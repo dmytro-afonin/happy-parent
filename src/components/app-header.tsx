@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router"
-import { Show, SignInButton, UserButton } from "@clerk/react"
+import { Show, SignInButton, SignUpButton, UserButton } from "@clerk/react"
 
 import { ModeToggle } from "@/components/mode-toggle"
 import { Button } from "@/components/ui/button"
@@ -36,8 +36,13 @@ export function AppHeader() {
           </Show>
           <Show when="signed-out">
             <SignInButton mode="modal">
-              <Button size="sm">Sign in</Button>
+              <Button variant="ghost" size="sm">
+                Sign in
+              </Button>
             </SignInButton>
+            <SignUpButton mode="modal">
+              <Button size="sm">Sign up</Button>
+            </SignUpButton>
           </Show>
         </div>
       </div>
