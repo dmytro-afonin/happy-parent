@@ -129,3 +129,28 @@
     @apply font-sans;
     }
 }
+
+.map-style-switcher__select {
+  height: 29px;
+  min-width: 6.5rem;
+  padding: 0 1.5rem 0 0.5rem;
+  border: 0;
+  background: transparent;
+  font: 12px/29px var(--font-sans, sans-serif);
+  color: #333;
+  cursor: pointer;
+  outline: none;
+}
+
+.place-map-popup-container .maplibregl-popup-content {
+  padding: 0;
+  overflow: hidden;
+  border-radius: 0.75rem;
+  background: var(--card);
+  color: var(--card-foreground);
+  box-shadow: 0 10px 30px rgb(0 0 0 / 0.18);
+}
+
+.place-map-popup-container .maplibregl-popup-tip {
+  border-top-color: var(--card);
+}

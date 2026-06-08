@@ -1,0 +1,17 @@
+---
+description: Do not add features, logic, or behavior the user did not ask for
+alwaysApply: true
+---
+
+# Scope discipline
+
+Implement **only** what the user explicitly requested.
+
+- Do not add features, refactors, abstractions, guards, sync jobs, env-driven behavior, or UI the user did not ask for.
+- Do not "improve" adjacent code, wire up extra persistence, or extend scope "while you're here."
+- Do not change product behavior (auth, roles, URL params, defaults, nav visibility) unless the user asked for that change.
+- If something seems missing or risky, **ask first** — do not implement speculatively.
+
+When fixing a bug, change the **minimum** needed to fix it. Prefer the smallest diff that satisfies the request.
+
+If the user reports unwanted behavior caused by prior agent work, revert or narrow that logic rather than layering more fixes on top.
