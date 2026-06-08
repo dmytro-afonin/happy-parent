@@ -1,4 +1,5 @@
 import { ClerkProvider } from "@clerk/tanstack-react-start"
+import { shadcn } from "@clerk/ui/themes"
 import { useAuth } from "@clerk/react"
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools"
 import { TanStackDevtools } from "@tanstack/react-devtools"
@@ -50,7 +51,7 @@ export const Route = createRootRoute({
 
 function RootComponent() {
   return (
-    <ClerkProvider>
+    <ClerkProvider appearance={{ theme: shadcn }}>
       <ConvexProviderWithClerk client={convex} useAuth={useAuth}>
         <TooltipProvider>
           <RootDocument>
