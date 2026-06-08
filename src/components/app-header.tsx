@@ -1,9 +1,12 @@
+"use client"
+
 import { Link } from "@tanstack/react-router"
 import { Show, SignInButton, SignUpButton, UserButton } from "@clerk/react"
 
 import { ModeToggle } from "@/components/mode-toggle"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
+import { useAdminStatus } from "@/hooks/use-admin-status"
 
 const navItems = [
   { to: "/", label: "Home", exact: true },
@@ -11,6 +14,8 @@ const navItems = [
 ] as const
 
 export function AppHeader() {
+  const { isAdmin } = useAdminStatus()
+
   return (
     <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto flex h-14 items-center gap-4 px-4">
@@ -28,6 +33,16 @@ export function AppHeader() {
               </Link>
             </Button>
           ))}
+          {isAdmin ? (
+            <Button variant="ghost" size="sm" asChild>
+              <Link
+                to="/admin"
+                activeProps={{ className: "bg-accent text-accent-foreground" }}
+              >
+                Admin
+              </Link>
+            </Button>
+          ) : null}
         </nav>
         <div className="ml-auto flex items-center gap-2">
           <ModeToggle />

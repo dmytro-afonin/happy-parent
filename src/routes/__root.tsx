@@ -10,6 +10,7 @@ import {
   Outlet,
   Scripts,
   createRootRoute,
+  useRouterState,
 } from "@tanstack/react-router"
 import { createServerFn } from "@tanstack/react-start"
 import { auth } from "@clerk/tanstack-react-start/server"
@@ -55,7 +56,6 @@ function RootComponent() {
       <ConvexProviderWithClerk client={convex} useAuth={useAuth}>
         <TooltipProvider>
           <RootDocument>
-            <AppHeader />
             <Outlet />
           </RootDocument>
         </TooltipProvider>
@@ -65,12 +65,17 @@ function RootComponent() {
 }
 
 function RootDocument({ children }: { children: React.ReactNode }) {
+  const isMapPage = useRouterState({
+    select: (state) => state.location.pathname === "/map",
+  })
+
   return (
     <html lang="en">
       <head>
         <HeadContent />
       </head>
       <body>
+        {!isMapPage ? <AppHeader /> : null}
         {children}
         <TanStackDevtools
           config={{ position: "bottom-right" }}
