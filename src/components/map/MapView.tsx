@@ -14,7 +14,7 @@ import "maplibre-gl/dist/maplibre-gl.css"
 import { MapStyleSwitcherControl } from "./MapStyleSwitcherControl"
 import {
   installMissingImageHandler,
-  patchOpenFreeMapStyle,
+  installOpenFreeMapStylePatches,
 } from "./map-style-patches"
 import { destroyMapOverlayHost } from "@/lib/map/map-overlay-host"
 import {
@@ -145,6 +145,7 @@ export const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
     })
 
     const removeMissingImageHandler = installMissingImageHandler(map)
+    const removeStylePatches = installOpenFreeMapStylePatches(map)
 
     map.addControl(styleSwitcher, "top-left")
     map.addControl(new maplibregl.NavigationControl(), "top-right")
@@ -188,7 +189,6 @@ export const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
     }
 
     const onMapLoad = () => {
-      patchOpenFreeMapStyle(map)
       applySavedStyle()
       map.once("idle", markMapReady)
     }
@@ -197,6 +197,7 @@ export const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
 
     return () => {
       map.off("load", onMapLoad)
+      removeStylePatches()
       removeMissingImageHandler()
       destroyMapOverlayHost(map)
       setReadyMap(null)
