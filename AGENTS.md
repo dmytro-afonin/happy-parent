@@ -6,12 +6,16 @@ Happy Parent is a single TanStack Start (React 19 + Vite) web app backed by Conv
 (database/server functions) and Clerk (auth). Standard commands live in `README.md`
 and `package.json` scripts; this section only covers non-obvious caveats.
 
-### Node version
+### Node / pnpm version (PATH gotcha)
 - `package.json` requires Node `>=24`. The VM's default `node` (`/exec-daemon/node`)
   is v22 and is hard-wired ahead of nvm on `PATH`, so plain `node`/`pnpm dev` will run
   on v22. Node 24 is installed via nvm; prepend it for dev/build/test:
   `export PATH="$HOME/.nvm/versions/node/v24.16.0/bin:$PATH"`. v22 also runs the app,
   but use v24 to match the engine.
+- `pnpm` is **not** on the bare system `PATH`; it is provided by nvm/Corepack and only
+  resolves once nvm is active. If you hit `pnpm: command not found`, start a login shell
+  or run `source ~/.bashrc` (sources nvm), or `export PATH="$HOME/.nvm/versions/node/v24.16.0/bin:$PATH"`.
+  Corepack is enabled and honors the `packageManager: pnpm@11.5.2` pin in `package.json`.
 
 ### Two long-running processes (run in separate terminals/tmux sessions)
 - Backend: `CONVEX_AGENT_MODE=anonymous pnpm dlx convex dev` — starts a **local**
