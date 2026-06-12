@@ -1,6 +1,7 @@
 {
+  "snapshot": "snapshot-20260212-00000000-0000-0000-0000-000000000010",
   "build": {
-    "dockerfile": ".cursor/Dockerfile",
+    "dockerfile": "Dockerfile",
     "context": ".."
   },
   "install": "bash .cursor/cloud-agent-install.sh",
@@ -12,7 +13,7 @@
     },
     {
       "name": "App",
-      "command": "pnpm dlx vercel dev --listen 3000",
+      "command": "pnpm dev",
       "ports": [3000]
     }
   ]
