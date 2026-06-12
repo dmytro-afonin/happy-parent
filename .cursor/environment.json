@@ -3,7 +3,6 @@
       "dockerfile": "Dockerfile",
       "context": "."
     }, 
-    
     "install": "pnpm install --frozen-lockfile",
     "terminals": [
       {
