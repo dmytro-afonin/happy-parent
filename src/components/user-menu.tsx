@@ -1,7 +1,7 @@
 "use client"
 
 import { UserButton } from "@clerk/react"
-import { Moon, Settings, Sun } from "lucide-react"
+import { Moon, Sun } from "lucide-react"
 
 import { useTheme } from "@/hooks/use-theme"
 
@@ -11,11 +11,6 @@ export function UserMenu() {
   return (
     <UserButton>
       <UserButton.MenuItems>
-        <UserButton.Link
-          label="Preferences"
-          labelIcon={<Settings className="size-4" />}
-          href="/preferences"
-        />
         <UserButton.Action
           label={theme === "dark" ? "Light mode" : "Dark mode"}
           labelIcon={
