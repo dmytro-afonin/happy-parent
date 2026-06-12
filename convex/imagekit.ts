@@ -1,6 +1,6 @@
 "use node"
 
-import ImageKit from "imagekit"
+import ImageKit from "@imagekit/nodejs"
 import { v } from "convex/values"
 
 import { action } from "./_generated/server"
@@ -26,11 +26,7 @@ function getImageKitClient() {
   }
 
   return {
-    client: new ImageKit({
-      publicKey,
-      privateKey,
-      urlEndpoint,
-    }),
+    client: new ImageKit({ privateKey }),
     publicKey,
     urlEndpoint,
   }
@@ -51,7 +47,7 @@ export const getUploadAuth = action({
     }
 
     const { client, publicKey, urlEndpoint } = getImageKitClient()
-    const auth = client.getAuthenticationParameters()
+    const auth = client.helper.getAuthenticationParameters()
 
     return {
       token: auth.token,

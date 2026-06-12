@@ -1,0 +1,17 @@
+{
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "install": "bash .cursor/cloud-agent-install.sh",
+  "terminals": [
+    {
+      "name": "Convex",
+      "command": "pnpm exec convex dev"
+    },
+    {
+      "name": "App",
+      "command": "pnpm dlx vercel dev --listen 3000",
+      "ports": [3000]
+    }
+  ]
+}
