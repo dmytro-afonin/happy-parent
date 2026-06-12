@@ -1,9 +1,10 @@
 "use client"
 
 import { Link } from "@tanstack/react-router"
-import { Show, SignInButton, SignUpButton, UserButton } from "@clerk/react"
+import { Show, SignInButton, SignUpButton } from "@clerk/react"
 
 import { ModeToggle } from "@/components/mode-toggle"
+import { UserMenu } from "@/components/user-menu"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { useAdminStatus } from "@/hooks/use-admin-status"
@@ -45,11 +46,8 @@ export function AppHeader() {
           ) : null}
         </nav>
         <div className="ml-auto flex items-center gap-2">
-          <ModeToggle />
-          <Show when="signed-in">
-            <UserButton />
-          </Show>
           <Show when="signed-out">
+            <ModeToggle />
             <SignInButton mode="modal">
               <Button variant="ghost" size="sm">
                 Sign in
@@ -58,6 +56,9 @@ export function AppHeader() {
             <SignUpButton mode="modal">
               <Button size="sm">Sign up</Button>
             </SignUpButton>
+          </Show>
+          <Show when="signed-in">
+            <UserMenu />
           </Show>
         </div>
       </div>
