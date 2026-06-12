@@ -6,8 +6,3 @@ RUN apt-get update \
   && corepack enable
 
 RUN node --version && git --version && pnpm --version
-
-# Official node image includes the `node` user (uid 1000). Cursor Cloud Agents
-# expect a non-root runtime user for workspace installs and dev terminals.
-USER node
-WORKDIR /home/node
