@@ -10,7 +10,7 @@
     },
     {
       "name": "App",
-      "command": "pnpm dlx vercel dev --listen 3000",
+      "command": "pnpm dev",
       "ports": [3000]
     }
   ]
