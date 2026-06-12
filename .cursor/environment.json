@@ -12,9 +12,7 @@
       {
         "name": "App",
         "command": "pnpm dev",
-        "ports": [
-          3000
-        ]
+        "ports": [3000]
       }
     ]
   }
