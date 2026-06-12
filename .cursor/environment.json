@@ -1,5 +1,4 @@
 {
-    "snapshot": "snapshot-20260212-00000000-0000-0000-0000-000000000030",
     "build": {
       "dockerfile": "Dockerfile",
       "context": "."
