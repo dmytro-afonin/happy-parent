@@ -10,7 +10,7 @@
     },
     {
       "name": "App",
-      "command": "pnpm dev",
+      "command": "bash .cursor/dev-app.sh",
       "ports": [3000]
     }
   ]

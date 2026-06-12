@@ -9,9 +9,15 @@ standard scripts in `package.json` (`dev`, `build`, `lint`, `typecheck`, `test`)
 ### Services
 Both services auto-start from `.cursor/environment.json` terminals; run them
 manually with:
-- **App**: `pnpm dev` — TanStack Start dev server on http://localhost:3000.
-  Use `pnpm dev`, NOT `vercel dev` (the latter needs Vercel auth/linking that is
-  not available in the cloud VM).
+- **App**: started via `bash .cursor/dev-app.sh` on http://localhost:3000.
+  The script runs `vercel dev` when `VERCEL_TOKEN` is set, otherwise it falls
+  back to `pnpm dev` (Vite). `vercel dev` requires Vercel auth + a linked
+  project: without credentials it hangs on an interactive OAuth device-login,
+  which is why the fallback exists. To use `vercel dev`, set the secrets
+  `VERCEL_TOKEN`, `VERCEL_ORG_ID`, and `VERCEL_PROJECT_ID` (the CLI reads the
+  ID env vars to link non-interactively). Caveat: `vercel dev` pulls the Vercel
+  project's env vars, which can override the local Convex `VITE_CONVEX_URL` from
+  `.env.local`; point it at the local anonymous deployment if Convex calls fail.
 - **Convex**: `pnpm exec convex dev` — local anonymous backend on port 3210.
   Requires the secret `CONVEX_AGENT_MODE=anonymous` (already configured).
 
