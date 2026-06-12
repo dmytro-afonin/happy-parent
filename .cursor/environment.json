@@ -1,5 +1,4 @@
 {
-    "snapshot": "snapshot-20260612-00000000-0000-0000-0000-000000037772",
     "build": {
       "dockerfile": "Dockerfile",
       "context": "."
@@ -13,7 +12,9 @@
       {
         "name": "App",
         "command": "pnpm dev",
-        "ports": [3000]
+        "ports": [
+          3000
+        ]
       }
     ]
   }
