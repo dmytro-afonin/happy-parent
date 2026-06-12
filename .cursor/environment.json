@@ -1,0 +1,22 @@
+{
+    "snapshot": "snapshot-20260212-00000000-0000-0000-0000-000000000020",
+    "build": {
+      "dockerfile": "Dockerfile",
+      "context": ".."
+    },
+    "install": "bash .cursor/cloud-agent-install.sh",
+    "start": "bash .cursor/cloud-agent-start.sh",
+    "terminals": [
+      {
+        "name": "Convex",
+        "command": "pnpm exec convex dev"
+      },
+      {
+        "name": "App",
+        "command": "pnpm dev",
+        "ports": [
+          3000
+        ]
+      }
+    ]
+  }
