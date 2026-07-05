@@ -1,10 +1,11 @@
 "use client"
 
 import { Link } from "@tanstack/react-router"
-import { Show, SignInButton, UserButton } from "@clerk/react"
+import { Show, SignInButton } from "@clerk/react"
 
 import { MapSearchBar } from "@/components/map/MapSearchModal"
 import { ModeToggle } from "@/components/mode-toggle"
+import { UserMenu } from "@/components/user-menu"
 import { Button } from "@/components/ui/button"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { useAdminStatus } from "@/hooks/use-admin-status"
@@ -39,9 +40,11 @@ export function MapCompactToolbar({ onOpenSearch }: MapCompactToolbarProps) {
       </nav>
       <MapSearchBar onOpenSearch={onOpenSearch} />
       <div className="ml-auto flex shrink-0 items-center gap-1">
-        <ModeToggle />
+        <Show when="signed-out">
+          <ModeToggle />
+        </Show>
         <Show when="signed-in">
-          <UserButton />
+          <UserMenu />
         </Show>
         <Show when="signed-out">
           <SignInButton mode="modal">
