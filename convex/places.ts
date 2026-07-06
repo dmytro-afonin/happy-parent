@@ -304,9 +304,7 @@ export const update = mutation({
       args.lng !== undefined ||
       args.boundary !== undefined
     ) {
-      const point =
-        lat !== undefined && lng !== undefined ? { lat, lng } : undefined
-      const geometry = validateGeometry(geometryType, point, boundary)
+      const geometry = validateGeometry(geometryType, { lat, lng }, boundary)
       lat = geometry.lat
       lng = geometry.lng
       boundary = geometry.boundary

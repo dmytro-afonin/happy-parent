@@ -4,7 +4,7 @@ import { PLACE_CATEGORIES, PLACE_CATEGORY_META } from "@/lib/place-categories"
 import type { PlaceCategoryId } from "@/lib/place-categories"
 import { isMapAlive } from "@/lib/map-utils"
 
-type LucideNode = [string, Record<string, string>]
+type LucideNode = [string, Record<string, string | undefined>]
 
 const CATEGORY_ICON_NODES: Record<PlaceCategoryId, LucideNode[]> = {
   // lucide "utensils-crossed"

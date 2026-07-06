@@ -102,7 +102,21 @@ export function PlaceCard({
       }
     }
 
-    await navigator.clipboard.writeText(url)
+    try {
+      await navigator.clipboard.writeText(url)
+    } catch {
+      // Clipboard API can be unavailable (e.g. permissions) — fall back to a
+      // temporary textarea + execCommand copy.
+      const textarea = document.createElement("textarea")
+      textarea.value = url
+      textarea.style.position = "fixed"
+      textarea.style.opacity = "0"
+      document.body.appendChild(textarea)
+      textarea.select()
+      document.execCommand("copy")
+      textarea.remove()
+    }
+
     setShareCopied(true)
     window.setTimeout(() => setShareCopied(false), 2000)
   }

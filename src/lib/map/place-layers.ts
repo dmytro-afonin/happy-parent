@@ -395,7 +395,7 @@ export function bindPlaceLayerInteractions({
     const features = map.queryRenderedFeatures(event.point, {
       layers: layerIds,
     })
-    const feature = features[0]
+    const feature = features.at(0)
     if (!feature) {
       onSelectPlace?.(null)
       return
@@ -404,7 +404,7 @@ export function bindPlaceLayerInteractions({
     event.originalEvent.preventDefault()
     event.originalEvent.stopPropagation()
 
-    const placeId = feature.properties?.id
+    const placeId = feature.properties.id
     const place = places.find((entry) => entry._id === placeId)
     if (!place) {
       return

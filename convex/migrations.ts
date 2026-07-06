@@ -358,21 +358,26 @@ export const migrateLegacyCategories = internalMutation({
 })
 
 /**
- * Grants or revokes the admin role by email. There is no in-app promotion UI;
- * run with: npx convex run migrations:setUserRole '{"email":"you@example.com","role":"admin"}'
+ * Grants or revokes the admin role. Matches by email or Clerk user id
+ * (tokenIdentifier suffix). There is no in-app promotion UI; run with:
+ * npx convex run migrations:setUserRole '{"user":"you@example.com","role":"admin"}'
  */
 export const setUserRole = internalMutation({
   args: {
-    email: v.string(),
+    user: v.string(),
     role: userRoleValidator,
   },
   returns: v.null(),
   handler: async (ctx, args) => {
     const users = await ctx.db.query("users").collect()
-    const user = users.find((entry) => entry.email === args.email)
+    const user = users.find(
+      (entry) =>
+        entry.email === args.user ||
+        entry.tokenIdentifier.endsWith(`|${args.user}`),
+    )
 
     if (!user) {
-      throw new Error(`No user found with email ${args.email}`)
+      throw new Error(`No user found matching ${args.user}`)
     }
 
     await ctx.db.patch("users", user._id, { role: args.role })
