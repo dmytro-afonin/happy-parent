@@ -1,7 +1,10 @@
 import { mutation, query } from "./_generated/server"
 import { v } from "convex/values"
 
-import { placeCategoryValidator } from "./lib/placeCategories"
+import {
+  isPlaceCategoryId,
+  placeCategoryValidator,
+} from "./lib/placeCategories"
 import { ensureAuthUser, getAuthUserId } from "./lib/users"
 
 const MAX_RECENT_CATEGORIES = 50
@@ -22,16 +25,19 @@ export const list = query({
       return []
     }
 
-    return (
-      await ctx.db
-        .query("recentCategories")
-        .withIndex("by_user_searchedAt", (q) => q.eq("userId", userId))
-        .order("desc")
-        .take(args.limit ?? 10)
-    ).map((entry) => ({
-      category: entry.category,
-      searchedAt: entry.searchedAt,
-    }))
+    const entries = await ctx.db
+      .query("recentCategories")
+      .withIndex("by_user_searchedAt", (q) => q.eq("userId", userId))
+      .order("desc")
+      .take(args.limit ?? 10)
+
+    // Rows recorded before the generic-categories rework are skipped.
+    return entries
+      .filter((entry) => isPlaceCategoryId(entry.category))
+      .map((entry) => ({
+        category: entry.category as "food" | "utilities" | "entertainment",
+        searchedAt: entry.searchedAt,
+      }))
   },
 })
 
@@ -46,12 +52,12 @@ export const record = mutation({
     const existing = await ctx.db
       .query("recentCategories")
       .withIndex("by_user_and_category", (q) =>
-        q.eq("userId", userId).eq("category", args.category),
+        q.eq("userId", userId).eq("category", args.category)
       )
       .unique()
 
     if (existing) {
-      await ctx.db.delete(existing._id)
+      await ctx.db.delete("recentCategories", existing._id)
     }
 
     await ctx.db.insert("recentCategories", {
@@ -69,7 +75,7 @@ export const record = mutation({
     if (overflow.length > MAX_RECENT_CATEGORIES) {
       const deleteCount = overflow.length - MAX_RECENT_CATEGORIES
       for (const entry of overflow.slice(0, deleteCount)) {
-        await ctx.db.delete(entry._id)
+        await ctx.db.delete("recentCategories", entry._id)
       }
     }
 

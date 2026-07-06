@@ -1,105 +1,50 @@
 import type maplibregl from "maplibre-gl"
 
-import {
-  PLACE_CATEGORIES,
-  PLACE_CATEGORY_META,
-  type PlaceCategoryId,
-} from "@/lib/place-categories"
+import { PLACE_CATEGORIES, PLACE_CATEGORY_META } from "@/lib/place-categories"
+import type { PlaceCategoryId } from "@/lib/place-categories"
 import { isMapAlive } from "@/lib/map-utils"
 
 type LucideNode = [string, Record<string, string>]
 
 const CATEGORY_ICON_NODES: Record<PlaceCategoryId, LucideNode[]> = {
-  playground: [
-    ["rect", { width: "18", height: "12", x: "3", y: "8", rx: "1" }],
-    ["path", { d: "M10 8V5c0-.6-.4-1-1-1H6a1 1 0 0 0-1 1v3" }],
-    ["path", { d: "M19 8V5c0-.6-.4-1-1-1h-3a1 1 0 0 0-1 1v3" }],
-  ],
-  park: [
+  // lucide "utensils-crossed"
+  food: [
+    [
+      "path",
+      { d: "m16 2-2.3 2.3a3 3 0 0 0 0 4.2l1.8 1.8a3 3 0 0 0 4.2 0L22 8" },
+    ],
     [
       "path",
       {
-        d: "m17 14 3 3.3a1 1 0 0 1-.7 1.7H4.7a1 1 0 0 1-.7-1.7L7 14h-.3a1 1 0 0 1-.7-1.7L9 9h-.2A1 1 0 0 1 8 7.3L12 3l4 4.3a1 1 0 0 1-.8 1.7H15l3 3.3a1 1 0 0 1-.7 1.7H17Z",
+        d: "M15 15 3.3 3.3a4.2 4.2 0 0 0 0 6l7.3 7.3c.7.7 2 .7 2.8 0L15 15Zm0 0 7 7",
       },
-    ],
-    ["path", { d: "M12 22v-3" }],
-  ],
-  cafe: [
-    ["path", { d: "M10 2v2" }],
-    ["path", { d: "M14 2v2" }],
-    [
-      "path",
-      {
-        d: "M16 8a1 1 0 0 1 1 1v8a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V9a1 1 0 0 1 1-1h14a4 4 0 1 1 0 8h-1",
-      },
-    ],
-    ["path", { d: "M6 2v2" }],
-  ],
-  restaurant: [
-    ["path", { d: "m16 2-2.3 2.3a3 3 0 0 0 0 4.2l1.8 1.8a3 3 0 0 0 4.2 0L22 8" }],
-    [
-      "path",
-      { d: "M15 15 3.3 3.3a4.2 4.2 0 0 0 0 6l7.3 7.3c.7.7 2 .7 2.8 0L15 15Zm0 0 7 7" },
     ],
     ["path", { d: "m2.1 21.8 6.4-6.3" }],
     ["path", { d: "m19 5-7 7" }],
   ],
-  library: [
-    ["path", { d: "M12 7v14" }],
+  // lucide "baby"
+  utilities: [
+    ["path", { d: "M9 12h.01" }],
+    ["path", { d: "M15 12h.01" }],
+    ["path", { d: "M10 16c.5.3 1.2.5 2 .5s1.5-.2 2-.5" }],
     [
       "path",
       {
-        d: "M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z",
+        d: "M19 6.3a9 9 0 0 1 1.8 3.9 2 2 0 0 1 0 3.6 9 9 0 0 1-17.6 0 2 2 0 0 1 0-3.6A9 9 0 0 1 12 3c2 0 3.5 1.1 3.5 2.5s-.9 2.5-2 2.5c-.8 0-1.5-.4-1.5-1",
       },
     ],
   ],
-  museum: [
-    ["path", { d: "M10 18v-7" }],
-    [
-      "path",
-      {
-        d: "M11.119 2.205a2 2 0 0 1 1.762 0l7.84 3.846A.5.5 0 0 1 20.5 7h-17a.5.5 0 0 1-.22-.949z",
-      },
-    ],
-    ["path", { d: "M14 18v-7" }],
-    ["path", { d: "M18 18v-7" }],
-    ["path", { d: "M3 22h18" }],
-    ["path", { d: "M6 18v-7" }],
-  ],
-  pool: [
-    ["path", { d: "M2 12q2.5 2 5 0t5 0 5 0 5 0" }],
-    ["path", { d: "M2 19q2.5 2 5 0t5 0 5 0 5 0" }],
-    ["path", { d: "M2 5q2.5 2 5 0t5 0 5 0 5 0" }],
-  ],
-  "indoor-play": [
-    ["path", { d: "M10 5V3" }],
-    ["path", { d: "M14 5V3" }],
-    ["path", { d: "M15 21v-3a3 3 0 0 0-6 0v3" }],
-    ["path", { d: "M18 3v8" }],
-    ["path", { d: "M18 5H6" }],
-    ["path", { d: "M22 11H2" }],
-    ["path", { d: "M22 9v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9" }],
-    ["path", { d: "M6 3v8" }],
-  ],
-  nature: [
-    [
-      "path",
-      {
-        d: "M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z",
-      },
-    ],
-    ["path", { d: "M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12" }],
-  ],
-  zoo: [
-    ["circle", { cx: "11", cy: "4", r: "2" }],
-    ["circle", { cx: "18", cy: "8", r: "2" }],
-    ["circle", { cx: "20", cy: "16", r: "2" }],
-    [
-      "path",
-      {
-        d: "M9 10a5 5 0 0 1 5 5v3.5a3.5 3.5 0 0 1-6.84 1.045Q6.52 17.48 4.46 16.84A3.5 3.5 0 0 1 5.5 10Z",
-      },
-    ],
+  // lucide "ferris-wheel"
+  entertainment: [
+    ["circle", { cx: "12", cy: "12", r: "2" }],
+    ["path", { d: "M12 2v4" }],
+    ["path", { d: "m6.8 15-3.5 2" }],
+    ["path", { d: "m20.7 7-3.5 2" }],
+    ["path", { d: "M6.8 9 3.3 7" }],
+    ["path", { d: "m20.7 17-3.5-2" }],
+    ["path", { d: "m9 22 3-8 3 8" }],
+    ["path", { d: "M8 22h8" }],
+    ["path", { d: "M18 18.7a9 9 0 1 0-12 0" }],
   ],
 }
 
@@ -179,9 +124,9 @@ export async function preloadCategoryMarkerImages() {
 
         imageCache.set(
           imageId,
-          await svgToImageData(buildCategoryMarkerSvg(category)),
+          await svgToImageData(buildCategoryMarkerSvg(category))
         )
-      }),
+      })
     ).then(() => undefined)
   }
 
@@ -213,7 +158,7 @@ export async function ensureCategoryMarkerImages(map: maplibregl.Map) {
 
 export function categoryMarkerImagesReady(map: maplibregl.Map) {
   return PLACE_CATEGORIES.every((category) =>
-    map.hasImage(categoryMarkerImageId(category)),
+    map.hasImage(categoryMarkerImageId(category))
   )
 }
 

@@ -6,15 +6,14 @@ import type maplibregl from "maplibre-gl"
 import { SearchIcon } from "lucide-react"
 
 import { MapDrawControl } from "@/components/admin/MapDrawControl"
-import { MapView, type MapViewHandle } from "@/components/map/MapView"
+import { MapView } from "@/components/map/MapView"
+import type { MapViewHandle } from "@/components/map/MapView"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useMapOverlay } from "@/hooks/use-map-overlay"
-import {
-  adminPreviewLayerHandlers,
-  type AdminPreviewState,
-} from "@/lib/map/admin-preview-layers"
+import { adminPreviewLayerHandlers } from "@/lib/map/admin-preview-layers"
+import type { AdminPreviewState } from "@/lib/map/admin-preview-layers"
 import type { GeometryType, LatLng } from "@/lib/geometry"
 import { api } from "../../../convex/_generated/api"
 
@@ -38,7 +37,7 @@ function AdminMapOverlays({
 }) {
   const previewState = useMemo<AdminPreviewState>(
     () => ({ geometryType, point, vertices }),
-    [geometryType, point, vertices],
+    [geometryType, point, vertices]
   )
 
   const previewRevision = `${geometryType}:${point?.lat ?? "x"}:${point?.lng ?? "x"}:${vertices.length}`

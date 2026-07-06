@@ -6,6 +6,8 @@ import { useConvexAuth, useMutation, useQuery } from "convex/react"
 import { Trash2Icon } from "lucide-react"
 
 import { AdminPlaceForm } from "@/components/admin/AdminPlaceForm"
+import { ModerationQueue } from "@/components/admin/ModerationQueue"
+import { AdminLabelForm } from "@/components/admin/AdminLabelForm"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -21,10 +23,7 @@ export const Route = createFileRoute("/admin")({
 function AdminPage() {
   const { isAuthenticated, isLoading: isAuthLoading } = useConvexAuth()
   const { isAdmin, isLoading: isAdminLoading } = useAdminStatus()
-  const places = useQuery(
-    api.places.listAllAdmin,
-    isAdmin ? {} : "skip",
-  )
+  const places = useQuery(api.places.listAllAdmin, isAdmin ? {} : "skip")
   const removePlace = useMutation(api.places.remove)
 
   if (isAuthLoading || isAdminLoading) {
@@ -81,10 +80,14 @@ function AdminPage() {
           <Badge>Places</Badge>
         </div>
         <p className="text-muted-foreground">
-          Create family-friendly places as points or outlined areas, with photos
-          stored in ImageKit.
+          Review user submissions, manage labels and create family-friendly
+          places as points or outlined areas.
         </p>
       </div>
+
+      <ModerationQueue />
+
+      <AdminLabelForm />
 
       <AdminPlaceForm />
 
@@ -104,7 +107,7 @@ function AdminPage() {
                 className="flex flex-wrap items-start justify-between gap-3 rounded-lg border p-3"
               >
                 <div className="flex min-w-0 flex-1 gap-3">
-                  {place.coverPhotoThumbnailUrl ?? place.coverPhotoUrl ? (
+                  {(place.coverPhotoThumbnailUrl ?? place.coverPhotoUrl) ? (
                     <img
                       src={place.coverPhotoThumbnailUrl ?? place.coverPhotoUrl}
                       alt={place.name}
@@ -116,7 +119,17 @@ function AdminPage() {
                     </div>
                   )}
                   <div className="min-w-0">
-                    <p className="font-medium">{place.name}</p>
+                    <p className="flex flex-wrap items-center gap-1.5 font-medium">
+                      {place.name}
+                      {place.status === "pending" ? (
+                        <Badge className="bg-amber-500/15 text-amber-600">
+                          Pending
+                        </Badge>
+                      ) : null}
+                      {place.status === "rejected" ? (
+                        <Badge variant="destructive">Rejected</Badge>
+                      ) : null}
+                    </p>
                     <p className="text-sm text-muted-foreground">
                       {PLACE_CATEGORY_META[place.category].label} ·{" "}
                       {place.geometryType === "polygon" ? "Area" : "Point"}

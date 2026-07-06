@@ -6,8 +6,8 @@ import {
   useImperativeHandle,
   useRef,
   useState,
-  type ReactNode,
 } from "react"
+import type { ReactNode } from "react"
 import maplibregl from "maplibre-gl"
 import "maplibre-gl/dist/maplibre-gl.css"
 
@@ -17,12 +17,8 @@ import {
   installOpenFreeMapStylePatches,
 } from "./map-style-patches"
 import { destroyMapOverlayHost } from "@/lib/map/map-overlay-host"
-import {
-  DEFAULT_MAP_STYLE_ID,
-  getMapStyle,
-  getMapStyleUrl,
-  type MapStyleId,
-} from "./map-styles"
+import { DEFAULT_MAP_STYLE_ID, getMapStyle, getMapStyleUrl } from "./map-styles"
+import type { MapStyleId } from "./map-styles"
 
 /** Warsaw city center [longitude, latitude] */
 const WARSAW_CENTER: [number, number] = [21.0122, 52.2297]
@@ -77,7 +73,7 @@ export const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
     onMapReady,
     children,
   },
-  ref,
+  ref
 ) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [readyMap, setReadyMap] = useState<maplibregl.Map | null>(null)
@@ -134,7 +130,7 @@ export const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
 
     const styleId = initialStyleIdRef.current
     const styleSwitcher = new MapStyleSwitcherControl(styleId, (nextStyleId) =>
-      onStyleChangeRef.current?.(nextStyleId),
+      onStyleChangeRef.current?.(nextStyleId)
     )
 
     const map = new maplibregl.Map({

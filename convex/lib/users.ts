@@ -14,7 +14,7 @@ export async function getAuthUser(ctx: AuthCtx) {
   return await ctx.db
     .query("users")
     .withIndex("by_token", (q) =>
-      q.eq("tokenIdentifier", identity.tokenIdentifier),
+      q.eq("tokenIdentifier", identity.tokenIdentifier)
     )
     .unique()
 }
@@ -55,7 +55,7 @@ export async function ensureAuthUser(ctx: MutationCtx): Promise<Id<"users">> {
 
   if (existing) {
     if (identity.email && existing.email !== identity.email) {
-      await ctx.db.patch(existing._id, { email: identity.email })
+      await ctx.db.patch("users", existing._id, { email: identity.email })
     }
 
     return existing._id

@@ -10,7 +10,7 @@ export function useAdminStatus() {
   const ensureCurrentUser = useMutation(api.users.ensureCurrentUser)
   const adminStatus = useQuery(
     api.users.getAdminStatus,
-    isAuthenticated ? {} : "skip",
+    isAuthenticated ? {} : "skip"
   )
 
   useEffect(() => {
@@ -21,7 +21,6 @@ export function useAdminStatus() {
 
   return {
     isAdmin: adminStatus?.isAdmin ?? false,
-    isLoading:
-      isAuthLoading || (isAuthenticated && adminStatus === undefined),
+    isLoading: isAuthLoading || (isAuthenticated && adminStatus === undefined),
   }
 }

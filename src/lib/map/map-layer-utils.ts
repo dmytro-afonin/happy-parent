@@ -28,7 +28,7 @@ export function removeSourceIfExists(map: MaplibreMap, sourceId: string) {
 export function removeLayersAndSource(
   map: MaplibreMap,
   layerIds: readonly string[],
-  sourceId: string,
+  sourceId: string
 ) {
   for (const layerId of layerIds) {
     removeLayerIfExists(map, layerId)
@@ -41,7 +41,7 @@ export function upsertGeoJsonSource(
   map: MaplibreMap,
   sourceId: string,
   data: GeoJsonData,
-  options?: Omit<GeoJSONSourceSpecification, "type" | "data">,
+  options?: Omit<GeoJSONSourceSpecification, "type" | "data">
 ) {
   if (!isMapAlive(map)) {
     return false

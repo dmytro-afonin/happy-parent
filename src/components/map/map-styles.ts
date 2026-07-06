@@ -4,12 +4,7 @@ import { getMapOverlayHost } from "@/lib/map/map-overlay-host"
 import { patchOpenFreeMapStyle } from "./map-style-patches"
 
 export type MapStyleId =
-  | "liberty"
-  | "bright"
-  | "positron"
-  | "dark"
-  | "fiord"
-  | "3d"
+  "liberty" | "bright" | "positron" | "dark" | "fiord" | "3d"
 
 export type MapStyle = {
   id: MapStyleId
@@ -71,7 +66,7 @@ export function getMapStyleUrl(id: MapStyleId) {
 export function applyMapStyleToMap(
   map: maplibregl.Map,
   styleId: MapStyleId,
-  previousStyleId: MapStyleId,
+  previousStyleId: MapStyleId
 ) {
   const style = getMapStyle(styleId)
   const previousStyle = getMapStyle(previousStyleId)

@@ -1,29 +1,12 @@
 import type { LucideIcon } from "lucide-react"
-import {
-  BookOpenIcon,
-  CastleIcon,
-  CoffeeIcon,
-  LandmarkIcon,
-  LeafIcon,
-  PawPrintIcon,
-  ToyBrickIcon,
-  TreePineIcon,
-  UtensilsCrossedIcon,
-  WavesIcon,
-} from "lucide-react"
+import { BabyIcon, FerrisWheelIcon, UtensilsCrossedIcon } from "lucide-react"
 
-export const PLACE_CATEGORIES = [
-  "playground",
-  "park",
-  "cafe",
-  "restaurant",
-  "library",
-  "museum",
-  "pool",
-  "indoor-play",
-  "nature",
-  "zoo",
-] as const
+/**
+ * Generic, wide-range place categories. Everything more specific
+ * (playground, restaurant, clinic, …) is a label attached to a place.
+ * Must stay in sync with convex/lib/placeCategories.ts.
+ */
+export const PLACE_CATEGORIES = ["food", "utilities", "entertainment"] as const
 
 export type PlaceCategoryId = (typeof PLACE_CATEGORIES)[number]
 
@@ -36,75 +19,26 @@ type PlaceCategoryMeta = {
 }
 
 export const PLACE_CATEGORY_META: Record<PlaceCategoryId, PlaceCategoryMeta> = {
-  playground: {
-    label: "Playgrounds",
-    description: "Outdoor play equipment and swings",
-    color: "#f97316",
-    icon: ToyBrickIcon,
-    searchHint: "Slides, swings, and climbing frames",
-  },
-  park: {
-    label: "Parks",
-    description: "Green spaces for picnics and play",
-    color: "#22c55e",
-    icon: TreePineIcon,
-    searchHint: "Lawns, paths, and open air",
-  },
-  cafe: {
-    label: "Family cafés",
-    description: "Cafés with space for kids",
-    color: "#a855f7",
-    icon: CoffeeIcon,
-    searchHint: "High chairs and relaxed vibes",
-  },
-  restaurant: {
-    label: "Restaurants",
-    description: "Kid-friendly dining spots",
+  food: {
+    label: "Food",
+    description: "Restaurants, cafés, food courts and other family dining",
     color: "#ef4444",
     icon: UtensilsCrossedIcon,
-    searchHint: "Menus and space for families",
+    searchHint: "Restaurants, cafés, food courts",
   },
-  library: {
-    label: "Libraries",
-    description: "Reading corners and story times",
+  utilities: {
+    label: "Utilities",
+    description: "Toilets, baby changing rooms, clinics and pharmacies",
     color: "#3b82f6",
-    icon: BookOpenIcon,
-    searchHint: "Books, quiet zones, events",
+    icon: BabyIcon,
+    searchHint: "Toilets, changing rooms, clinics",
   },
-  museum: {
-    label: "Museums",
-    description: "Interactive and science museums",
-    color: "#6366f1",
-    icon: LandmarkIcon,
-    searchHint: "Hands-on exhibits for kids",
-  },
-  pool: {
-    label: "Swimming pools",
-    description: "Pools with family lanes and splash zones",
-    color: "#06b6d4",
-    icon: WavesIcon,
-    searchHint: "Swimming and splash areas",
-  },
-  "indoor-play": {
-    label: "Indoor play",
-    description: "Soft play and activity centers",
-    color: "#ec4899",
-    icon: CastleIcon,
-    searchHint: "Rainy-day energy burners",
-  },
-  nature: {
-    label: "Nature trails",
-    description: "Forests, trails, and outdoor exploration",
-    color: "#84cc16",
-    icon: LeafIcon,
-    searchHint: "Walks and wildlife spotting",
-  },
-  zoo: {
-    label: "Zoos & aquariums",
-    description: "Animal encounters for curious kids",
-    color: "#eab308",
-    icon: PawPrintIcon,
-    searchHint: "Animals and marine life",
+  entertainment: {
+    label: "Entertainment",
+    description: "Parks, playgrounds, walking zones and kids play zones",
+    color: "#22c55e",
+    icon: FerrisWheelIcon,
+    searchHint: "Parks, playgrounds, play zones",
   },
 }
 
@@ -132,6 +66,6 @@ export function matchPlaceCategories(query: string) {
       category.label.toLowerCase().includes(trimmed) ||
       category.searchHint.toLowerCase().includes(trimmed) ||
       category.description.toLowerCase().includes(trimmed) ||
-      category.id.replace("-", " ").includes(trimmed),
+      category.id.replace("-", " ").includes(trimmed)
   )
 }

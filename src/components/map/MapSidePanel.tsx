@@ -1,7 +1,15 @@
 "use client"
 
 import { useConvexAuth, useMutation, useQuery } from "convex/react"
-import { ClockIcon, HeartIcon, LayersIcon, StarIcon, Trash2Icon } from "lucide-react"
+import {
+  ClockIcon,
+  HeartIcon,
+  LayersIcon,
+  MapPinIcon,
+  StarIcon,
+  TagIcon,
+  Trash2Icon,
+} from "lucide-react"
 
 import { CategoryLayerControl } from "@/components/map/CategoryLayerControl"
 import {
@@ -13,54 +21,74 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { useSidebar } from "@/components/ui/sidebar"
+import { useLocalizedNames } from "@/hooks/use-localized-catalog"
+import type { PlaceLabel } from "@/hooks/use-localized-catalog"
+import { useI18n } from "@/lib/i18n"
 import type { PlaceSearchResult } from "@/lib/place-search"
 import type { SidePanelSection } from "@/lib/map-preferences"
-import {
-  PLACE_CATEGORY_LIST,
-  PLACE_CATEGORY_META,
-  type PlaceCategoryId,
-} from "@/lib/place-categories"
+import { PLACE_CATEGORY_META } from "@/lib/place-categories"
+import type { PlaceCategoryId } from "@/lib/place-categories"
+import { cn } from "@/lib/utils"
 import { api } from "../../../convex/_generated/api"
 import type { Id } from "../../../convex/_generated/dataModel"
 
 type MapSidePanelProps = {
   activeCategories: PlaceCategoryId[]
   placeCounts: Partial<Record<PlaceCategoryId, number>>
+  labels: PlaceLabel[] | undefined
+  activeLabelIds: string[]
+  labelCounts: Record<string, number>
+  onToggleLabel: (labelId: string) => void
+  onClearLabels: () => void
   sidePanelSection: SidePanelSection
   onSidePanelSectionChange: (section: SidePanelSection | undefined) => void
   onToggleCategory: (category: PlaceCategoryId) => void
   onShowAllCategories: () => void
   onHideAllCategories: () => void
   onSelectPlace: (place: PlaceSearchResult) => void
+  onSelectSavedPlace: (placeId: string) => void
   onSelectRecentCategory?: (category: PlaceCategoryId) => void
 }
 
 export function MapSidePanel({
   activeCategories,
   placeCounts,
+  labels,
+  activeLabelIds,
+  labelCounts,
+  onToggleLabel,
+  onClearLabels,
   sidePanelSection,
   onSidePanelSectionChange,
   onToggleCategory,
   onShowAllCategories,
   onHideAllCategories,
   onSelectPlace,
+  onSelectSavedPlace,
   onSelectRecentCategory,
 }: MapSidePanelProps) {
+  const { t } = useI18n()
   const { isAuthenticated } = useConvexAuth()
   const { isMobile, setOpenMobile } = useSidebar()
+  const { categoryName, labelName } = useLocalizedNames()
   const favourites = useQuery(
     api.favouritePlaces.list,
-    isAuthenticated ? {} : "skip",
+    isAuthenticated ? {} : "skip"
+  )
+  const savedPlaces = useQuery(
+    api.savedPlaces.list,
+    isAuthenticated ? {} : "skip"
   )
   const recentSearches = useQuery(
     api.recentSearches.listRecent,
-    isAuthenticated ? { limit: 15 } : "skip",
+    isAuthenticated ? { limit: 15 } : "skip"
   )
   const recentCategories = useQuery(
     api.recentCategories.list,
-    isAuthenticated ? { limit: 6 } : "skip",
+    isAuthenticated ? { limit: 6 } : "skip"
   )
   const removeFavourite = useMutation(api.favouritePlaces.remove)
+  const toggleSavedPlace = useMutation(api.savedPlaces.toggle)
 
   const closeMobileSidebar = () => {
     if (isMobile) {
@@ -83,6 +111,10 @@ export function MapSidePanel({
   }
 
   const activeCategoryCount = activeCategories.length
+  const visibleLabels = (labels ?? []).filter((label) =>
+    activeCategories.includes(label.category)
+  )
+  const savedCount = (favourites?.length ?? 0) + (savedPlaces?.length ?? 0)
 
   return (
     <Accordion
@@ -91,7 +123,7 @@ export function MapSidePanel({
       value={sidePanelSection}
       onValueChange={(value) =>
         onSidePanelSectionChange(
-          value === "" ? undefined : (value as SidePanelSection),
+          value === "" ? undefined : (value as SidePanelSection)
         )
       }
       className="px-2"
@@ -100,7 +132,7 @@ export function MapSidePanel({
         <AccordionTrigger className="px-2 hover:no-underline">
           <span className="flex items-center gap-2">
             <LayersIcon className="size-4 text-muted-foreground" />
-            Categories
+            {t("map.categories")}
             <Badge variant="secondary" className="ml-1">
               {activeCategoryCount}
             </Badge>
@@ -115,6 +147,58 @@ export function MapSidePanel({
             onShowAll={onShowAllCategories}
             onHideAll={onHideAllCategories}
           />
+
+          <div className="px-3 pb-3">
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <div className="flex items-center gap-1.5 text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                <TagIcon className="size-3.5" />
+                {t("map.labels")}
+              </div>
+              {activeLabelIds.length > 0 ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  className="h-6 px-1.5 text-xs"
+                  onClick={onClearLabels}
+                >
+                  {t("map.all")}
+                </Button>
+              ) : null}
+            </div>
+            <div className="flex flex-wrap gap-1">
+              {visibleLabels.map((label) => {
+                const isActive = activeLabelIds.includes(label._id)
+                const count = labelCounts[label._id] ?? 0
+
+                return (
+                  <button
+                    key={label._id}
+                    type="button"
+                    onClick={() => onToggleLabel(label._id)}
+                    className={cn(
+                      "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs transition-colors",
+                      isActive
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "bg-muted/40 hover:bg-muted"
+                    )}
+                  >
+                    <span
+                      className="size-1.5 rounded-full"
+                      style={{
+                        backgroundColor:
+                          PLACE_CATEGORY_META[label.category].color,
+                      }}
+                    />
+                    {labelName(label)}
+                    {count > 0 ? (
+                      <span className="text-muted-foreground">{count}</span>
+                    ) : null}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
         </AccordionContent>
       </AccordionItem>
 
@@ -122,10 +206,10 @@ export function MapSidePanel({
         <AccordionTrigger className="px-2 hover:no-underline">
           <span className="flex items-center gap-2">
             <HeartIcon className="size-4 text-red-500" />
-            My places
-            {favourites ? (
+            {t("map.myPlaces")}
+            {isAuthenticated ? (
               <Badge variant="secondary" className="ml-1">
-                {favourites.length}
+                {savedCount}
               </Badge>
             ) : null}
           </span>
@@ -133,57 +217,105 @@ export function MapSidePanel({
         <AccordionContent className="px-1">
           {!isAuthenticated ? (
             <p className="px-2 py-3 text-sm text-muted-foreground">
-              Sign in to save places.
+              {t("map.signInToSave")}
             </p>
-          ) : favourites === undefined ? (
+          ) : favourites === undefined || savedPlaces === undefined ? (
+            <p className="px-2 py-3 text-sm text-muted-foreground">Loading…</p>
+          ) : savedCount === 0 ? (
             <p className="px-2 py-3 text-sm text-muted-foreground">
-              Loading…
-            </p>
-          ) : favourites.length === 0 ? (
-            <p className="px-2 py-3 text-sm text-muted-foreground">
-              No saved places yet.
+              {t("map.noSaved")}
             </p>
           ) : (
-            <ul className="space-y-1">
-              {favourites.map((favourite) => (
-                <li key={favourite._id}>
-                  <div className="group flex items-start gap-1 rounded-lg px-1 py-1.5 hover:bg-sidebar-accent">
-                    <button
-                      type="button"
-                      className="min-w-0 flex-1 text-left"
-                      onClick={() =>
-                        handleSelectPlace({
-                          id: `favourite:${favourite._id}`,
-                          label: favourite.label,
-                          subtitle: favourite.subtitle,
-                          lat: favourite.lat,
-                          lng: favourite.lng,
-                          source: "recent",
-                          externalId: favourite.externalId,
-                        })
-                      }
-                    >
-                      <div className="truncate text-sm font-medium">
-                        {favourite.name}
-                      </div>
-                      <div className="truncate text-xs text-muted-foreground">
-                        {favourite.subtitle ?? favourite.label}
-                      </div>
-                    </button>
-                    <Button
-                      type="button"
-                      size="icon-sm"
-                      variant="ghost"
-                      className="opacity-0 group-hover:opacity-100"
-                      aria-label={`Remove ${favourite.name}`}
-                      onClick={() => void handleRemove(favourite._id)}
-                    >
-                      <Trash2Icon className="size-4" />
-                    </Button>
-                  </div>
-                </li>
-              ))}
-            </ul>
+            <div className="space-y-3">
+              {savedPlaces.length > 0 ? (
+                <div>
+                  <p className="mb-1.5 px-1 text-xs font-medium text-muted-foreground">
+                    {t("map.savedPlaces")}
+                  </p>
+                  <ul className="space-y-1">
+                    {savedPlaces.map((entry) => (
+                      <li key={entry._id}>
+                        <div className="group flex items-start gap-1 rounded-lg px-1 py-1.5 hover:bg-sidebar-accent">
+                          <button
+                            type="button"
+                            className="flex min-w-0 flex-1 items-center gap-2 text-left"
+                            onClick={() => {
+                              onSelectSavedPlace(entry.placeId)
+                              closeMobileSidebar()
+                            }}
+                          >
+                            <MapPinIcon className="size-4 shrink-0 text-muted-foreground" />
+                            <span className="truncate text-sm font-medium">
+                              {entry.placeName ?? "…"}
+                            </span>
+                          </button>
+                          <Button
+                            type="button"
+                            size="icon-sm"
+                            variant="ghost"
+                            className="opacity-0 group-hover:opacity-100"
+                            aria-label={`Remove ${entry.placeName ?? "place"}`}
+                            onClick={() =>
+                              void toggleSavedPlace({ placeId: entry.placeId })
+                            }
+                          >
+                            <Trash2Icon className="size-4" />
+                          </Button>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+
+              {favourites.length > 0 ? (
+                <div>
+                  <p className="mb-1.5 px-1 text-xs font-medium text-muted-foreground">
+                    Favourites
+                  </p>
+                  <ul className="space-y-1">
+                    {favourites.map((favourite) => (
+                      <li key={favourite._id}>
+                        <div className="group flex items-start gap-1 rounded-lg px-1 py-1.5 hover:bg-sidebar-accent">
+                          <button
+                            type="button"
+                            className="min-w-0 flex-1 text-left"
+                            onClick={() =>
+                              handleSelectPlace({
+                                id: `favourite:${favourite._id}`,
+                                label: favourite.label,
+                                subtitle: favourite.subtitle,
+                                lat: favourite.lat,
+                                lng: favourite.lng,
+                                source: "recent",
+                                externalId: favourite.externalId,
+                              })
+                            }
+                          >
+                            <div className="truncate text-sm font-medium">
+                              {favourite.name}
+                            </div>
+                            <div className="truncate text-xs text-muted-foreground">
+                              {favourite.subtitle ?? favourite.label}
+                            </div>
+                          </button>
+                          <Button
+                            type="button"
+                            size="icon-sm"
+                            variant="ghost"
+                            className="opacity-0 group-hover:opacity-100"
+                            aria-label={`Remove ${favourite.name}`}
+                            onClick={() => void handleRemove(favourite._id)}
+                          >
+                            <Trash2Icon className="size-4" />
+                          </Button>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+            </div>
           )}
         </AccordionContent>
       </AccordionItem>
@@ -192,9 +324,8 @@ export function MapSidePanel({
         <AccordionTrigger className="px-2 hover:no-underline">
           <span className="flex items-center gap-2">
             <ClockIcon className="size-4 text-muted-foreground" />
-            Recents
-            {isAuthenticated &&
-            (recentSearches || recentCategories) ? (
+            {t("map.recents")}
+            {isAuthenticated && (recentSearches || recentCategories) ? (
               <Badge variant="secondary" className="ml-1">
                 {(recentCategories?.length ?? 0) +
                   (recentSearches?.length ?? 0)}
@@ -205,31 +336,24 @@ export function MapSidePanel({
         <AccordionContent className="px-1">
           {!isAuthenticated ? (
             <p className="px-2 py-3 text-sm text-muted-foreground">
-              Sign in to see recents.
+              {t("map.signInToSave")}
             </p>
-          ) : recentSearches === undefined ||
-            recentCategories === undefined ? (
-            <p className="px-2 py-3 text-sm text-muted-foreground">
-              Loading…
-            </p>
+          ) : recentSearches === undefined || recentCategories === undefined ? (
+            <p className="px-2 py-3 text-sm text-muted-foreground">Loading…</p>
           ) : recentCategories.length === 0 && recentSearches.length === 0 ? (
             <p className="px-2 py-3 text-sm text-muted-foreground">
-              No recent searches yet.
+              {t("map.noSaved")}
             </p>
           ) : (
             <div className="space-y-3">
               {recentCategories.length > 0 ? (
                 <div>
                   <p className="mb-1.5 px-1 text-xs font-medium text-muted-foreground">
-                    Categories
+                    {t("map.categories")}
                   </p>
                   <div className="flex flex-wrap gap-1 px-1">
                     {recentCategories.map((entry) => {
                       const meta = PLACE_CATEGORY_META[entry.category]
-                      const categoryEntry = PLACE_CATEGORY_LIST.find(
-                        (item) => item.id === entry.category,
-                      )
-                      const Icon = categoryEntry?.icon
 
                       return (
                         <button
@@ -238,15 +362,11 @@ export function MapSidePanel({
                           onClick={() => handleSelectCategory(entry.category)}
                           className="inline-flex items-center gap-1 rounded-full border bg-muted/40 px-2 py-0.5 text-xs hover:bg-muted"
                         >
-                          {Icon ? (
-                            <span
-                              className="flex size-4 items-center justify-center rounded-full text-white"
-                              style={{ backgroundColor: meta.color }}
-                            >
-                              <Icon className="size-2.5" />
-                            </span>
-                          ) : null}
-                          {meta.label}
+                          <span
+                            className="size-2 rounded-full"
+                            style={{ backgroundColor: meta.color }}
+                          />
+                          {categoryName(entry.category)}
                         </button>
                       )
                     })}
@@ -257,7 +377,7 @@ export function MapSidePanel({
               {recentSearches.length > 0 ? (
                 <div>
                   <p className="mb-1.5 px-1 text-xs font-medium text-muted-foreground">
-                    Places
+                    {t("map.recents")}
                   </p>
                   <ul className="space-y-1">
                     {recentSearches.map((entry) => (

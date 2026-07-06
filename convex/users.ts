@@ -12,7 +12,7 @@ const currentUserValidator = v.union(
     email: v.optional(v.string()),
     role: userRoleValidator,
     isAdmin: v.boolean(),
-  }),
+  })
 )
 
 export const getCurrent = query({

@@ -14,7 +14,7 @@ const NUMERIC_COMPARISON_OPS = new Set([">=", "<=", ">", "<", "==", "!="])
 /** Read a feature property only when MapLibre reports it as a number. */
 function numericFeatureProperty(
   property: string,
-  fallback: number,
+  fallback: number
 ): ExpressionSpecification {
   return [
     "case",
@@ -52,7 +52,9 @@ function isNumericLiteral(value: unknown): value is number {
  * OpenFreeMap filters compare raw feature properties to numbers. Null tile
  * values trigger "Expected number, found null" during filter evaluation.
  */
-function hardenNumericComparisons(expression: unknown): ExpressionSpecification {
+function hardenNumericComparisons(
+  expression: unknown
+): ExpressionSpecification {
   if (!Array.isArray(expression)) {
     return expression as ExpressionSpecification
   }
@@ -115,12 +117,12 @@ export function patchOpenFreeMapStyle(map: maplibregl.Map) {
   map.setPaintProperty(
     "building-3d",
     "fill-extrusion-height",
-    buildingExtrusionHeight(),
+    buildingExtrusionHeight()
   )
   map.setPaintProperty(
     "building-3d",
     "fill-extrusion-base",
-    numericFeatureProperty("render_min_height", 0),
+    numericFeatureProperty("render_min_height", 0)
   )
 }
 

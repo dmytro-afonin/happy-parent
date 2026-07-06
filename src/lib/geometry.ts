@@ -14,7 +14,7 @@ export function computeCentroid(vertices: LatLng[]): LatLng {
       lat: acc.lat + vertex.lat,
       lng: acc.lng + vertex.lng,
     }),
-    { lat: 0, lng: 0 },
+    { lat: 0, lng: 0 }
   )
 
   return {
@@ -39,7 +39,9 @@ export function verticesToGeoJsonRing(vertices: LatLng[]): number[][] {
   return ring
 }
 
-export function geoJsonRingToVertices(ring: number[][] | null | undefined): LatLng[] {
+export function geoJsonRingToVertices(
+  ring: number[][] | null | undefined
+): LatLng[] {
   if (!ring || ring.length === 0) {
     return []
   }
@@ -82,7 +84,7 @@ export function geoJsonRingToVertices(ring: number[][] | null | undefined): LatL
 export function validatePlaceGeometry(
   geometryType: GeometryType,
   point: LatLng | null,
-  vertices: LatLng[],
+  vertices: LatLng[]
 ): string | null {
   if (geometryType === "point") {
     if (!point) {

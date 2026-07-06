@@ -3,19 +3,24 @@
 import { Link } from "@tanstack/react-router"
 import { Show, SignInButton, SignUpButton } from "@clerk/react"
 
+import { LanguageSwitcher } from "@/components/language-switcher"
 import { ModeToggle } from "@/components/mode-toggle"
 import { UserMenu } from "@/components/user-menu"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { useAdminStatus } from "@/hooks/use-admin-status"
+import { useI18n } from "@/lib/i18n"
+import type { MessageKey } from "@/lib/i18n"
 
-const navItems = [
-  { to: "/", label: "Home", exact: true },
-  { to: "/map", label: "Map" },
-] as const
+const navItems: Array<{ to: string; labelKey: MessageKey; exact?: boolean }> = [
+  { to: "/", labelKey: "nav.home", exact: true },
+  { to: "/map", labelKey: "nav.map" },
+  { to: "/translations", labelKey: "nav.translations" },
+]
 
 export function AppHeader() {
   const { isAdmin } = useAdminStatus()
+  const { t } = useI18n()
 
   return (
     <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -27,10 +32,10 @@ export function AppHeader() {
             <Button key={item.to} variant="ghost" size="sm" asChild>
               <Link
                 to={item.to}
-                activeOptions={{ exact: "exact" in item ? item.exact : false }}
+                activeOptions={{ exact: item.exact ?? false }}
                 activeProps={{ className: "bg-accent text-accent-foreground" }}
               >
-                {item.label}
+                {t(item.labelKey)}
               </Link>
             </Button>
           ))}
@@ -40,21 +45,22 @@ export function AppHeader() {
                 to="/admin"
                 activeProps={{ className: "bg-accent text-accent-foreground" }}
               >
-                Admin
+                {t("nav.admin")}
               </Link>
             </Button>
           ) : null}
         </nav>
         <div className="ml-auto flex items-center gap-2">
+          <LanguageSwitcher />
           <Show when="signed-out">
             <ModeToggle />
             <SignInButton mode="modal">
               <Button variant="ghost" size="sm">
-                Sign in
+                {t("auth.signIn")}
               </Button>
             </SignInButton>
             <SignUpButton mode="modal">
-              <Button size="sm">Sign up</Button>
+              <Button size="sm">{t("auth.signUp")}</Button>
             </SignUpButton>
           </Show>
           <Show when="signed-in">

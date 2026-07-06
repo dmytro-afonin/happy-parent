@@ -65,7 +65,8 @@ export function AdminCoordinateEditor({
     )
   }
 
-  const rows = vertices.length > 0 ? vertices : [EMPTY_VERTEX, EMPTY_VERTEX, EMPTY_VERTEX]
+  const rows =
+    vertices.length > 0 ? vertices : [EMPTY_VERTEX, EMPTY_VERTEX, EMPTY_VERTEX]
 
   return (
     <div className="space-y-3">
@@ -117,7 +118,9 @@ export function AdminCoordinateEditor({
               variant="ghost"
               disabled={rows.length <= 3}
               onClick={() => {
-                onVerticesChange(rows.filter((_, rowIndex) => rowIndex !== index))
+                onVerticesChange(
+                  rows.filter((_, rowIndex) => rowIndex !== index)
+                )
               }}
             >
               <Trash2Icon className="size-4" />

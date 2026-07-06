@@ -9,10 +9,16 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TranslationsRouteImport } from './routes/translations'
 import { Route as MapRouteImport } from './routes/map'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 
+const TranslationsRoute = TranslationsRouteImport.update({
+  id: '/translations',
+  path: '/translations',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MapRoute = MapRouteImport.update({
   id: '/map',
   path: '/map',
@@ -33,34 +39,45 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/map': typeof MapRoute
+  '/translations': typeof TranslationsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/map': typeof MapRoute
+  '/translations': typeof TranslationsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/map': typeof MapRoute
+  '/translations': typeof TranslationsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/admin' | '/map'
+  fullPaths: '/' | '/admin' | '/map' | '/translations'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/admin' | '/map'
-  id: '__root__' | '/' | '/admin' | '/map'
+  to: '/' | '/admin' | '/map' | '/translations'
+  id: '__root__' | '/' | '/admin' | '/map' | '/translations'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRoute
   MapRoute: typeof MapRoute
+  TranslationsRoute: typeof TranslationsRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/translations': {
+      id: '/translations'
+      path: '/translations'
+      fullPath: '/translations'
+      preLoaderRoute: typeof TranslationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/map': {
       id: '/map'
       path: '/map'
@@ -89,6 +106,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRoute,
   MapRoute: MapRoute,
+  TranslationsRoute: TranslationsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -20,7 +20,10 @@ type PlaceImageUploaderProps = {
   onChange: (photos: UploadedPlacePhoto[]) => void
 }
 
-export function PlaceImageUploader({ photos, onChange }: PlaceImageUploaderProps) {
+export function PlaceImageUploader({
+  photos,
+  onChange,
+}: PlaceImageUploaderProps) {
   const inputRef = useRef<HTMLInputElement>(null)
   const getUploadAuth = useAction(api.imagekit.getUploadAuth)
   const [uploading, setUploading] = useState(false)
@@ -68,7 +71,7 @@ export function PlaceImageUploader({ photos, onChange }: PlaceImageUploaderProps
       setError(
         uploadError instanceof Error
           ? uploadError.message
-          : "Image upload failed",
+          : "Image upload failed"
       )
     } finally {
       setUploading(false)
@@ -125,8 +128,8 @@ export function PlaceImageUploader({ photos, onChange }: PlaceImageUploaderProps
                 onClick={() =>
                   onChange(
                     photos.filter(
-                      (entry) => entry.imageKitFileId !== photo.imageKitFileId,
-                    ),
+                      (entry) => entry.imageKitFileId !== photo.imageKitFileId
+                    )
                   )
                 }
               >

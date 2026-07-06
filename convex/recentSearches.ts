@@ -37,14 +37,14 @@ export const search = query({
     const byLabel = await ctx.db
       .query("recentSearches")
       .withSearchIndex("search_label", (q) =>
-        q.search("label", trimmed).eq("userId", userId),
+        q.search("label", trimmed).eq("userId", userId)
       )
       .take(limit)
 
     const byQuery = await ctx.db
       .query("recentSearches")
       .withSearchIndex("search_query", (q) =>
-        q.search("query", trimmed).eq("userId", userId),
+        q.search("query", trimmed).eq("userId", userId)
       )
       .take(limit)
 
@@ -121,7 +121,7 @@ export const record = mutation({
     if (overflow.length > MAX_RECENT_SEARCHES) {
       const deleteCount = overflow.length - MAX_RECENT_SEARCHES
       for (const entry of overflow.slice(0, deleteCount)) {
-        await ctx.db.delete(entry._id)
+        await ctx.db.delete("recentSearches", entry._id)
       }
     }
 

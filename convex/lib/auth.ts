@@ -1,5 +1,1 @@
-export {
-  ensureAuthUser,
-  getAuthUserId,
-  requireAuthUserId,
-} from "./users"
+export { ensureAuthUser, getAuthUserId, requireAuthUserId } from "./users"

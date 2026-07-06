@@ -1,11 +1,9 @@
-import maplibregl from "maplibre-gl"
+import type maplibregl from "maplibre-gl"
 
-import {
-  PLACE_CATEGORIES,
-  PLACE_CATEGORY_META,
-  type PlaceCategoryId,
-} from "@/lib/place-categories"
-import { verticesToGeoJsonRing, type LatLng } from "@/lib/geometry"
+import { PLACE_CATEGORIES, PLACE_CATEGORY_META } from "@/lib/place-categories"
+import type { PlaceCategoryId } from "@/lib/place-categories"
+import { verticesToGeoJsonRing } from "@/lib/geometry"
+import type { LatLng } from "@/lib/geometry"
 import { isMapAlive } from "@/lib/map-utils"
 import {
   ensureLayer,
@@ -16,7 +14,6 @@ import {
   categoryMarkerImageId,
   ensureCategoryMarkerImages,
 } from "@/lib/map/category-marker-icons"
-import type { PlaceMapPopupController } from "@/lib/map/place-map-popup"
 
 export type MapPlace = {
   _id: string
@@ -26,6 +23,9 @@ export type MapPlace = {
   lat: number
   lng: number
   category: PlaceCategoryId
+  labelIds?: string[]
+  status?: "pending" | "approved" | "rejected"
+  isOwn?: boolean
   geometryType?: "point" | "polygon"
   boundary?: LatLng[]
   coverPhotoUrl?: string
@@ -66,7 +66,7 @@ function sourceId(category: PlaceCategoryId) {
 }
 
 export function getPlaceLayerIds(
-  categories: readonly PlaceCategoryId[] = PLACE_CATEGORIES,
+  categories: readonly PlaceCategoryId[] = PLACE_CATEGORIES
 ) {
   return categories.flatMap((category) => [
     pointLayerId(category),
@@ -77,7 +77,7 @@ export function getPlaceLayerIds(
 }
 
 export function getPlaceInteractiveLayerIds(
-  categories: readonly PlaceCategoryId[] = PLACE_CATEGORIES,
+  categories: readonly PlaceCategoryId[] = PLACE_CATEGORIES
 ) {
   return categories.flatMap((category) => [
     pointLayerId(category),
@@ -113,12 +113,17 @@ function polygonLineOpacityPaint(selectedPlaceId: string | null) {
 }
 
 function placeToFeatures(place: MapPlace): GeoJSON.Feature[] {
-  if (place.geometryType === "polygon" && place.boundary && place.boundary.length >= 3) {
+  if (
+    place.geometryType === "polygon" &&
+    place.boundary &&
+    place.boundary.length >= 3
+  ) {
     const properties = {
       id: place._id,
       name: place.name,
       description: place.description ?? "",
       category: place.category,
+      status: place.status ?? "approved",
     }
 
     return [
@@ -159,6 +164,7 @@ function placeToFeatures(place: MapPlace): GeoJSON.Feature[] {
         name: place.name,
         description: place.description ?? "",
         category: place.category,
+        status: place.status ?? "approved",
         geometryType: "point",
       },
     },
@@ -180,11 +186,7 @@ function groupPlacesByCategory(places: MapPlace[]) {
 }
 
 function removeCategoryLayers(map: maplibregl.Map, category: PlaceCategoryId) {
-  removeLayersAndSource(
-    map,
-    getPlaceLayerIds([category]),
-    sourceId(category),
-  )
+  removeLayersAndSource(map, getPlaceLayerIds([category]), sourceId(category))
 }
 
 export function clearPlaceLayers(map: maplibregl.Map) {
@@ -201,7 +203,7 @@ function upsertCategoryLayers(
   map: maplibregl.Map,
   category: PlaceCategoryId,
   categoryPlaces: MapPlace[],
-  selectedPlaceId: string | null,
+  selectedPlaceId: string | null
 ) {
   const source = sourceId(category)
   const features = categoryPlaces.flatMap(placeToFeatures)
@@ -211,16 +213,25 @@ function upsertCategoryLayers(
   }
 
   const pointFeatures = features.filter(
-    (feature) => feature.properties?.geometryType === "point",
+    (feature) => feature.properties?.geometryType === "point"
   )
   const polygonMarkerFeatures = features.filter(
-    (feature) => feature.properties?.geometryType === "polygon-marker",
+    (feature) => feature.properties?.geometryType === "polygon-marker"
   )
   const polygonFeatures = features.filter(
-    (feature) => feature.properties?.geometryType === "polygon",
+    (feature) => feature.properties?.geometryType === "polygon"
   )
 
   upsertGeoJsonSource(map, source, collection)
+
+  // Pending submissions render semi-transparent (visible only to their
+  // submitter and admins).
+  const pendingOpacityPaint = [
+    "case",
+    ["==", ["get", "status"], "approved"],
+    1,
+    0.55,
+  ] as maplibregl.ExpressionSpecification
 
   if (pointFeatures.length > 0) {
     ensureLayer(map, {
@@ -233,6 +244,9 @@ function upsertCategoryLayers(
         "icon-size": 0.55,
         "icon-allow-overlap": true,
         "icon-ignore-placement": true,
+      },
+      paint: {
+        "icon-opacity": pendingOpacityPaint,
       },
     })
   }
@@ -248,6 +262,9 @@ function upsertCategoryLayers(
         "icon-size": 0.55,
         "icon-allow-overlap": true,
         "icon-ignore-placement": true,
+      },
+      paint: {
+        "icon-opacity": pendingOpacityPaint,
       },
     })
   }
@@ -281,7 +298,7 @@ function upsertCategoryLayers(
 export function updatePlaceSelectionHighlight(
   map: maplibregl.Map,
   activeCategories: PlaceCategoryId[],
-  selectedPlaceId: string | null,
+  selectedPlaceId: string | null
 ) {
   if (!isMapAlive(map)) {
     return
@@ -295,7 +312,7 @@ export function updatePlaceSelectionHighlight(
       map.setPaintProperty(
         fillLayerId,
         "fill-opacity",
-        polygonFillOpacityPaint(selectedPlaceId),
+        polygonFillOpacityPaint(selectedPlaceId)
       )
     }
 
@@ -303,12 +320,12 @@ export function updatePlaceSelectionHighlight(
       map.setPaintProperty(
         lineLayerId,
         "line-width",
-        polygonLineWidthPaint(selectedPlaceId),
+        polygonLineWidthPaint(selectedPlaceId)
       )
       map.setPaintProperty(
         lineLayerId,
         "line-opacity",
-        polygonLineOpacityPaint(selectedPlaceId),
+        polygonLineOpacityPaint(selectedPlaceId)
       )
     }
   }
@@ -316,7 +333,7 @@ export function updatePlaceSelectionHighlight(
 
 export async function renderPlaceLayers(
   map: maplibregl.Map,
-  state: PlaceLayersState,
+  state: PlaceLayersState
 ) {
   await ensureCategoryMarkerImages(map)
 
@@ -350,7 +367,6 @@ export const placeLayerHandlers = {
 
 type PlaceLayerInteractionOptions = {
   map: maplibregl.Map
-  popupController: PlaceMapPopupController
   getState: () => PlaceLayersState
   onSelectPlace?: (place: MapPlace | null) => void
   onPlaceClick?: (place: MapPlace) => void
@@ -358,7 +374,6 @@ type PlaceLayerInteractionOptions = {
 
 export function bindPlaceLayerInteractions({
   map,
-  popupController,
   getState,
   onSelectPlace,
   onPlaceClick,
@@ -369,18 +384,19 @@ export function bindPlaceLayerInteractions({
     }
 
     const { places, activeCategories } = getState()
-    const layerIds = getPlaceInteractiveLayerIds(activeCategories).filter((id) =>
-      Boolean(map.getLayer(id)),
+    const layerIds = getPlaceInteractiveLayerIds(activeCategories).filter(
+      (id) => Boolean(map.getLayer(id))
     )
 
     if (layerIds.length === 0) {
       return
     }
 
-    const features = map.queryRenderedFeatures(event.point, { layers: layerIds })
+    const features = map.queryRenderedFeatures(event.point, {
+      layers: layerIds,
+    })
     const feature = features[0]
     if (!feature) {
-      popupController.hide()
       onSelectPlace?.(null)
       return
     }
@@ -397,13 +413,6 @@ export function bindPlaceLayerInteractions({
     onSelectPlace?.(place)
     updatePlaceSelectionHighlight(map, activeCategories, place._id)
 
-    const popupLocation =
-      place.geometryType === "polygon"
-        ? { lng: place.lng, lat: place.lat }
-        : event.lngLat
-
-    popupController.show(map, place, popupLocation)
-
     onPlaceClick?.(place)
   }
 
@@ -412,16 +421,18 @@ export function bindPlaceLayerInteractions({
       return
     }
 
-    const layerIds = getPlaceInteractiveLayerIds(getState().activeCategories).filter(
-      (id) => Boolean(map.getLayer(id)),
-    )
+    const layerIds = getPlaceInteractiveLayerIds(
+      getState().activeCategories
+    ).filter((id) => Boolean(map.getLayer(id)))
 
     if (layerIds.length === 0) {
       map.getCanvas().style.cursor = ""
       return
     }
 
-    const features = map.queryRenderedFeatures(event.point, { layers: layerIds })
+    const features = map.queryRenderedFeatures(event.point, {
+      layers: layerIds,
+    })
     map.getCanvas().style.cursor = features.length > 0 ? "pointer" : ""
   }
 

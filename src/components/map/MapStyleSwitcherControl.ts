@@ -5,8 +5,8 @@ import {
   DEFAULT_MAP_STYLE_ID,
   getMapStyle,
   MAP_STYLES,
-  type MapStyleId,
 } from "./map-styles"
+import type { MapStyleId } from "./map-styles"
 
 export class MapStyleSwitcherControl implements maplibregl.IControl {
   private container?: HTMLDivElement
@@ -17,7 +17,7 @@ export class MapStyleSwitcherControl implements maplibregl.IControl {
 
   constructor(
     initialStyleId: MapStyleId = DEFAULT_MAP_STYLE_ID,
-    onStyleChange?: (styleId: MapStyleId) => void,
+    onStyleChange?: (styleId: MapStyleId) => void
   ) {
     this.activeStyleId = initialStyleId
     this.onStyleChange = onStyleChange
