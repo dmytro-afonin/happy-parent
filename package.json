@@ -16,7 +16,7 @@
     "check": "prettier --check \"**/*.{ts,tsx,js,jsx}\"",
     "typecheck": "tsc --noEmit",
     "verify": "pnpm check && pnpm lint && pnpm test && pnpm typecheck",
-    "vercel-build": "pnpm verify && pnpm dlx convex deploy --cmd 'pnpm run build' --preview-run 'migrations:seedLabels'"
+    "vercel-build": "pnpm verify && node ./scripts/vercel-build.mjs"
   },
   "dependencies": {
     "@clerk/react": "^6.11.3",

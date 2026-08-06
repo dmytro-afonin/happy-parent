@@ -69,27 +69,24 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ## Deploy to Vercel
 
-1. Import the GitHub repo on Vercel
-2. Set environment variables from `.env.example`
-3. Build command: `pnpm build` (configured in `vercel.json`)
-4. Ensure Nitro plugin is present in `vite.config.ts`
+Build command is `pnpm vercel-build` (via `vercel.json`):
 
-### Preview deployments (branch previews)
+| `VERCEL_ENV` | Behavior |
+| --- | --- |
+| `production` | `convex deploy` (push functions/schema) then `pnpm build` |
+| `preview` / `development` | `pnpm build` only — uses `VITE_CONVEX_URL` from the Vercel env |
 
-With a preview-scoped `CONVEX_DEPLOY_KEY`, every branch build creates a
-**fresh Convex preview deployment** that starts with no environment variables
-and no data. Two things are required for previews to work while signed in:
+### Recommended split: keep current project for dev, separate project for prod
 
-1. In the Convex dashboard → project settings → **Default Environment
-   Variables**, add `CLERK_FRONTEND_API_URL` (enabled for *Preview*
-   deployments) pointing at the **same Clerk instance whose keys are used in
-   the Vercel Preview environment** (development keys `pk_test_…` →
-   `https://<slug>.clerk.accounts.dev`). If this is missing or points at a
-   different Clerk instance, Convex rejects the browser's auth token and the
-   client reconnects in a loop — signed-in pages hang on "Loading map…".
-2. Seed data: `vercel.json` passes `--preview-run 'migrations:seedLabels'` to
-   `convex deploy`, which seeds place types and translations on every fresh
-   preview deployment (production deploys are unaffected).
+1. **Dev (current Convex project)** — local `convex dev`, Vercel Development if you use it, Clerk Development keys.
+2. **Prod (new Convex project)** — create a second Convex project; deploy once with a production deploy key; set `CLERK_FRONTEND_API_URL` (and other Convex env vars) on that project's **Production** deployment; use Clerk **Production** keys.
+3. **Vercel Production** — `CONVEX_DEPLOY_KEY` for the **prod** project; Clerk Production keys; leave Convex deploy to `vercel-build`.
+4. **Vercel Preview** — same production data and auth as prod:
+   - Set `VITE_CONVEX_URL` (and `VITE_CONVEX_SITE_URL` if used) to the **prod** Convex URLs
+   - Set Clerk Preview env to the **same Production** Clerk keys as prod
+   - Do **not** attach a preview-scoped `CONVEX_DEPLOY_KEY` (or disconnect Preview from the Convex marketplace integration’s preview deploys). Preview builds must not create empty Convex backends or push branch code onto production.
+
+Preview therefore shows production data. Mutations from a preview URL hit production — that is intentional with this model.
 
 ## Deferred (not in initial scaffold)
 
