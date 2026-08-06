@@ -19,8 +19,15 @@ export function useAdminStatus() {
     }
   }, [ensureCurrentUser, isAuthenticated])
 
+  const isLoading =
+    isAuthLoading || (isAuthenticated && adminStatus === undefined)
+
+  // Require an authenticated session AND an explicit true from the server.
+  // Never treat a cached query result as admin after sign-out.
+  const isAdmin = isAuthenticated && !isLoading && adminStatus?.isAdmin === true
+
   return {
-    isAdmin: adminStatus?.isAdmin ?? false,
-    isLoading: isAuthLoading || (isAuthenticated && adminStatus === undefined),
+    isAdmin,
+    isLoading,
   }
 }

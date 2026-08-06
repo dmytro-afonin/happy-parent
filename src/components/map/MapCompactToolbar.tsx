@@ -22,8 +22,9 @@ export function MapCompactToolbar({
   onOpenSearch,
   onAddPlace,
 }: MapCompactToolbarProps) {
-  const { isAdmin } = useAdminStatus()
+  const { isAdmin, isLoading: isAdminLoading } = useAdminStatus()
   const { t } = useI18n()
+  const showAdminLinks = !isAdminLoading && isAdmin
 
   return (
     <header className="flex h-11 shrink-0 items-center gap-1.5 border-b bg-background/95 px-2 backdrop-blur supports-[backdrop-filter]:bg-background/60 sm:gap-2 sm:px-3">
@@ -35,10 +36,15 @@ export function MapCompactToolbar({
         <Button variant="secondary" size="sm" className="h-8 px-2" asChild>
           <Link to="/map">{t("nav.map")}</Link>
         </Button>
-        {isAdmin ? (
-          <Button variant="ghost" size="sm" className="h-8 px-2" asChild>
-            <Link to="/admin">{t("nav.admin")}</Link>
-          </Button>
+        {showAdminLinks ? (
+          <>
+            <Button variant="ghost" size="sm" className="h-8 px-2" asChild>
+              <Link to="/translations">{t("nav.translations")}</Link>
+            </Button>
+            <Button variant="ghost" size="sm" className="h-8 px-2" asChild>
+              <Link to="/admin">{t("nav.admin")}</Link>
+            </Button>
+          </>
         ) : null}
       </nav>
       <MapSearchBar onOpenSearch={onOpenSearch} />

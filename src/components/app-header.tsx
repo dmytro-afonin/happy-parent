@@ -18,8 +18,10 @@ const navItems: Array<{ to: string; labelKey: MessageKey; exact?: boolean }> = [
 ]
 
 export function AppHeader() {
-  const { isAdmin } = useAdminStatus()
+  const { isAdmin, isLoading: isAdminLoading } = useAdminStatus()
   const { t } = useI18n()
+  // Only show admin-only links after status is resolved to true.
+  const showAdminLinks = !isAdminLoading && isAdmin
 
   return (
     <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -38,7 +40,7 @@ export function AppHeader() {
               </Link>
             </Button>
           ))}
-          {isAdmin ? (
+          {showAdminLinks ? (
             <>
               <Button variant="ghost" size="sm" asChild>
                 <Link

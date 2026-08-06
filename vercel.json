@@ -1,5 +1,5 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "pnpm dlx convex deploy --cmd 'pnpm run build' --preview-run 'migrations:seedLabels'",
+  "buildCommand": "pnpm vercel-build",
   "framework": "tanstack-start"
 }
