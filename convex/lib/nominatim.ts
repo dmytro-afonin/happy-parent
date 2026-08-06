@@ -1,4 +1,4 @@
-type NominatimAddress = Record<string, string>
+type NominatimAddress = Record<string, string | undefined>
 
 type NominatimPlace = {
   name?: string

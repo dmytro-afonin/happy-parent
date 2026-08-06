@@ -23,6 +23,8 @@ export default [
       "convex/_generated/**",
       ".output/**",
       "node_modules/**",
+      // Vendored agent skill files, not application code.
+      ".agents/**",
     ],
   },
 ]

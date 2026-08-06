@@ -49,7 +49,7 @@ export function geoJsonRingToVertices(
   const vertices: LatLng[] = []
 
   for (const coord of ring) {
-    if (!coord || coord.length < 2) {
+    if (coord.length < 2) {
       continue
     }
 

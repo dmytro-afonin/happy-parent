@@ -1,11 +1,9 @@
 import { mutation, query } from "./_generated/server"
 import { v } from "convex/values"
 
-import { internal } from "./_generated/api"
 import { localeValidator } from "./lib/locales"
 import { isPlaceCategoryId } from "./lib/placeCategories"
-import { isAdminRole } from "./lib/roles"
-import { ensureAuthUser } from "./lib/users"
+import { requireAdminUser } from "./lib/users"
 
 const translationEntityValidator = v.union(
   v.literal("category"),
@@ -13,8 +11,9 @@ const translationEntityValidator = v.union(
 )
 
 /**
- * Approved translations of categories and labels for one locale. The UI falls
- * back to English base names when no approved translation exists.
+ * Approved translations of categories and place-type labels for one locale.
+ * The UI falls back to English base names when no approved translation
+ * exists.
  */
 export const listApproved = query({
   args: {
@@ -44,11 +43,10 @@ export const listApproved = query({
 })
 
 /**
- * Suggest a translation for a category or label. Admin suggestions are
- * applied immediately (replacing the previous approved value); user
- * suggestions go through moderation.
+ * Set a translation for a category or place-type label. Admin-only: the new
+ * value is applied immediately, replacing the previous approved value.
  */
-export const suggest = mutation({
+export const set = mutation({
   args: {
     entityType: translationEntityValidator,
     entityKey: v.string(),
@@ -57,9 +55,7 @@ export const suggest = mutation({
   },
   returns: v.id("translations"),
   handler: async (ctx, args) => {
-    const userId = await ensureAuthUser(ctx)
-    const user = await ctx.db.get("users", userId)
-    const isAdmin = isAdminRole(user?.role)
+    const admin = await requireAdminUser(ctx)
 
     const value = args.value.trim()
     if (value.length === 0) {
@@ -79,48 +75,34 @@ export const suggest = mutation({
         .withIndex("by_slug", (q) => q.eq("slug", args.entityKey))
         .unique()
       if (!label) {
-        throw new Error("Unknown label")
+        throw new Error("Unknown place type")
       }
     }
 
-    const status = isAdmin ? ("approved" as const) : ("pending" as const)
+    const existing = await ctx.db
+      .query("translations")
+      .withIndex("by_entity", (q) =>
+        q
+          .eq("entityType", args.entityType)
+          .eq("entityKey", args.entityKey)
+          .eq("locale", args.locale)
+      )
+      .collect()
 
-    if (status === "approved") {
-      const existing = await ctx.db
-        .query("translations")
-        .withIndex("by_entity", (q) =>
-          q
-            .eq("entityType", args.entityType)
-            .eq("entityKey", args.entityKey)
-            .eq("locale", args.locale)
-        )
-        .collect()
-
-      for (const entry of existing) {
-        if (entry.status === "approved") {
-          await ctx.db.delete("translations", entry._id)
-        }
+    for (const entry of existing) {
+      if (entry.status === "approved") {
+        await ctx.db.delete("translations", entry._id)
       }
     }
 
-    const translationId = await ctx.db.insert("translations", {
+    return await ctx.db.insert("translations", {
       entityType: args.entityType,
       entityKey: args.entityKey,
       locale: args.locale,
       value,
-      status,
-      createdBy: userId,
+      status: "approved",
+      createdBy: admin._id,
       createdAt: Date.now(),
     })
-
-    if (status === "pending") {
-      await ctx.scheduler.runAfter(0, internal.emails.notifyModerationRequest, {
-        kind: "translation",
-        summary: `${args.entityType} "${args.entityKey}" → [${args.locale}] ${value}`,
-        submitterName: user?.name ?? user?.email,
-      })
-    }
-
-    return translationId
   },
 })

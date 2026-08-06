@@ -8,7 +8,10 @@ export function isMapAlive(
   }
 
   try {
-    return map.getStyle() != null
+    // getStyle() is typed as non-null but returns undefined once the map is
+    // destroyed, hence the widening assertion.
+    const style = map.getStyle() as maplibregl.StyleSpecification | undefined
+    return style != null
   } catch {
     return false
   }

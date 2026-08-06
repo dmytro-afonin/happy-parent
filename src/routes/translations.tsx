@@ -2,14 +2,14 @@
 
 import { useState } from "react"
 import { createFileRoute } from "@tanstack/react-router"
-import { Show, SignInButton } from "@clerk/react"
-import { useConvexAuth, useMutation, useQuery } from "convex/react"
+import { useMutation, useQuery } from "convex/react"
 import { CheckIcon, Loader2Icon, SendIcon } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import { useAdminStatus } from "@/hooks/use-admin-status"
 import { useLabels } from "@/hooks/use-localized-catalog"
 import { LOCALE_NAMES, SUPPORTED_LOCALES, useI18n } from "@/lib/i18n"
 import type { Locale } from "@/lib/i18n"
@@ -23,7 +23,7 @@ export const Route = createFileRoute("/translations")({
 
 function TranslationsPage() {
   const { t, locale } = useI18n()
-  const { isAuthenticated } = useConvexAuth()
+  const { isAdmin } = useAdminStatus()
   const [targetLocale, setTargetLocale] = useState<Locale>(
     locale === "en" ? "pl" : locale
   )
@@ -46,15 +46,9 @@ function TranslationsPage() {
           {t("translations.title")}
         </h1>
         <p className="text-muted-foreground">{t("translations.intro")}</p>
-        {!isAuthenticated ? (
+        {!isAdmin ? (
           <p className="text-sm text-muted-foreground">
-            <Show when="signed-out">
-              <SignInButton mode="modal">
-                <button type="button" className="underline">
-                  {t("translations.signIn")}
-                </button>
-              </SignInButton>
-            </Show>
+            {t("translations.adminOnly")}
           </p>
         ) : null}
       </div>
@@ -93,7 +87,7 @@ function TranslationsPage() {
               baseName={PLACE_CATEGORY_META[category].label}
               currentValue={approvedByKey.get(`category:${category}`)}
               locale={targetLocale}
-              canSuggest={isAuthenticated}
+              canEdit={isAdmin}
               accentColor={PLACE_CATEGORY_META[category].color}
             />
           ))}
@@ -113,7 +107,7 @@ function TranslationsPage() {
               baseName={label.name}
               currentValue={approvedByKey.get(`label:${label.slug}`)}
               locale={targetLocale}
-              canSuggest={isAuthenticated}
+              canEdit={isAdmin}
               accentColor={PLACE_CATEGORY_META[label.category].color}
             />
           ))}
@@ -129,7 +123,7 @@ type TranslationRowProps = {
   baseName: string
   currentValue: string | undefined
   locale: Locale
-  canSuggest: boolean
+  canEdit: boolean
   accentColor: string
 }
 
@@ -139,11 +133,11 @@ function TranslationRow({
   baseName,
   currentValue,
   locale,
-  canSuggest,
+  canEdit,
   accentColor,
 }: TranslationRowProps) {
   const { t } = useI18n()
-  const suggest = useMutation(api.translations.suggest)
+  const setTranslation = useMutation(api.translations.set)
   const [value, setValue] = useState("")
   const [submitting, setSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
@@ -158,7 +152,7 @@ function TranslationRow({
     setSubmitting(true)
     setError(null)
     try {
-      await suggest({ entityType, entityKey, locale, value: trimmed })
+      await setTranslation({ entityType, entityKey, locale, value: trimmed })
       setValue("")
       setSubmitted(true)
       window.setTimeout(() => setSubmitted(false), 3000)
@@ -166,7 +160,7 @@ function TranslationRow({
       setError(
         submitError instanceof Error
           ? submitError.message
-          : "Could not submit suggestion."
+          : "Could not save the translation."
       )
     } finally {
       setSubmitting(false)
@@ -186,7 +180,7 @@ function TranslationRow({
       <Badge variant="secondary" className="min-w-20 justify-center">
         {currentValue ?? "—"}
       </Badge>
-      {canSuggest ? (
+      {canEdit ? (
         <div className="flex min-w-48 flex-1 items-center gap-1.5">
           <Input
             value={value}

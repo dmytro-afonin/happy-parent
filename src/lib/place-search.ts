@@ -73,11 +73,7 @@ export function enrichResultsWithDistance(
         distanceLabel: formatDistance(distance),
       }
     })
-    .sort(
-      (left, right) =>
-        (left.distanceKm ?? Number.POSITIVE_INFINITY) -
-        (right.distanceKm ?? Number.POSITIVE_INFINITY)
-    )
+    .sort((left, right) => left.distanceKm - right.distanceKm)
 }
 
 export function mergeSearchResults(

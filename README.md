@@ -74,6 +74,23 @@ Open [http://localhost:3000](http://localhost:3000).
 3. Build command: `pnpm build` (configured in `vercel.json`)
 4. Ensure Nitro plugin is present in `vite.config.ts`
 
+### Preview deployments (branch previews)
+
+With a preview-scoped `CONVEX_DEPLOY_KEY`, every branch build creates a
+**fresh Convex preview deployment** that starts with no environment variables
+and no data. Two things are required for previews to work while signed in:
+
+1. In the Convex dashboard → project settings → **Default Environment
+   Variables**, add `CLERK_FRONTEND_API_URL` (enabled for *Preview*
+   deployments) pointing at the **same Clerk instance whose keys are used in
+   the Vercel Preview environment** (development keys `pk_test_…` →
+   `https://<slug>.clerk.accounts.dev`). If this is missing or points at a
+   different Clerk instance, Convex rejects the browser's auth token and the
+   client reconnects in a loop — signed-in pages hang on "Loading map…".
+2. Seed data: `vercel.json` passes `--preview-run 'migrations:seedLabels'` to
+   `convex deploy`, which seeds place types and translations on every fresh
+   preview deployment (production deploys are unaffected).
+
 ## Deferred (not in initial scaffold)
 
 - Place search (Photon / Nominatim)

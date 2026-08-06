@@ -220,7 +220,7 @@ export function AdminPlaceForm({ onCreated }: AdminPlaceFormProps) {
           </div>
 
           <div className="space-y-2">
-            <span className="text-sm font-medium">Labels</span>
+            <span className="text-sm font-medium">Place types</span>
             <div className="flex flex-wrap gap-1.5">
               {(labels ?? [])
                 .filter((label) => label.category === category)
@@ -247,7 +247,7 @@ export function AdminPlaceForm({ onCreated }: AdminPlaceFormProps) {
                 })}
             </div>
             <span className="text-xs text-muted-foreground">
-              Pick one or more labels describing this place.
+              Pick one or more place types describing this place.
             </span>
           </div>
         </CardContent>

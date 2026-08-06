@@ -33,12 +33,12 @@ const en = {
   "home.browseCategories": "Browse by category",
   "home.categoriesHint":
     "Three wide categories cover everything. Tap one to open the map.",
-  "home.browseLabels": "Or jump straight to a label",
+  "home.browseLabels": "Or jump straight to a place type",
   "home.labelsHint":
-    "Labels are the specific place types inside each category.",
+    "Place types are the specific kinds of places inside each category.",
 
   "map.categories": "Categories",
-  "map.labels": "Labels",
+  "map.labels": "Place types",
   "map.myPlaces": "My places",
   "map.savedPlaces": "Saved places",
   "map.recents": "Recents",
@@ -80,7 +80,7 @@ const en = {
   "suggest.name": "Name",
   "suggest.description": "Description",
   "suggest.category": "Category",
-  "suggest.labels": "Labels",
+  "suggest.labels": "Place types",
   "suggest.location": "Location",
   "suggest.useMapCenter": "Use current map center",
   "suggest.submit": "Submit for review",
@@ -92,15 +92,15 @@ const en = {
 
   "translations.title": "Translations",
   "translations.intro":
-    "Suggest better translations for categories and labels. Suggestions are reviewed by admins.",
+    "Manage translations for categories and place types. Changes apply immediately.",
   "translations.language": "Language",
   "translations.categories": "Categories",
-  "translations.labels": "Labels",
+  "translations.labels": "Place types",
   "translations.current": "Current",
-  "translations.suggestion": "Your suggestion",
-  "translations.submit": "Suggest",
-  "translations.submitted": "Suggestion submitted for review.",
-  "translations.signIn": "Sign in to suggest translations.",
+  "translations.suggestion": "New translation",
+  "translations.submit": "Save",
+  "translations.submitted": "Saved.",
+  "translations.adminOnly": "Only admins can edit translations.",
 } as const
 
 export type MessageKey = keyof typeof en
@@ -122,11 +122,12 @@ const pl: Record<MessageKey, string> = {
   "home.browseCategories": "Przeglądaj według kategorii",
   "home.categoriesHint":
     "Trzy szerokie kategorie obejmują wszystko. Wybierz jedną, aby otworzyć mapę.",
-  "home.browseLabels": "Albo przejdź od razu do etykiety",
-  "home.labelsHint": "Etykiety to konkretne typy miejsc w każdej kategorii.",
+  "home.browseLabels": "Albo przejdź od razu do typu miejsca",
+  "home.labelsHint":
+    "Typy miejsc to konkretne rodzaje miejsc w każdej kategorii.",
 
   "map.categories": "Kategorie",
-  "map.labels": "Etykiety",
+  "map.labels": "Typy miejsc",
   "map.myPlaces": "Moje miejsca",
   "map.savedPlaces": "Zapisane miejsca",
   "map.recents": "Ostatnie",
@@ -169,7 +170,7 @@ const pl: Record<MessageKey, string> = {
   "suggest.name": "Nazwa",
   "suggest.description": "Opis",
   "suggest.category": "Kategoria",
-  "suggest.labels": "Etykiety",
+  "suggest.labels": "Typy miejsc",
   "suggest.location": "Lokalizacja",
   "suggest.useMapCenter": "Użyj środka mapy",
   "suggest.submit": "Wyślij do moderacji",
@@ -181,15 +182,15 @@ const pl: Record<MessageKey, string> = {
 
   "translations.title": "Tłumaczenia",
   "translations.intro":
-    "Zaproponuj lepsze tłumaczenia kategorii i etykiet. Propozycje są sprawdzane przez adminów.",
+    "Zarządzaj tłumaczeniami kategorii i typów miejsc. Zmiany obowiązują natychmiast.",
   "translations.language": "Język",
   "translations.categories": "Kategorie",
-  "translations.labels": "Etykiety",
+  "translations.labels": "Typy miejsc",
   "translations.current": "Obecne",
-  "translations.suggestion": "Twoja propozycja",
-  "translations.submit": "Zaproponuj",
-  "translations.submitted": "Propozycja wysłana do moderacji.",
-  "translations.signIn": "Zaloguj się, aby proponować tłumaczenia.",
+  "translations.suggestion": "Nowe tłumaczenie",
+  "translations.submit": "Zapisz",
+  "translations.submitted": "Zapisano.",
+  "translations.adminOnly": "Tylko administratorzy mogą edytować tłumaczenia.",
 }
 
 const uk: Record<MessageKey, string> = {
@@ -209,11 +210,12 @@ const uk: Record<MessageKey, string> = {
   "home.browseCategories": "Перегляд за категоріями",
   "home.categoriesHint":
     "Три широкі категорії охоплюють усе. Оберіть одну, щоб відкрити мапу.",
-  "home.browseLabels": "Або перейдіть одразу до мітки",
-  "home.labelsHint": "Мітки — це конкретні типи місць у кожній категорії.",
+  "home.browseLabels": "Або перейдіть одразу до типу місця",
+  "home.labelsHint":
+    "Типи місць — це конкретні різновиди місць у кожній категорії.",
 
   "map.categories": "Категорії",
-  "map.labels": "Мітки",
+  "map.labels": "Типи місць",
   "map.myPlaces": "Мої місця",
   "map.savedPlaces": "Збережені місця",
   "map.recents": "Нещодавні",
@@ -256,7 +258,7 @@ const uk: Record<MessageKey, string> = {
   "suggest.name": "Назва",
   "suggest.description": "Опис",
   "suggest.category": "Категорія",
-  "suggest.labels": "Мітки",
+  "suggest.labels": "Типи місць",
   "suggest.location": "Розташування",
   "suggest.useMapCenter": "Використати центр мапи",
   "suggest.submit": "Надіслати на модерацію",
@@ -267,15 +269,15 @@ const uk: Record<MessageKey, string> = {
 
   "translations.title": "Переклади",
   "translations.intro":
-    "Запропонуйте кращі переклади категорій і міток. Пропозиції перевіряють адміни.",
+    "Керуйте перекладами категорій і типів місць. Зміни застосовуються одразу.",
   "translations.language": "Мова",
   "translations.categories": "Категорії",
-  "translations.labels": "Мітки",
+  "translations.labels": "Типи місць",
   "translations.current": "Поточний",
-  "translations.suggestion": "Ваша пропозиція",
-  "translations.submit": "Запропонувати",
-  "translations.submitted": "Пропозицію надіслано на модерацію.",
-  "translations.signIn": "Увійдіть, щоб пропонувати переклади.",
+  "translations.suggestion": "Новий переклад",
+  "translations.submit": "Зберегти",
+  "translations.submitted": "Збережено.",
+  "translations.adminOnly": "Лише адміністратори можуть редагувати переклади.",
 }
 
 const ru: Record<MessageKey, string> = {
@@ -295,11 +297,12 @@ const ru: Record<MessageKey, string> = {
   "home.browseCategories": "Просмотр по категориям",
   "home.categoriesHint":
     "Три широкие категории охватывают всё. Выберите одну, чтобы открыть карту.",
-  "home.browseLabels": "Или перейдите сразу к метке",
-  "home.labelsHint": "Метки — это конкретные типы мест в каждой категории.",
+  "home.browseLabels": "Или перейдите сразу к типу места",
+  "home.labelsHint":
+    "Типы мест — это конкретные разновидности мест в каждой категории.",
 
   "map.categories": "Категории",
-  "map.labels": "Метки",
+  "map.labels": "Типы мест",
   "map.myPlaces": "Мои места",
   "map.savedPlaces": "Сохранённые места",
   "map.recents": "Недавние",
@@ -342,7 +345,7 @@ const ru: Record<MessageKey, string> = {
   "suggest.name": "Название",
   "suggest.description": "Описание",
   "suggest.category": "Категория",
-  "suggest.labels": "Метки",
+  "suggest.labels": "Типы мест",
   "suggest.location": "Расположение",
   "suggest.useMapCenter": "Использовать центр карты",
   "suggest.submit": "Отправить на модерацию",
@@ -353,15 +356,16 @@ const ru: Record<MessageKey, string> = {
 
   "translations.title": "Переводы",
   "translations.intro":
-    "Предложите лучшие переводы категорий и меток. Предложения проверяют админы.",
+    "Управляйте переводами категорий и типов мест. Изменения применяются сразу.",
   "translations.language": "Язык",
   "translations.categories": "Категории",
-  "translations.labels": "Метки",
+  "translations.labels": "Типы мест",
   "translations.current": "Текущий",
-  "translations.suggestion": "Ваше предложение",
-  "translations.submit": "Предложить",
-  "translations.submitted": "Предложение отправлено на модерацию.",
-  "translations.signIn": "Войдите, чтобы предлагать переводы.",
+  "translations.suggestion": "Новый перевод",
+  "translations.submit": "Сохранить",
+  "translations.submitted": "Сохранено.",
+  "translations.adminOnly":
+    "Только администраторы могут редактировать переводы.",
 }
 
 const be: Record<MessageKey, string> = {
@@ -381,11 +385,12 @@ const be: Record<MessageKey, string> = {
   "home.browseCategories": "Прагляд па катэгорыях",
   "home.categoriesHint":
     "Тры шырокія катэгорыі ахопліваюць усё. Абярыце адну, каб адкрыць мапу.",
-  "home.browseLabels": "Або перайдзіце адразу да меткі",
-  "home.labelsHint": "Меткі — гэта канкрэтныя тыпы месцаў у кожнай катэгорыі.",
+  "home.browseLabels": "Або перайдзіце адразу да тыпу месца",
+  "home.labelsHint":
+    "Тыпы месцаў — гэта канкрэтныя разнавіднасці месцаў у кожнай катэгорыі.",
 
   "map.categories": "Катэгорыі",
-  "map.labels": "Меткі",
+  "map.labels": "Тыпы месцаў",
   "map.myPlaces": "Мае месцы",
   "map.savedPlaces": "Захаваныя месцы",
   "map.recents": "Нядаўнія",
@@ -428,7 +433,7 @@ const be: Record<MessageKey, string> = {
   "suggest.name": "Назва",
   "suggest.description": "Апісанне",
   "suggest.category": "Катэгорыя",
-  "suggest.labels": "Меткі",
+  "suggest.labels": "Тыпы месцаў",
   "suggest.location": "Месцазнаходжанне",
   "suggest.useMapCenter": "Выкарыстаць цэнтр мапы",
   "suggest.submit": "Даслаць на мадэрацыю",
@@ -439,15 +444,16 @@ const be: Record<MessageKey, string> = {
 
   "translations.title": "Пераклады",
   "translations.intro":
-    "Прапануйце лепшыя пераклады катэгорый і метак. Прапановы правяраюць адміны.",
+    "Кіруйце перакладамі катэгорый і тыпаў месцаў. Змены ўжываюцца адразу.",
   "translations.language": "Мова",
   "translations.categories": "Катэгорыі",
-  "translations.labels": "Меткі",
+  "translations.labels": "Тыпы месцаў",
   "translations.current": "Бягучы",
-  "translations.suggestion": "Ваша прапанова",
-  "translations.submit": "Прапанаваць",
-  "translations.submitted": "Прапанова даслана на мадэрацыю.",
-  "translations.signIn": "Увайдзіце, каб прапаноўваць пераклады.",
+  "translations.suggestion": "Новы пераклад",
+  "translations.submit": "Захаваць",
+  "translations.submitted": "Захавана.",
+  "translations.adminOnly":
+    "Толькі адміністратары могуць рэдагаваць пераклады.",
 }
 
 export const MESSAGES: Record<Locale, Record<MessageKey, string>> = {

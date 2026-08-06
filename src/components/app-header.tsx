@@ -15,7 +15,6 @@ import type { MessageKey } from "@/lib/i18n"
 const navItems: Array<{ to: string; labelKey: MessageKey; exact?: boolean }> = [
   { to: "/", labelKey: "nav.home", exact: true },
   { to: "/map", labelKey: "nav.map" },
-  { to: "/translations", labelKey: "nav.translations" },
 ]
 
 export function AppHeader() {
@@ -40,14 +39,28 @@ export function AppHeader() {
             </Button>
           ))}
           {isAdmin ? (
-            <Button variant="ghost" size="sm" asChild>
-              <Link
-                to="/admin"
-                activeProps={{ className: "bg-accent text-accent-foreground" }}
-              >
-                {t("nav.admin")}
-              </Link>
-            </Button>
+            <>
+              <Button variant="ghost" size="sm" asChild>
+                <Link
+                  to="/translations"
+                  activeProps={{
+                    className: "bg-accent text-accent-foreground",
+                  }}
+                >
+                  {t("nav.translations")}
+                </Link>
+              </Button>
+              <Button variant="ghost" size="sm" asChild>
+                <Link
+                  to="/admin"
+                  activeProps={{
+                    className: "bg-accent text-accent-foreground",
+                  }}
+                >
+                  {t("nav.admin")}
+                </Link>
+              </Button>
+            </>
           ) : null}
         </nav>
         <div className="ml-auto flex items-center gap-2">

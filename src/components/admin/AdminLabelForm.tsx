@@ -40,7 +40,7 @@ export function AdminLabelForm() {
       setError(
         submitError instanceof Error
           ? submitError.message
-          : "Could not create label."
+          : "Could not create place type."
       )
     } finally {
       setSubmitting(false)
@@ -52,7 +52,7 @@ export function AdminLabelForm() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <TagIcon className="size-4" />
-          Labels
+          Place types
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -74,7 +74,7 @@ export function AdminLabelForm() {
           <Input
             value={name}
             onChange={(event) => setName(event.target.value)}
-            placeholder="New label (English name)"
+            placeholder="New place type (English name)"
             className="h-8 w-56 text-sm"
           />
           <div className="flex gap-1">
@@ -103,14 +103,14 @@ export function AdminLabelForm() {
             {submitting ? (
               <Loader2Icon className="size-4 animate-spin" />
             ) : (
-              "Add label"
+              "Add place type"
             )}
           </Button>
         </div>
         {error ? <p className="text-sm text-destructive">{error}</p> : null}
         <p className="text-xs text-muted-foreground">
-          Add translations for new labels on the Translations page — admin
-          suggestions are applied immediately.
+          Add translations for new place types on the Translations page —
+          changes apply immediately.
         </p>
       </CardContent>
     </Card>

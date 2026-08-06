@@ -279,7 +279,11 @@ export function ModerationQueue() {
                 className="space-y-2 rounded-lg border p-3"
               >
                 <div className="flex flex-wrap items-center gap-2 text-sm">
-                  <Badge variant="outline">{translation.entityType}</Badge>
+                  <Badge variant="outline">
+                    {translation.entityType === "label"
+                      ? "place type"
+                      : translation.entityType}
+                  </Badge>
                   <span className="font-medium">{translation.entityKey}</span>
                   <span className="text-muted-foreground">
                     → {LOCALE_NAMES[translation.locale]}:

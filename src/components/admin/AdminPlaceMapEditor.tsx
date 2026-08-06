@@ -108,7 +108,7 @@ export function AdminPlaceMapEditor({
         maxLng: viewport?.bounds.maxLng,
       })
 
-      const result = results[0]
+      const result = results.at(0)
       if (!result) {
         return
       }

@@ -373,7 +373,7 @@ export const setUserRole = internalMutation({
     const user = users.find(
       (entry) =>
         entry.email === args.user ||
-        entry.tokenIdentifier.endsWith(`|${args.user}`),
+        entry.tokenIdentifier.endsWith(`|${args.user}`)
     )
 
     if (!user) {
