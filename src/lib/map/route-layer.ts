@@ -20,6 +20,18 @@ export type RouteResult = {
   durationSeconds: number
 }
 
+/** Stable codes — translate in the UI before display. */
+export type RouteErrorCode =
+  "route_request_failed" | "route_not_found" | "route_aborted"
+
+export function isRouteErrorCode(value: string): value is RouteErrorCode {
+  return (
+    value === "route_request_failed" ||
+    value === "route_not_found" ||
+    value === "route_aborted"
+  )
+}
+
 export async function fetchWalkingRoute(
   from: { lat: number; lng: number },
   to: { lat: number; lng: number },
@@ -32,9 +44,18 @@ export async function fetchWalkingRoute(
     ? AbortSignal.any([timeoutSignal, options.signal])
     : timeoutSignal
 
-  const response = await fetch(url, { signal })
+  let response: Response
+  try {
+    response = await fetch(url, { signal })
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw new Error("route_aborted" satisfies RouteErrorCode)
+    }
+    throw new Error("route_request_failed" satisfies RouteErrorCode)
+  }
+
   if (!response.ok) {
-    throw new Error(`Routing request failed (${response.status})`)
+    throw new Error("route_request_failed" satisfies RouteErrorCode)
   }
 
   const data = (await response.json()) as {
@@ -48,7 +69,7 @@ export async function fetchWalkingRoute(
 
   const route = data.routes?.[0]
   if (data.code !== "Ok" || !route) {
-    throw new Error("No route found")
+    throw new Error("route_not_found" satisfies RouteErrorCode)
   }
 
   return {
@@ -155,9 +176,10 @@ export function formatRouteSummary(
   const km = route.distanceMeters / 1000
   const minutes = Math.round(route.durationSeconds / 60)
   const units = options?.units ?? { km: "km", m: "m", min: "min" }
+  const numberFormat = new Intl.NumberFormat(options?.locale)
   const distance =
     km >= 1
-      ? `${km.toFixed(1)} ${units.km}`
-      : `${Math.round(route.distanceMeters)} ${units.m}`
-  return `${distance} · ${minutes} ${units.min}`
+      ? `${numberFormat.format(Number(km.toFixed(1)))} ${units.km}`
+      : `${numberFormat.format(Math.round(route.distanceMeters))} ${units.m}`
+  return `${distance} · ${numberFormat.format(minutes)} ${units.min}`
 }

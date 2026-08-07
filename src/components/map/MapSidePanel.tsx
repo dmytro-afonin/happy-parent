@@ -122,7 +122,10 @@ export function MapSidePanel({
   const visibleLabels = (labels ?? []).filter((label) =>
     activeCategories.includes(label.category)
   )
-  const savedCount = (favourites?.length ?? 0) + savedPlaces.length
+  const savedPlacesHasMore =
+    savedPlacesStatus === "CanLoadMore" || savedPlacesStatus === "LoadingMore"
+  const savedCountValue = (favourites?.length ?? 0) + savedPlaces.length
+  const savedCountLabel = `${savedCountValue}${savedPlacesHasMore ? "+" : ""}`
 
   return (
     <Accordion
@@ -183,6 +186,7 @@ export function MapSidePanel({
                   <button
                     key={label._id}
                     type="button"
+                    aria-pressed={isActive}
                     onClick={() => onToggleLabel(label._id)}
                     className={cn(
                       "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs transition-colors",
@@ -217,7 +221,7 @@ export function MapSidePanel({
             {t("map.myPlaces")}
             {isAuthenticated ? (
               <Badge variant="secondary" className="ml-1">
-                {savedCount}
+                {savedCountLabel}
               </Badge>
             ) : null}
           </span>
@@ -232,7 +236,7 @@ export function MapSidePanel({
             <p className="px-2 py-3 text-sm text-muted-foreground">
               {t("common.loading")}
             </p>
-          ) : savedCount === 0 ? (
+          ) : savedCountValue === 0 ? (
             <p className="px-2 py-3 text-sm text-muted-foreground">
               {t("map.noSaved")}
             </p>

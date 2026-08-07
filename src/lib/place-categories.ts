@@ -65,9 +65,10 @@ export function matchPlaceCategories(
   }
 
   return PLACE_CATEGORY_LIST.filter((category) => {
-    const label = localizedNames?.[category.id] ?? category.label
+    const localized = localizedNames?.[category.id]
     return (
-      label.toLowerCase().includes(trimmed) ||
+      (localized !== undefined && localized.toLowerCase().includes(trimmed)) ||
+      category.label.toLowerCase().includes(trimmed) ||
       category.searchHint.toLowerCase().includes(trimmed) ||
       category.description.toLowerCase().includes(trimmed) ||
       category.id.replace("-", " ").includes(trimmed)

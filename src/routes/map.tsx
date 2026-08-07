@@ -39,7 +39,9 @@ import {
   drawRoute,
   fetchWalkingRoute,
   formatRouteSummary,
+  isRouteErrorCode,
 } from "@/lib/map/route-layer"
+import type { MessageKey } from "@/lib/i18n"
 import type { PlaceSearchResult } from "@/lib/place-search"
 import { isPlaceCategoryId, PLACE_CATEGORIES } from "@/lib/place-categories"
 import type { PlaceCategoryId } from "@/lib/place-categories"
@@ -375,11 +377,34 @@ function MapPage() {
       })
 
       drawRoute(mapInstance, route)
-      setRouteSummary(formatRouteSummary(route, { locale }))
-    } catch (error) {
-      setRouteError(
-        error instanceof Error ? error.message : t("place.routeError")
+      setRouteSummary(
+        formatRouteSummary(route, {
+          locale,
+          units: {
+            km: t("units.km"),
+            m: t("units.m"),
+            min: t("units.min"),
+          },
+        })
       )
+    } catch (error) {
+      if (error instanceof Error && isRouteErrorCode(error.message)) {
+        const key = (
+          {
+            route_request_failed: "place.routeRequestFailed",
+            route_not_found: "place.routeNotFound",
+            route_aborted: "place.routeAborted",
+          } as const satisfies Record<string, MessageKey>
+        )[error.message]
+        setRouteError(t(key))
+      } else if (
+        error instanceof Error &&
+        error.message === t("place.locationNeeded")
+      ) {
+        setRouteError(error.message)
+      } else {
+        setRouteError(t("place.routeError"))
+      }
     } finally {
       setRouteLoading(false)
     }

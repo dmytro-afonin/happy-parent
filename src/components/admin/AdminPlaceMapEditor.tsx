@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useMapOverlay } from "@/hooks/use-map-overlay"
+import { useI18n } from "@/lib/i18n"
 import { adminPreviewLayerHandlers } from "@/lib/map/admin-preview-layers"
 import type { AdminPreviewState } from "@/lib/map/admin-preview-layers"
 import type { GeometryType, LatLng } from "@/lib/geometry"
@@ -83,6 +84,7 @@ export function AdminPlaceMapEditor({
   onPointChange,
   onVerticesChange,
 }: AdminPlaceMapEditorProps) {
+  const { t } = useI18n()
   const mapRef = useRef<MapViewHandle>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [searching, setSearching] = useState(false)
@@ -112,7 +114,7 @@ export function AdminPlaceMapEditor({
 
       const result = results.at(0)
       if (!result) {
-        setSearchError("No results found")
+        setSearchError(t("admin.searchNoResults"))
         return
       }
 
@@ -121,8 +123,8 @@ export function AdminPlaceMapEditor({
       if (geometryType === "point") {
         onPointChange({ lat: result.lat, lng: result.lng })
       }
-    } catch (err) {
-      setSearchError(err instanceof Error ? err.message : "Search failed")
+    } catch {
+      setSearchError(t("admin.searchFailed"))
     } finally {
       setSearching(false)
     }
@@ -160,7 +162,9 @@ export function AdminPlaceMapEditor({
         </Button>
       </div>
       {searchError ? (
-        <p className="text-sm text-destructive">{searchError}</p>
+        <p role="alert" className="text-sm text-destructive">
+          {searchError}
+        </p>
       ) : null}
 
       <div className="flex flex-wrap items-center gap-2">
