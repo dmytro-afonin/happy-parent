@@ -11,6 +11,16 @@
  */
 import { spawnSync } from "node:child_process"
 
+// Mirror src/lib/clerk-env.ts — Marketplace NEXT_PUBLIC_* → Vite/Clerk names.
+const publishable =
+  process.env.VITE_CLERK_PUBLISHABLE_KEY ||
+  process.env.CLERK_PUBLISHABLE_KEY ||
+  process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
+if (publishable) {
+  process.env.VITE_CLERK_PUBLISHABLE_KEY ??= publishable
+  process.env.CLERK_PUBLISHABLE_KEY ??= publishable
+}
+
 const env = process.env.VERCEL_ENV ?? "development"
 
 function run(command, args) {

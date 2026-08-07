@@ -42,11 +42,11 @@ Discover and save family-friendly places on an interactive map.
    ```
 
 4. Configure Clerk:
-   - Create an application in the [Clerk Dashboard](https://dashboard.clerk.com)
-   - Add `VITE_CLERK_PUBLISHABLE_KEY` and `CLERK_SECRET_KEY` to `.env.local`
+   - Create an application in the [Clerk Dashboard](https://dashboard.clerk.com) (or connect the Vercel Marketplace Clerk integration)
+   - Local: add `VITE_CLERK_PUBLISHABLE_KEY` and `CLERK_SECRET_KEY` to `.env.local`
+   - Vercel + Marketplace: integration syncs `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` and `CLERK_SECRET_KEY` for Preview/Production — enough for this app (we alias `NEXT_PUBLIC_*` to the Vite names). You can remove any old manual `VITE_CLERK_PUBLISHABLE_KEY` on Vercel
    - Create a JWT template named exactly **`convex`**
-   - Copy the template Issuer URL into `CLERK_JWT_ISSUER_DOMAIN` in `.env.local`
-   - Set the same Issuer in `convex/auth.config.ts` via the env var above
+   - Set `CLERK_FRONTEND_API_URL` on the Convex deployment to the Clerk Frontend API URL (Dashboard → API keys)
 
 5. Run the app (two terminals):
 
