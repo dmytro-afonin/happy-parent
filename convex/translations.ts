@@ -34,7 +34,17 @@ export const listApproved = query({
       )
       .collect()
 
-    return translations.map((entry) => ({
+    // Newest approved row wins when superseded history left duplicates.
+    const newestByKey = new Map<string, (typeof translations)[number]>()
+    for (const entry of translations) {
+      const key = `${entry.entityType}:${entry.entityKey}`
+      const previous = newestByKey.get(key)
+      if (!previous || entry.createdAt > previous.createdAt) {
+        newestByKey.set(key, entry)
+      }
+    }
+
+    return [...newestByKey.values()].map((entry) => ({
       entityType: entry.entityType,
       entityKey: entry.entityKey,
       value: entry.value,
@@ -89,9 +99,14 @@ export const set = mutation({
       )
       .collect()
 
+    const now = Date.now()
     for (const entry of existing) {
       if (entry.status === "approved") {
-        await ctx.db.delete("translations", entry._id)
+        await ctx.db.patch("translations", entry._id, {
+          status: "superseded",
+          moderatedBy: admin._id,
+          moderatedAt: now,
+        })
       }
     }
 
@@ -102,7 +117,7 @@ export const set = mutation({
       value,
       status: "approved",
       createdBy: admin._id,
-      createdAt: Date.now(),
+      createdAt: now,
     })
   },
 })

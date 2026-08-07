@@ -14,6 +14,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
+import { useLocalizedNames } from "@/hooks/use-localized-catalog"
 import { cn } from "@/lib/utils"
 import {
   buildFavouriteLookup,
@@ -60,6 +61,7 @@ export function MapSearchModal({
   activeCategories = [],
 }: MapSearchModalProps) {
   const { isAuthenticated } = useConvexAuth()
+  const { categoryName } = useLocalizedNames()
   const [query, setQuery] = useState(initialQuery)
   const [tab, setTab] = useState<SearchResultsTab>("all")
   const [geocodingResults, setGeocodingResults] = useState<PlaceSearchResult[]>(
@@ -147,7 +149,15 @@ export function MapSearchModal({
     return enrichResultsWithDistance(results, userLocation)
   }, [tab, recents, geocodingResults, userLocation])
 
-  const matchingCategories = useMemo(() => matchPlaceCategories(query), [query])
+  const matchingCategories = useMemo(() => {
+    const localizedNames = Object.fromEntries(
+      PLACE_CATEGORY_LIST.map((category) => [
+        category.id,
+        categoryName(category.id),
+      ])
+    ) as Partial<Record<PlaceCategoryId, string>>
+    return matchPlaceCategories(query, localizedNames)
+  }, [categoryName, query])
 
   const handleCategorySelect = (category: PlaceCategoryId) => {
     onCategorySelect?.(category)
@@ -224,7 +234,7 @@ export function MapSearchModal({
                         >
                           <Icon className="size-3" />
                         </span>
-                        {category.label}
+                        {categoryName(category.id)}
                       </button>
                     )
                   })}

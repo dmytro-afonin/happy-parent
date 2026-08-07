@@ -17,7 +17,7 @@ import { auth } from "@clerk/tanstack-react-start/server"
 
 import { AppHeader } from "@/components/app-header"
 import { TooltipProvider } from "@/components/ui/tooltip"
-import { I18nProvider } from "@/lib/i18n"
+import { I18nProvider, useI18n } from "@/lib/i18n"
 import appCss from "../styles.css?url"
 
 const convex = new ConvexReactClient(
@@ -68,12 +68,13 @@ function RootComponent() {
 }
 
 function RootDocument({ children }: { children: React.ReactNode }) {
+  const { locale } = useI18n()
   const isMapPage = useRouterState({
     select: (state) => state.location.pathname === "/map",
   })
 
   return (
-    <html lang="en">
+    <html lang={locale}>
       <head>
         <HeadContent />
       </head>

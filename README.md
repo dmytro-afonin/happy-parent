@@ -15,7 +15,7 @@ Discover and save family-friendly places on an interactive map.
 
 ## Prerequisites
 
-- Node.js 20+
+- Node.js 24+
 - [pnpm](https://pnpm.io)
 - [Convex](https://convex.dev) account
 - [Clerk](https://clerk.com) account

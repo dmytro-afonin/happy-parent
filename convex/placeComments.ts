@@ -1,12 +1,13 @@
 import { mutation, query } from "./_generated/server"
 import { v } from "convex/values"
 
-import { internal } from "./_generated/api"
+import { scheduleModerationNotify } from "./lib/moderationNotify"
 import { moderationStatusValidator } from "./lib/moderation"
 import { isAdminRole } from "./lib/roles"
 import { ensureAuthUser, getAuthUser } from "./lib/users"
 
 const MAX_COMMENT_LENGTH = 2000
+const PUBLIC_AUTHOR_FALLBACK = "Anonymous"
 
 const commentValidator = v.object({
   _id: v.id("placeComments"),
@@ -51,9 +52,16 @@ export const listByPlace = query({
     const results = []
 
     for (const comment of visible.sort((a, b) => b.createdAt - a.createdAt)) {
+      const isOwn = viewer !== null && comment.authorId === viewer._id
+
       if (!authorNames.has(comment.authorId)) {
         const author = await ctx.db.get("users", comment.authorId)
-        authorNames.set(comment.authorId, author?.name ?? author?.email)
+        const canSeeEmail = isAdmin || isOwn
+        const displayName =
+          author?.name ||
+          (canSeeEmail ? author?.email : undefined) ||
+          PUBLIC_AUTHOR_FALLBACK
+        authorNames.set(comment.authorId, displayName)
       }
 
       results.push({
@@ -64,7 +72,7 @@ export const listByPlace = query({
         rejectionComment: comment.rejectionComment,
         createdAt: comment.createdAt,
         authorName: authorNames.get(comment.authorId),
-        isOwn: viewer !== null && comment.authorId === viewer._id,
+        isOwn,
       })
     }
 
@@ -107,7 +115,7 @@ export const add = mutation({
     })
 
     if (status === "pending") {
-      await ctx.scheduler.runAfter(0, internal.emails.notifyModerationRequest, {
+      await scheduleModerationNotify(ctx, userId, {
         kind: "comment",
         summary: `${place.name}: ${text.slice(0, 200)}`,
         submitterName: user?.name ?? user?.email,

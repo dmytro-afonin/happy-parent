@@ -54,6 +54,7 @@ export function MapCompactToolbar({
             variant="outline"
             size="sm"
             className="h-8 px-2"
+            aria-label={t("map.addPlace")}
             onClick={onAddPlace}
           >
             <PlusIcon className="size-4" />
@@ -62,7 +63,12 @@ export function MapCompactToolbar({
         </Show>
         <Show when="signed-out">
           <SignInButton mode="modal">
-            <Button variant="outline" size="sm" className="h-8 px-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 px-2"
+              aria-label={t("map.addPlace")}
+            >
               <PlusIcon className="size-4" />
               <span className="hidden sm:inline">{t("map.addPlace")}</span>
             </Button>

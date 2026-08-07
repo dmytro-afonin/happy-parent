@@ -6,7 +6,7 @@ import { LOCALE_NAMES, SUPPORTED_LOCALES, isLocale, useI18n } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 
 export function LanguageSwitcher({ className }: { className?: string }) {
-  const { locale, setLocale } = useI18n()
+  const { locale, setLocale, t } = useI18n()
 
   return (
     <label
@@ -17,7 +17,7 @@ export function LanguageSwitcher({ className }: { className?: string }) {
     >
       <GlobeIcon className="size-4" />
       <select
-        aria-label="Language"
+        aria-label={t("nav.language")}
         value={locale}
         onChange={(event) => {
           if (isLocale(event.target.value)) {

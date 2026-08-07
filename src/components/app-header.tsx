@@ -1,6 +1,7 @@
 "use client"
 
 import { Link } from "@tanstack/react-router"
+import type { LinkProps } from "@tanstack/react-router"
 import { Show, SignInButton, SignUpButton } from "@clerk/react"
 
 import { LanguageSwitcher } from "@/components/language-switcher"
@@ -12,7 +13,11 @@ import { useAdminStatus } from "@/hooks/use-admin-status"
 import { useI18n } from "@/lib/i18n"
 import type { MessageKey } from "@/lib/i18n"
 
-const navItems: Array<{ to: string; labelKey: MessageKey; exact?: boolean }> = [
+const navItems: Array<{
+  to: LinkProps["to"]
+  labelKey: MessageKey
+  exact?: boolean
+}> = [
   { to: "/", labelKey: "nav.home", exact: true },
   { to: "/map", labelKey: "nav.map" },
 ]

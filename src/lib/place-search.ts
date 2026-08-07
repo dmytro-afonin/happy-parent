@@ -54,26 +54,28 @@ export function enrichResultsWithDistance(
   results: PlaceSearchResult[],
   origin: { lat: number; lng: number } | null
 ): PlaceSearchResultWithDistance[] {
-  if (!origin) {
-    return results
-  }
+  const enriched: PlaceSearchResultWithDistance[] = origin
+    ? results.map((result) => {
+        const distance = distanceKm(
+          origin.lat,
+          origin.lng,
+          result.lat,
+          result.lng
+        )
 
-  return results
-    .map((result) => {
-      const distance = distanceKm(
-        origin.lat,
-        origin.lng,
-        result.lat,
-        result.lng
-      )
+        return {
+          ...result,
+          distanceKm: distance,
+          distanceLabel: formatDistance(distance),
+        }
+      })
+    : results
 
-      return {
-        ...result,
-        distanceKm: distance,
-        distanceLabel: formatDistance(distance),
-      }
-    })
-    .sort((left, right) => left.distanceKm - right.distanceKm)
+  return [...enriched].sort(
+    (left, right) =>
+      (left.distanceKm ?? Number.POSITIVE_INFINITY) -
+      (right.distanceKm ?? Number.POSITIVE_INFINITY)
+  )
 }
 
 export function mergeSearchResults(

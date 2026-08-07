@@ -10,7 +10,9 @@ const ROUTE_CASING_LAYER_ID = "in-app-route-casing"
  * Builds a walking route with the public OSRM demo server and MapLibre —
  * an in-app alternative to opening Google/Apple Maps.
  */
-const OSRM_BASE_URL = "https://router.project-osrm.org/route/v1/foot"
+const OSRM_BASE_URL =
+  import.meta.env.VITE_OSRM_BASE_URL ??
+  "https://router.project-osrm.org/route/v1/foot"
 
 export type RouteResult = {
   geometry: GeoJSON.LineString
@@ -20,11 +22,17 @@ export type RouteResult = {
 
 export async function fetchWalkingRoute(
   from: { lat: number; lng: number },
-  to: { lat: number; lng: number }
+  to: { lat: number; lng: number },
+  options?: { signal?: AbortSignal }
 ): Promise<RouteResult> {
   const url = `${OSRM_BASE_URL}/${from.lng},${from.lat};${to.lng},${to.lat}?overview=full&geometries=geojson`
 
-  const response = await fetch(url)
+  const timeoutSignal = AbortSignal.timeout(15_000)
+  const signal = options?.signal
+    ? AbortSignal.any([timeoutSignal, options.signal])
+    : timeoutSignal
+
+  const response = await fetch(url, { signal })
   if (!response.ok) {
     throw new Error(`Routing request failed (${response.status})`)
   }
@@ -137,10 +145,19 @@ export function clearRoute(map: maplibregl.Map) {
   }
 }
 
-export function formatRouteSummary(route: RouteResult) {
+export function formatRouteSummary(
+  route: RouteResult,
+  options?: {
+    locale?: string
+    units?: { km: string; m: string; min: string }
+  }
+) {
   const km = route.distanceMeters / 1000
   const minutes = Math.round(route.durationSeconds / 60)
+  const units = options?.units ?? { km: "km", m: "m", min: "min" }
   const distance =
-    km >= 1 ? `${km.toFixed(1)} km` : `${Math.round(route.distanceMeters)} m`
-  return `${distance} · ${minutes} min`
+    km >= 1
+      ? `${km.toFixed(1)} ${units.km}`
+      : `${Math.round(route.distanceMeters)} ${units.m}`
+  return `${distance} · ${minutes} ${units.min}`
 }

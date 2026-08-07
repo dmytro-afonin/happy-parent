@@ -18,6 +18,8 @@ const submitterValidator = v.object({
   submissionsRejected: v.number(),
 })
 
+const PENDING_SECTION_LIMIT = 50
+
 async function getSubmitter(ctx: QueryCtx, userId: Id<"users">) {
   const user = await ctx.db.get("users", userId)
   return {
@@ -84,25 +86,58 @@ export const listPending = query({
       ctx.db
         .query("places")
         .withIndex("by_status", (q) => q.eq("status", "pending"))
-        .collect(),
+        .take(PENDING_SECTION_LIMIT),
       ctx.db
         .query("photos")
         .withIndex("by_status", (q) => q.eq("status", "pending"))
-        .collect(),
+        .take(PENDING_SECTION_LIMIT),
       ctx.db
         .query("placeComments")
         .withIndex("by_status", (q) => q.eq("status", "pending"))
-        .collect(),
+        .take(PENDING_SECTION_LIMIT),
       ctx.db
         .query("translations")
         .withIndex("by_status", (q) => q.eq("status", "pending"))
-        .collect(),
+        .take(PENDING_SECTION_LIMIT),
     ])
 
     const allLabels = await ctx.db.query("labels").collect()
     const labelNameById = new Map(
       allLabels.map((label) => [label._id, label.name])
     )
+
+    const submitterCache = new Map<
+      Id<"users">,
+      Awaited<ReturnType<typeof getSubmitter>>
+    >()
+    const placeNameCache = new Map<Id<"places">, string | undefined>()
+
+    const loadSubmitter = async (userId: Id<"users">) => {
+      const cached = submitterCache.get(userId)
+      if (cached) {
+        return cached
+      }
+      const submitter = await getSubmitter(ctx, userId)
+      submitterCache.set(userId, submitter)
+      return submitter
+    }
+
+    const loadPlaceName = async (placeId: Id<"places">) => {
+      if (placeNameCache.has(placeId)) {
+        return placeNameCache.get(placeId)
+      }
+      const place = await ctx.db.get("places", placeId)
+      const name = place?.name
+      placeNameCache.set(placeId, name)
+      return name
+    }
+
+    const emptySubmitter = {
+      name: undefined,
+      email: undefined,
+      submissionsApproved: 0,
+      submissionsRejected: 0,
+    }
 
     return {
       places: await Promise.all(
@@ -118,33 +153,27 @@ export const listPending = query({
             .map((labelId) => labelNameById.get(labelId))
             .filter((name): name is string => Boolean(name)),
           createdAt: place.createdAt,
-          submitter: await getSubmitter(ctx, place.createdBy),
+          submitter: await loadSubmitter(place.createdBy),
         }))
       ),
       photos: await Promise.all(
-        photos.map(async (photo) => {
-          const place = await ctx.db.get("places", photo.placeId)
-          return {
-            _id: photo._id,
-            placeName: place?.name,
-            url: photo.url,
-            thumbnailUrl: photo.thumbnailUrl,
-            createdAt: photo.createdAt,
-            submitter: await getSubmitter(ctx, photo.uploaderId),
-          }
-        })
+        photos.map(async (photo) => ({
+          _id: photo._id,
+          placeName: await loadPlaceName(photo.placeId),
+          url: photo.url,
+          thumbnailUrl: photo.thumbnailUrl,
+          createdAt: photo.createdAt,
+          submitter: await loadSubmitter(photo.uploaderId),
+        }))
       ),
       comments: await Promise.all(
-        comments.map(async (comment) => {
-          const place = await ctx.db.get("places", comment.placeId)
-          return {
-            _id: comment._id,
-            placeName: place?.name,
-            text: comment.text,
-            createdAt: comment.createdAt,
-            submitter: await getSubmitter(ctx, comment.authorId),
-          }
-        })
+        comments.map(async (comment) => ({
+          _id: comment._id,
+          placeName: await loadPlaceName(comment.placeId),
+          text: comment.text,
+          createdAt: comment.createdAt,
+          submitter: await loadSubmitter(comment.authorId),
+        }))
       ),
       translations: await Promise.all(
         translations.map(async (translation) => ({
@@ -155,13 +184,8 @@ export const listPending = query({
           value: translation.value,
           createdAt: translation.createdAt,
           submitter: translation.createdBy
-            ? await getSubmitter(ctx, translation.createdBy)
-            : {
-                name: undefined,
-                email: undefined,
-                submissionsApproved: 0,
-                submissionsRejected: 0,
-              },
+            ? await loadSubmitter(translation.createdBy)
+            : emptySubmitter,
         }))
       ),
     }
@@ -288,7 +312,7 @@ export const decideTranslation = mutation({
     }
 
     if (args.approve) {
-      // Replace the previously approved value for the same entity + locale.
+      // Keep prior approved rows for history; mark them superseded.
       const existing = await ctx.db
         .query("translations")
         .withIndex("by_entity", (q) =>
@@ -301,7 +325,11 @@ export const decideTranslation = mutation({
 
       for (const entry of existing) {
         if (entry.status === "approved" && entry._id !== translation._id) {
-          await ctx.db.delete("translations", entry._id)
+          await ctx.db.patch("translations", entry._id, {
+            status: "superseded",
+            moderatedBy: admin._id,
+            moderatedAt: Date.now(),
+          })
         }
       }
     }

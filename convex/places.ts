@@ -10,6 +10,7 @@ import {
   validateGeometry,
 } from "./lib/geometry"
 import { effectiveStatus, moderationStatusValidator } from "./lib/moderation"
+import type { PlaceCategoryId } from "./lib/placeCategories"
 import {
   normalizePlaceCategory,
   placeCategoryValidator,
@@ -155,7 +156,8 @@ export const listAllAdmin = query({
 
 async function validateLabelIds(
   ctx: QueryCtx,
-  labelIds: Id<"labels">[] | undefined
+  labelIds: Id<"labels">[] | undefined,
+  category: PlaceCategoryId
 ) {
   if (!labelIds) {
     return []
@@ -167,9 +169,34 @@ async function validateLabelIds(
     if (!label) {
       throw new Error("Unknown label")
     }
+    if (label.category !== category) {
+      throw new Error(
+        `Label "${label.slug}" belongs to ${label.category}, not ${category}`
+      )
+    }
   }
 
   return unique
+}
+
+/** Keep labels that still match the place category; drop the rest. */
+async function labelsForCategory(
+  ctx: QueryCtx,
+  labelIds: Id<"labels">[] | undefined,
+  category: PlaceCategoryId
+) {
+  if (!labelIds || labelIds.length === 0) {
+    return []
+  }
+
+  const kept: Id<"labels">[] = []
+  for (const labelId of labelIds) {
+    const label = await ctx.db.get("labels", labelId)
+    if (label && label.category === category) {
+      kept.push(labelId)
+    }
+  }
+  return kept
 }
 
 /**
@@ -202,7 +229,7 @@ export const create = mutation({
       throw new Error("Name is required")
     }
 
-    const labelIds = await validateLabelIds(ctx, args.labelIds)
+    const labelIds = await validateLabelIds(ctx, args.labelIds, args.category)
 
     const point =
       args.lat !== undefined && args.lng !== undefined
@@ -288,10 +315,15 @@ export const update = mutation({
       throw new Error("Name is required")
     }
 
-    const labelIds =
-      args.labelIds !== undefined
-        ? await validateLabelIds(ctx, args.labelIds)
-        : undefined
+    const nextCategory = normalizePlaceCategory(args.category ?? place.category)
+
+    let labelIds: Id<"labels">[] | undefined
+    if (args.labelIds !== undefined) {
+      labelIds = await validateLabelIds(ctx, args.labelIds, nextCategory)
+    } else if (args.category !== undefined) {
+      // Category-only update: drop labels that no longer match.
+      labelIds = await labelsForCategory(ctx, place.labelIds, nextCategory)
+    }
 
     const geometryType = args.geometryType ?? place.geometryType ?? "point"
     let lat = args.lat ?? place.lat

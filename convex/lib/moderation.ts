@@ -13,6 +13,14 @@ export const moderationStatusValidator = v.union(
   v.literal("rejected")
 )
 
+/** Translation rows may also be superseded when a newer approved value replaces them. */
+export const translationStatusValidator = v.union(
+  v.literal("pending"),
+  v.literal("approved"),
+  v.literal("rejected"),
+  v.literal("superseded")
+)
+
 /** Fields shared by every moderated document. */
 export const moderationFields = {
   status: v.optional(moderationStatusValidator),

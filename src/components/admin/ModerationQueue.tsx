@@ -49,11 +49,15 @@ function DecisionControls({ onDecide }: DecisionControlsProps) {
   const [rejecting, setRejecting] = useState(false)
   const [comment, setComment] = useState("")
   const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const decide = async (approve: boolean) => {
     setBusy(true)
+    setError(null)
     try {
       await onDecide(approve, approve ? undefined : comment)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Decision failed")
     } finally {
       setBusy(false)
     }
@@ -90,12 +94,15 @@ function DecisionControls({ onDecide }: DecisionControlsProps) {
         >
           Cancel
         </Button>
+        {error ? (
+          <p className="w-full text-sm text-destructive">{error}</p>
+        ) : null}
       </div>
     )
   }
 
   return (
-    <div className="flex items-center gap-1.5">
+    <div className="flex flex-wrap items-center gap-1.5">
       <Button
         type="button"
         size="sm"
@@ -118,6 +125,9 @@ function DecisionControls({ onDecide }: DecisionControlsProps) {
         <ThumbsDownIcon className="size-4" />
         Reject
       </Button>
+      {error ? (
+        <p className="w-full text-sm text-destructive">{error}</p>
+      ) : null}
     </div>
   )
 }

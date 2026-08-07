@@ -3,7 +3,11 @@ import { v } from "convex/values"
 
 import { localeValidator } from "./lib/locales"
 import { mapStyleIdValidator } from "./lib/mapStyles"
-import { moderationFields, moderationStatusValidator } from "./lib/moderation"
+import {
+  moderationFields,
+  moderationStatusValidator,
+  translationStatusValidator,
+} from "./lib/moderation"
 import {
   placeCategorySchemaValidator,
   placeCategoryValidator,
@@ -31,6 +35,8 @@ export default defineSchema({
     // Internal trust rating derived from moderation outcomes.
     submissionsApproved: v.optional(v.number()),
     submissionsRejected: v.optional(v.number()),
+    /** Cooldown marker for batched moderation notification emails. */
+    lastModerationNotifyAt: v.optional(v.number()),
   }).index("by_token", ["tokenIdentifier"]),
 
   recentSearches: defineTable({
@@ -154,7 +160,7 @@ export default defineSchema({
     entityKey: v.string(),
     locale: localeValidator,
     value: v.string(),
-    status: moderationStatusValidator,
+    status: translationStatusValidator,
     createdBy: v.optional(v.id("users")),
     rejectionComment: v.optional(v.string()),
     moderatedBy: v.optional(v.id("users")),

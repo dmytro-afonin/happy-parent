@@ -97,7 +97,7 @@ function TranslationsPage() {
         <CardContent className="space-y-2">
           {PLACE_CATEGORIES.map((category) => (
             <TranslationRow
-              key={category}
+              key={`${targetLocale}-${category}`}
               entityType="category"
               entityKey={category}
               baseName={PLACE_CATEGORY_META[category].label}
@@ -116,7 +116,7 @@ function TranslationsPage() {
         <CardContent className="space-y-2">
           {(labels ?? []).map((label) => (
             <TranslationRow
-              key={label._id}
+              key={`${targetLocale}-${label._id}`}
               entityType="label"
               entityKey={label.slug}
               baseName={label.name}

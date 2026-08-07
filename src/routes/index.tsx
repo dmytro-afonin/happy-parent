@@ -4,10 +4,12 @@ import { MapIcon, PlusIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useLabels, useLocalizedNames } from "@/hooks/use-localized-catalog"
 import { useI18n } from "@/lib/i18n"
+import type { MessageKey } from "@/lib/i18n"
 import {
   PLACE_CATEGORY_LIST,
   PLACE_CATEGORY_META,
 } from "@/lib/place-categories"
+import type { PlaceCategoryId } from "@/lib/place-categories"
 
 export const Route = createFileRoute("/")({ component: HomePage })
 
@@ -15,6 +17,9 @@ function HomePage() {
   const { t } = useI18n()
   const labels = useLabels()
   const { categoryName, labelName } = useLocalizedNames()
+
+  const categoryHintKey = (id: PlaceCategoryId): MessageKey =>
+    `home.categoryHint.${id}` as MessageKey
 
   return (
     <main className="relative overflow-hidden">
@@ -81,7 +86,7 @@ function HomePage() {
                     {categoryName(category.id)}
                   </h3>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    {category.searchHint}
+                    {t(categoryHintKey(category.id))}
                   </p>
                   {categoryLabels.length > 0 ? (
                     <p className="mt-3 line-clamp-2 text-xs text-muted-foreground/80">

@@ -21,6 +21,7 @@ const en = {
   "nav.map": "Map",
   "nav.admin": "Admin",
   "nav.translations": "Translations",
+  "nav.language": "Language",
   "auth.signIn": "Sign in",
   "auth.signUp": "Sign up",
 
@@ -36,6 +37,9 @@ const en = {
   "home.browseLabels": "Or jump straight to a place type",
   "home.labelsHint":
     "Place types are the specific kinds of places inside each category.",
+  "home.categoryHint.food": "Restaurants, cafés, food courts",
+  "home.categoryHint.utilities": "Toilets, changing rooms, clinics",
+  "home.categoryHint.entertainment": "Parks, playgrounds, play zones",
 
   "map.categories": "Categories",
   "map.labels": "Place types",
@@ -50,6 +54,11 @@ const en = {
   "map.places": "places",
   "map.signInToSave": "Sign in to save places.",
   "map.noSaved": "No saved places yet.",
+  "map.favourites": "Favourites",
+  "map.loadMore": "Load more",
+  "map.placeLayers": "Place layers",
+  "map.removeSaved": "Remove saved place",
+  "map.removeFavourite": "Remove favourite",
 
   "place.directions": "Directions",
   "place.googleMaps": "Google Maps",
@@ -73,6 +82,9 @@ const en = {
   "place.rejected": "Rejected",
   "place.area": "Area",
   "place.pendingNote": "Visible only to you and admins until approved.",
+  "place.anonymous": "Anonymous",
+  "place.commentError": "Could not add comment.",
+  "place.uploadError": "Image upload failed",
 
   "suggest.title": "Suggest a place",
   "suggest.intro":
@@ -87,8 +99,12 @@ const en = {
   "suggest.submitted":
     "Thanks! Your place was submitted and is awaiting review.",
   "suggest.signIn": "Sign in to suggest a place.",
+  "suggest.created": "Place created.",
+  "suggest.error": "Could not submit the place.",
+  "suggest.namePlaceholder": "Playground at Łazienki Park",
   "common.cancel": "Cancel",
   "common.close": "Close",
+  "common.loading": "Loading…",
 
   "translations.title": "Translations",
   "translations.intro":
@@ -110,6 +126,7 @@ const pl: Record<MessageKey, string> = {
   "nav.map": "Mapa",
   "nav.admin": "Admin",
   "nav.translations": "Tłumaczenia",
+  "nav.language": "Język",
   "auth.signIn": "Zaloguj się",
   "auth.signUp": "Zarejestruj się",
 
@@ -125,6 +142,9 @@ const pl: Record<MessageKey, string> = {
   "home.browseLabels": "Albo przejdź od razu do typu miejsca",
   "home.labelsHint":
     "Typy miejsc to konkretne rodzaje miejsc w każdej kategorii.",
+  "home.categoryHint.food": "Restauracje, kawiarnie, food court",
+  "home.categoryHint.utilities": "Toalety, przewijaki, kliniki",
+  "home.categoryHint.entertainment": "Parki, place zabaw, strefy zabaw",
 
   "map.categories": "Kategorie",
   "map.labels": "Typy miejsc",
@@ -139,6 +159,11 @@ const pl: Record<MessageKey, string> = {
   "map.places": "miejsc",
   "map.signInToSave": "Zaloguj się, aby zapisywać miejsca.",
   "map.noSaved": "Brak zapisanych miejsc.",
+  "map.favourites": "Ulubione",
+  "map.loadMore": "Wczytaj więcej",
+  "map.placeLayers": "Warstwy miejsc",
+  "map.removeSaved": "Usuń zapisane miejsce",
+  "map.removeFavourite": "Usuń ulubione",
 
   "place.directions": "Trasa",
   "place.googleMaps": "Google Maps",
@@ -163,6 +188,9 @@ const pl: Record<MessageKey, string> = {
   "place.area": "Obszar",
   "place.pendingNote":
     "Widoczne tylko dla Ciebie i adminów do czasu akceptacji.",
+  "place.anonymous": "Anonimowy",
+  "place.commentError": "Nie udało się dodać komentarza.",
+  "place.uploadError": "Przesyłanie zdjęcia nie powiodło się",
 
   "suggest.title": "Zaproponuj miejsce",
   "suggest.intro":
@@ -177,8 +205,12 @@ const pl: Record<MessageKey, string> = {
   "suggest.submitted":
     "Dziękujemy! Twoje miejsce zostało przesłane i czeka na moderację.",
   "suggest.signIn": "Zaloguj się, aby zaproponować miejsce.",
+  "suggest.created": "Miejsce utworzone.",
+  "suggest.error": "Nie udało się przesłać miejsca.",
+  "suggest.namePlaceholder": "Plac zabaw w Parku Łazienki",
   "common.cancel": "Anuluj",
   "common.close": "Zamknij",
+  "common.loading": "Ładowanie…",
 
   "translations.title": "Tłumaczenia",
   "translations.intro":
@@ -198,6 +230,7 @@ const uk: Record<MessageKey, string> = {
   "nav.map": "Мапа",
   "nav.admin": "Адмін",
   "nav.translations": "Переклади",
+  "nav.language": "Мова",
   "auth.signIn": "Увійти",
   "auth.signUp": "Зареєструватися",
 
@@ -213,6 +246,9 @@ const uk: Record<MessageKey, string> = {
   "home.browseLabels": "Або перейдіть одразу до типу місця",
   "home.labelsHint":
     "Типи місць — це конкретні різновиди місць у кожній категорії.",
+  "home.categoryHint.food": "Ресторани, кафе, фуд-корти",
+  "home.categoryHint.utilities": "Туалети, кімнати для немовлят, клініки",
+  "home.categoryHint.entertainment": "Парки, майданчики, ігрові зони",
 
   "map.categories": "Категорії",
   "map.labels": "Типи місць",
@@ -227,6 +263,11 @@ const uk: Record<MessageKey, string> = {
   "map.places": "місць",
   "map.signInToSave": "Увійдіть, щоб зберігати місця.",
   "map.noSaved": "Ще немає збережених місць.",
+  "map.favourites": "Обране",
+  "map.loadMore": "Завантажити ще",
+  "map.placeLayers": "Шари місць",
+  "map.removeSaved": "Видалити збережене місце",
+  "map.removeFavourite": "Видалити обране",
 
   "place.directions": "Маршрут",
   "place.googleMaps": "Google Maps",
@@ -251,6 +292,9 @@ const uk: Record<MessageKey, string> = {
   "place.rejected": "Відхилено",
   "place.area": "Зона",
   "place.pendingNote": "Видно лише вам та адмінам до схвалення.",
+  "place.anonymous": "Анонім",
+  "place.commentError": "Не вдалося додати коментар.",
+  "place.uploadError": "Не вдалося завантажити зображення",
 
   "suggest.title": "Запропонувати місце",
   "suggest.intro":
@@ -264,8 +308,12 @@ const uk: Record<MessageKey, string> = {
   "suggest.submit": "Надіслати на модерацію",
   "suggest.submitted": "Дякуємо! Ваше місце надіслано й очікує модерації.",
   "suggest.signIn": "Увійдіть, щоб запропонувати місце.",
+  "suggest.created": "Місце створено.",
+  "suggest.error": "Не вдалося надіслати місце.",
+  "suggest.namePlaceholder": "Майданчик у парку Łazienki",
   "common.cancel": "Скасувати",
   "common.close": "Закрити",
+  "common.loading": "Завантаження…",
 
   "translations.title": "Переклади",
   "translations.intro":
@@ -285,6 +333,7 @@ const ru: Record<MessageKey, string> = {
   "nav.map": "Карта",
   "nav.admin": "Админ",
   "nav.translations": "Переводы",
+  "nav.language": "Язык",
   "auth.signIn": "Войти",
   "auth.signUp": "Регистрация",
 
@@ -300,6 +349,9 @@ const ru: Record<MessageKey, string> = {
   "home.browseLabels": "Или перейдите сразу к типу места",
   "home.labelsHint":
     "Типы мест — это конкретные разновидности мест в каждой категории.",
+  "home.categoryHint.food": "Рестораны, кафе, фуд-корты",
+  "home.categoryHint.utilities": "Туалеты, комнаты для младенцев, клиники",
+  "home.categoryHint.entertainment": "Парки, площадки, игровые зоны",
 
   "map.categories": "Категории",
   "map.labels": "Типы мест",
@@ -314,6 +366,11 @@ const ru: Record<MessageKey, string> = {
   "map.places": "мест",
   "map.signInToSave": "Войдите, чтобы сохранять места.",
   "map.noSaved": "Пока нет сохранённых мест.",
+  "map.favourites": "Избранное",
+  "map.loadMore": "Загрузить ещё",
+  "map.placeLayers": "Слои мест",
+  "map.removeSaved": "Удалить сохранённое место",
+  "map.removeFavourite": "Удалить из избранного",
 
   "place.directions": "Маршрут",
   "place.googleMaps": "Google Maps",
@@ -338,6 +395,9 @@ const ru: Record<MessageKey, string> = {
   "place.rejected": "Отклонено",
   "place.area": "Зона",
   "place.pendingNote": "Видно только вам и админам до одобрения.",
+  "place.anonymous": "Аноним",
+  "place.commentError": "Не удалось добавить комментарий.",
+  "place.uploadError": "Не удалось загрузить изображение",
 
   "suggest.title": "Предложить место",
   "suggest.intro":
@@ -351,8 +411,12 @@ const ru: Record<MessageKey, string> = {
   "suggest.submit": "Отправить на модерацию",
   "suggest.submitted": "Спасибо! Ваше место отправлено и ожидает модерации.",
   "suggest.signIn": "Войдите, чтобы предложить место.",
+  "suggest.created": "Место создано.",
+  "suggest.error": "Не удалось отправить место.",
+  "suggest.namePlaceholder": "Детская площадка в парке Łazienki",
   "common.cancel": "Отмена",
   "common.close": "Закрыть",
+  "common.loading": "Загрузка…",
 
   "translations.title": "Переводы",
   "translations.intro":
@@ -373,6 +437,7 @@ const be: Record<MessageKey, string> = {
   "nav.map": "Мапа",
   "nav.admin": "Адмін",
   "nav.translations": "Пераклады",
+  "nav.language": "Мова",
   "auth.signIn": "Увайсці",
   "auth.signUp": "Рэгістрацыя",
 
@@ -388,6 +453,9 @@ const be: Record<MessageKey, string> = {
   "home.browseLabels": "Або перайдзіце адразу да тыпу месца",
   "home.labelsHint":
     "Тыпы месцаў — гэта канкрэтныя разнавіднасці месцаў у кожнай катэгорыі.",
+  "home.categoryHint.food": "Рэстараны, кафэ, фуд-корты",
+  "home.categoryHint.utilities": "Туалеты, пялёнкавыя, клінікі",
+  "home.categoryHint.entertainment": "Паркі, дзетскія пляцоўкі, зоны гульняў",
 
   "map.categories": "Катэгорыі",
   "map.labels": "Тыпы месцаў",
@@ -402,6 +470,11 @@ const be: Record<MessageKey, string> = {
   "map.places": "месцаў",
   "map.signInToSave": "Увайдзіце, каб захоўваць месцы.",
   "map.noSaved": "Пакуль няма захаваных месцаў.",
+  "map.favourites": "Абранае",
+  "map.loadMore": "Загрузіць яшчэ",
+  "map.placeLayers": "Слой месцаў",
+  "map.removeSaved": "Выдаліць захаванае месца",
+  "map.removeFavourite": "Выдаліць абранае",
 
   "place.directions": "Маршрут",
   "place.googleMaps": "Google Maps",
@@ -426,6 +499,9 @@ const be: Record<MessageKey, string> = {
   "place.rejected": "Адхілена",
   "place.area": "Зона",
   "place.pendingNote": "Бачна толькі вам і адмінам да ўхвалення.",
+  "place.anonymous": "Ананім",
+  "place.commentError": "Не атрымалася дадаць каментарый.",
+  "place.uploadError": "Не атрымалася загрузіць відарыс",
 
   "suggest.title": "Прапанаваць месца",
   "suggest.intro":
@@ -439,8 +515,12 @@ const be: Record<MessageKey, string> = {
   "suggest.submit": "Даслаць на мадэрацыю",
   "suggest.submitted": "Дзякуй! Ваша месца даслана і чакае мадэрацыі.",
   "suggest.signIn": "Увайдзіце, каб прапанаваць месца.",
+  "suggest.created": "Месца створана.",
+  "suggest.error": "Не атрымалася даслаць месца.",
+  "suggest.namePlaceholder": "Дзіцячая пляцоўка ў парку Łazienki",
   "common.cancel": "Скасаваць",
   "common.close": "Закрыць",
+  "common.loading": "Загрузка…",
 
   "translations.title": "Пераклады",
   "translations.intro":

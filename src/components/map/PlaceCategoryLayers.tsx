@@ -7,7 +7,6 @@ import { useMapOverlay } from "@/hooks/use-map-overlay"
 import {
   bindPlaceLayerInteractions,
   placeLayerHandlers,
-  updatePlaceSelectionHighlight,
 } from "@/lib/map/place-layers"
 import type { MapPlace, PlaceLayersState } from "@/lib/map/place-layers"
 
@@ -36,10 +35,15 @@ export function PlaceCategoryLayers({
   const layerRevision = `${places.map((place) => `${place._id}:${place.status ?? ""}`).join(",")}:${activeCategories.join(",")}:${selectedPlaceId ?? ""}`
 
   const layerStateRef = useRef(layerState)
-  layerStateRef.current = layerState
-
   const onSelectPlaceRef = useRef(onSelectPlace)
-  onSelectPlaceRef.current = onSelectPlace
+
+  useEffect(() => {
+    layerStateRef.current = layerState
+  }, [layerState])
+
+  useEffect(() => {
+    onSelectPlaceRef.current = onSelectPlace
+  }, [onSelectPlace])
 
   useMapOverlay(map, placeLayerHandlers, layerState, layerRevision)
 
@@ -49,11 +53,6 @@ export function PlaceCategoryLayers({
       getState: () => layerStateRef.current,
       onSelectPlace: (place) => {
         onSelectPlaceRef.current(place)
-        updatePlaceSelectionHighlight(
-          map,
-          layerStateRef.current.activeCategories,
-          place?._id ?? null
-        )
       },
     })
 

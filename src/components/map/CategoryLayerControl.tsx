@@ -1,7 +1,7 @@
 "use client"
 
+import { useMemo } from "react"
 import { LayersIcon } from "lucide-react"
-
 import { Button } from "@/components/ui/button"
 import { useLocalizedNames } from "@/hooks/use-localized-catalog"
 import { useI18n } from "@/lib/i18n"
@@ -28,8 +28,9 @@ export function CategoryLayerControl({
   className,
   variant = "overlay",
 }: CategoryLayerControlProps) {
-  const { t } = useI18n()
+  const { locale, t } = useI18n()
   const { categoryName } = useLocalizedNames()
+  const pluralRules = useMemo(() => new Intl.PluralRules(locale), [locale])
 
   return (
     <div
@@ -44,7 +45,7 @@ export function CategoryLayerControl({
         {variant === "overlay" ? (
           <div className="flex items-center gap-2 text-sm font-medium">
             <LayersIcon className="size-4" />
-            Place layers
+            {t("map.placeLayers")}
           </div>
         ) : (
           <div className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
@@ -74,6 +75,11 @@ export function CategoryLayerControl({
           const isActive = activeCategories.includes(category.id)
           const count = placeCounts[category.id] ?? 0
 
+          const countLabel =
+            pluralRules.select(count) === "one"
+              ? t("map.place")
+              : t("map.places")
+
           return (
             <button
               key={category.id}
@@ -97,7 +103,7 @@ export function CategoryLayerControl({
                   {categoryName(category.id)}
                 </span>
                 <span className="block text-xs text-muted-foreground">
-                  {count} {count === 1 ? t("map.place") : t("map.places")}
+                  {count} {countLabel}
                 </span>
               </span>
               <span

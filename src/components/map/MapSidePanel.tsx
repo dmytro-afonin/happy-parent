@@ -1,6 +1,11 @@
 "use client"
 
-import { useConvexAuth, useMutation, useQuery } from "convex/react"
+import {
+  useConvexAuth,
+  useMutation,
+  usePaginatedQuery,
+  useQuery,
+} from "convex/react"
 import {
   ClockIcon,
   HeartIcon,
@@ -75,10 +80,13 @@ export function MapSidePanel({
     api.favouritePlaces.list,
     isAuthenticated ? {} : "skip"
   )
-  const savedPlaces = useQuery(
-    api.savedPlaces.list,
-    isAuthenticated ? {} : "skip"
-  )
+  const {
+    results: savedPlaces,
+    status: savedPlacesStatus,
+    loadMore: loadMoreSavedPlaces,
+  } = usePaginatedQuery(api.savedPlaces.list, isAuthenticated ? {} : "skip", {
+    initialNumItems: 20,
+  })
   const recentSearches = useQuery(
     api.recentSearches.listRecent,
     isAuthenticated ? { limit: 15 } : "skip"
@@ -114,7 +122,7 @@ export function MapSidePanel({
   const visibleLabels = (labels ?? []).filter((label) =>
     activeCategories.includes(label.category)
   )
-  const savedCount = (favourites?.length ?? 0) + (savedPlaces?.length ?? 0)
+  const savedCount = (favourites?.length ?? 0) + savedPlaces.length
 
   return (
     <Accordion
@@ -219,8 +227,11 @@ export function MapSidePanel({
             <p className="px-2 py-3 text-sm text-muted-foreground">
               {t("map.signInToSave")}
             </p>
-          ) : favourites === undefined || savedPlaces === undefined ? (
-            <p className="px-2 py-3 text-sm text-muted-foreground">Loading…</p>
+          ) : favourites === undefined ||
+            savedPlacesStatus === "LoadingFirstPage" ? (
+            <p className="px-2 py-3 text-sm text-muted-foreground">
+              {t("common.loading")}
+            </p>
           ) : savedCount === 0 ? (
             <p className="px-2 py-3 text-sm text-muted-foreground">
               {t("map.noSaved")}
@@ -254,7 +265,7 @@ export function MapSidePanel({
                             size="icon-sm"
                             variant="ghost"
                             className="opacity-0 group-hover:opacity-100"
-                            aria-label={`Remove ${entry.placeName ?? "place"}`}
+                            aria-label={t("map.removeSaved")}
                             onClick={() =>
                               void toggleSavedPlace({ placeId: entry.placeId })
                             }
@@ -265,13 +276,24 @@ export function MapSidePanel({
                       </li>
                     ))}
                   </ul>
+                  {savedPlacesStatus === "CanLoadMore" ? (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      className="mt-1 w-full text-xs"
+                      onClick={() => loadMoreSavedPlaces(20)}
+                    >
+                      {t("map.loadMore")}
+                    </Button>
+                  ) : null}
                 </div>
               ) : null}
 
               {favourites.length > 0 ? (
                 <div>
                   <p className="mb-1.5 px-1 text-xs font-medium text-muted-foreground">
-                    Favourites
+                    {t("map.favourites")}
                   </p>
                   <ul className="space-y-1">
                     {favourites.map((favourite) => (
@@ -304,7 +326,7 @@ export function MapSidePanel({
                             size="icon-sm"
                             variant="ghost"
                             className="opacity-0 group-hover:opacity-100"
-                            aria-label={`Remove ${favourite.name}`}
+                            aria-label={t("map.removeFavourite")}
                             onClick={() => void handleRemove(favourite._id)}
                           >
                             <Trash2Icon className="size-4" />
@@ -339,7 +361,9 @@ export function MapSidePanel({
               {t("map.signInToSave")}
             </p>
           ) : recentSearches === undefined || recentCategories === undefined ? (
-            <p className="px-2 py-3 text-sm text-muted-foreground">Loading…</p>
+            <p className="px-2 py-3 text-sm text-muted-foreground">
+              {t("common.loading")}
+            </p>
           ) : recentCategories.length === 0 && recentSearches.length === 0 ? (
             <p className="px-2 py-3 text-sm text-muted-foreground">
               {t("map.noSaved")}

@@ -19,6 +19,7 @@ import type * as lib_locales from "../lib/locales.js";
 import type * as lib_mapPreferenceFields from "../lib/mapPreferenceFields.js";
 import type * as lib_mapStyles from "../lib/mapStyles.js";
 import type * as lib_moderation from "../lib/moderation.js";
+import type * as lib_moderationNotify from "../lib/moderationNotify.js";
 import type * as lib_nominatim from "../lib/nominatim.js";
 import type * as lib_placeCategories from "../lib/placeCategories.js";
 import type * as lib_places from "../lib/places.js";
@@ -54,6 +55,7 @@ declare const fullApi: ApiFromModules<{
   "lib/mapPreferenceFields": typeof lib_mapPreferenceFields;
   "lib/mapStyles": typeof lib_mapStyles;
   "lib/moderation": typeof lib_moderation;
+  "lib/moderationNotify": typeof lib_moderationNotify;
   "lib/nominatim": typeof lib_nominatim;
   "lib/placeCategories": typeof lib_placeCategories;
   "lib/places": typeof lib_places;

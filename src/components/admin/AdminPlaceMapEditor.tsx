@@ -86,6 +86,7 @@ export function AdminPlaceMapEditor({
   const mapRef = useRef<MapViewHandle>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [searching, setSearching] = useState(false)
+  const [searchError, setSearchError] = useState<string | null>(null)
   const searchPlaces = useAction(api.geocoding.search)
 
   const handleSearch = async () => {
@@ -95,6 +96,7 @@ export function AdminPlaceMapEditor({
     }
 
     setSearching(true)
+    setSearchError(null)
     try {
       const viewport = mapRef.current?.getSearchViewport()
       const results = await searchPlaces({
@@ -110,6 +112,7 @@ export function AdminPlaceMapEditor({
 
       const result = results.at(0)
       if (!result) {
+        setSearchError("No results found")
         return
       }
 
@@ -118,6 +121,8 @@ export function AdminPlaceMapEditor({
       if (geometryType === "point") {
         onPointChange({ lat: result.lat, lng: result.lng })
       }
+    } catch (err) {
+      setSearchError(err instanceof Error ? err.message : "Search failed")
     } finally {
       setSearching(false)
     }
@@ -154,6 +159,9 @@ export function AdminPlaceMapEditor({
           Search
         </Button>
       </div>
+      {searchError ? (
+        <p className="text-sm text-destructive">{searchError}</p>
+      ) : null}
 
       <div className="flex flex-wrap items-center gap-2">
         <Badge variant="secondary">

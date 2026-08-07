@@ -55,17 +55,22 @@ export function getCategoryMeta(category: PlaceCategoryId) {
   return PLACE_CATEGORY_META[category]
 }
 
-export function matchPlaceCategories(query: string) {
+export function matchPlaceCategories(
+  query: string,
+  localizedNames?: Partial<Record<PlaceCategoryId, string>>
+) {
   const trimmed = query.trim().toLowerCase()
   if (trimmed.length === 0) {
     return []
   }
 
-  return PLACE_CATEGORY_LIST.filter(
-    (category) =>
-      category.label.toLowerCase().includes(trimmed) ||
+  return PLACE_CATEGORY_LIST.filter((category) => {
+    const label = localizedNames?.[category.id] ?? category.label
+    return (
+      label.toLowerCase().includes(trimmed) ||
       category.searchHint.toLowerCase().includes(trimmed) ||
       category.description.toLowerCase().includes(trimmed) ||
       category.id.replace("-", " ").includes(trimmed)
-  )
+    )
+  })
 }

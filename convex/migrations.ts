@@ -3,7 +3,11 @@ import type { MutationCtx } from "./_generated/server"
 import { v } from "convex/values"
 
 import type { Locale } from "./lib/locales"
-import { LEGACY_CATEGORY_MAP, isPlaceCategoryId } from "./lib/placeCategories"
+import {
+  LEGACY_CATEGORY_MAP,
+  isLegacyPlaceCategoryId,
+  isPlaceCategoryId,
+} from "./lib/placeCategories"
 import type { PlaceCategoryId } from "./lib/placeCategories"
 import { userRoleValidator } from "./lib/roles"
 
@@ -339,16 +343,27 @@ export const migrateLegacyCategories = internalMutation({
         continue
       }
 
+      if (!isLegacyPlaceCategoryId(place.category)) {
+        throw new Error(
+          `migrateLegacyCategories: no mapping for category "${place.category}" on place ${place._id}`
+        )
+      }
+
       const legacy = LEGACY_CATEGORY_MAP[place.category]
       const labelId = labelBySlug.get(legacy.labelSlug)
+      if (!labelId) {
+        throw new Error(
+          `migrateLegacyCategories: missing label slug "${legacy.labelSlug}" — run seedLabels first`
+        )
+      }
+
       const labelIds = place.labelIds ?? []
 
       await ctx.db.patch("places", place._id, {
         category: legacy.category,
-        labelIds:
-          labelId && !labelIds.includes(labelId)
-            ? [...labelIds, labelId]
-            : labelIds,
+        labelIds: labelIds.includes(labelId)
+          ? labelIds
+          : [...labelIds, labelId],
       })
       migrated += 1
     }

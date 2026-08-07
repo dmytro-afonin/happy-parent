@@ -398,6 +398,7 @@ export function bindPlaceLayerInteractions({
     const feature = features.at(0)
     if (!feature) {
       onSelectPlace?.(null)
+      updatePlaceSelectionHighlight(map, getState().activeCategories, null)
       return
     }
 

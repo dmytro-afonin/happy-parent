@@ -71,7 +71,7 @@ function MapPage() {
     place: urlPlace,
   } = Route.useSearch()
   const navigate = useNavigate()
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
   const mapRef = useRef<MapViewHandle>(null)
   const [mapInstance, setMapInstance] = useState<maplibregl.Map | null>(null)
   const [searchOpen, setSearchOpen] = useState(false)
@@ -98,7 +98,9 @@ function MapPage() {
   const { isAuthenticated, isLoading: isAuthLoading } = useConvexAuth()
   const { isAdmin } = useAdminStatus()
   const isAuthenticatedRef = useRef(isAuthenticated)
-  isAuthenticatedRef.current = isAuthenticated
+  useEffect(() => {
+    isAuthenticatedRef.current = isAuthenticated
+  }, [isAuthenticated])
   const systemPlaces = useQuery(api.places.list, {})
   const labels = useLabels()
   const savedPreferences = useQuery(
@@ -117,8 +119,12 @@ function MapPage() {
   }, [ensureCurrentUser, isAuthenticated])
 
   const clearCategorySearchParam = useCallback(() => {
-    void navigate({ to: "/map", replace: true })
-  }, [navigate])
+    void navigate({
+      to: "/map",
+      search: urlPlace ? { place: urlPlace } : {},
+      replace: true,
+    })
+  }, [navigate, urlPlace])
 
   // URL category takes precedence (e.g. home page deep links).
   useLayoutEffect(() => {
@@ -188,7 +194,12 @@ function MapPage() {
 
   // Share deep link (?place=<id>) opens the place card and flies to it.
   useEffect(() => {
-    if (!urlPlace || urlPlaceAppliedRef.current || systemPlaces === undefined) {
+    if (
+      !urlPlace ||
+      urlPlaceAppliedRef.current ||
+      systemPlaces === undefined ||
+      !mapInstance
+    ) {
       return
     }
 
@@ -201,9 +212,9 @@ function MapPage() {
           : [...current, place.category]
       )
       mapRef.current?.flyTo({ lat: place.lat, lng: place.lng })
+      urlPlaceAppliedRef.current = true
     }
-    urlPlaceAppliedRef.current = true
-  }, [mapPlaces, systemPlaces, urlPlace])
+  }, [mapInstance, mapPlaces, systemPlaces, urlPlace])
 
   const persistCategories = useCallback(
     (
@@ -364,7 +375,7 @@ function MapPage() {
       })
 
       drawRoute(mapInstance, route)
-      setRouteSummary(formatRouteSummary(route))
+      setRouteSummary(formatRouteSummary(route, { locale }))
     } catch (error) {
       setRouteError(
         error instanceof Error ? error.message : t("place.routeError")
@@ -372,7 +383,7 @@ function MapPage() {
     } finally {
       setRouteLoading(false)
     }
-  }, [mapInstance, selectedPlace, t, userLocation])
+  }, [locale, mapInstance, selectedPlace, t, userLocation])
 
   const visiblePlaces = useMemo(() => {
     if (activeLabelIds.length === 0) {

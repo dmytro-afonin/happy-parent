@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useAction, useMutation } from "convex/react"
 import { CrosshairIcon, Loader2Icon } from "lucide-react"
 
@@ -79,10 +79,13 @@ export function SuggestPlaceDialog({
     setLocation(getMapCenter())
   }
 
-  const handleOpenChange = (nextOpen: boolean) => {
-    if (nextOpen && !location) {
+  useEffect(() => {
+    if (open && !location) {
       setLocation(getMapCenter())
     }
+  }, [open, location, getMapCenter])
+
+  const handleOpenChange = (nextOpen: boolean) => {
     resetAndClose(nextOpen)
   }
 
@@ -133,9 +136,7 @@ export function SuggestPlaceDialog({
       setSubmitted(true)
     } catch (submitError) {
       setError(
-        submitError instanceof Error
-          ? submitError.message
-          : "Could not submit the place."
+        submitError instanceof Error ? submitError.message : t("suggest.error")
       )
     } finally {
       setSubmitting(false)
@@ -155,7 +156,7 @@ export function SuggestPlaceDialog({
         {submitted ? (
           <div className="space-y-4">
             <p className="text-sm text-green-600">
-              {isAdmin ? "Place created." : t("suggest.submitted")}
+              {isAdmin ? t("suggest.created") : t("suggest.submitted")}
             </p>
             <Button type="button" onClick={() => resetAndClose(false)}>
               {t("common.close")}
@@ -168,7 +169,7 @@ export function SuggestPlaceDialog({
               <Input
                 value={name}
                 onChange={(event) => setName(event.target.value)}
-                placeholder="Playground at Łazienki Park"
+                placeholder={t("suggest.namePlaceholder")}
               />
             </label>
 

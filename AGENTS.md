@@ -26,8 +26,7 @@ and `package.json` scripts; this section only covers non-obvious caveats.
   — answer `n` (do not commit AI files). It also halts function push until
   `CLERK_FRONTEND_API_URL` is set **on the Convex deployment**:
   `pnpm dlx convex env set CLERK_FRONTEND_API_URL "$CLERK_FRONTEND_API_URL"` (the value
-  is available as an env var here). Note `convex/auth.config.ts` reads
-  `CLERK_FRONTEND_API_URL`, even though `.env.example`/README mention `CLERK_JWT_ISSUER_DOMAIN`.
+  is available as an env var here). `convex/auth.config.ts` reads `CLERK_FRONTEND_API_URL`.
 - `.env.local` is gitignored. Clerk keys (`VITE_CLERK_PUBLISHABLE_KEY` or Marketplace
   `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, plus `CLERK_SECRET_KEY`, `CLERK_FRONTEND_API_URL`)
   are injected as env vars; copy them into `.env.local` for the Vite/SSR server. The app

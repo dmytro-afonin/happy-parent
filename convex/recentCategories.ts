@@ -25,15 +25,18 @@ export const list = query({
       return []
     }
 
+    const limit = args.limit ?? 10
+
+    // Take a larger window first so legacy category rows don't shrink the page.
     const entries = await ctx.db
       .query("recentCategories")
       .withIndex("by_user_searchedAt", (q) => q.eq("userId", userId))
       .order("desc")
-      .take(args.limit ?? 10)
+      .take(MAX_RECENT_CATEGORIES)
 
-    // Rows recorded before the generic-categories rework are skipped.
     return entries
       .filter((entry) => isPlaceCategoryId(entry.category))
+      .slice(0, limit)
       .map((entry) => ({
         category: entry.category as "food" | "utilities" | "entertainment",
         searchedAt: entry.searchedAt,

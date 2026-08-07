@@ -1,6 +1,6 @@
 "use client"
 
-import { useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { Show, SignInButton } from "@clerk/react"
 import { useConvexAuth, useAction, useMutation, useQuery } from "convex/react"
 import { upload } from "@imagekit/react"
@@ -63,13 +63,17 @@ export function PlaceCard({
   const placeId = place._id as Id<"places">
   const photos = useQuery(api.placePhotos.listByPlace, { placeId })
   const comments = useQuery(api.placeComments.listByPlace, { placeId })
-  const saved = useQuery(api.savedPlaces.list, isAuthenticated ? {} : "skip")
+  const saved = useQuery(
+    api.savedPlaces.isSaved,
+    isAuthenticated ? { placeId } : "skip"
+  )
   const toggleSaved = useMutation(api.savedPlaces.toggle)
 
-  const isSaved = Boolean(saved?.some((entry) => entry.placeId === placeId))
+  const isSaved = saved === true
 
   const [shareCopied, setShareCopied] = useState(false)
   const [directionsOpen, setDirectionsOpen] = useState(false)
+  const directionsRef = useRef<HTMLDivElement>(null)
 
   const meta = PLACE_CATEGORY_META[place.category]
   const navigation = getNavigationLinks(place.lat, place.lng, place.name)
@@ -84,6 +88,34 @@ export function PlaceCard({
   const placeLabels = (place.labelIds ?? [])
     .map((labelId) => labels?.find((label) => label._id === labelId))
     .filter((label): label is PlaceLabel => Boolean(label))
+
+  useEffect(() => {
+    if (!directionsOpen) {
+      return
+    }
+
+    const handlePointerDown = (event: MouseEvent) => {
+      if (
+        directionsRef.current &&
+        !directionsRef.current.contains(event.target as Node)
+      ) {
+        setDirectionsOpen(false)
+      }
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setDirectionsOpen(false)
+      }
+    }
+
+    document.addEventListener("mousedown", handlePointerDown)
+    document.addEventListener("keydown", handleKeyDown)
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown)
+      document.removeEventListener("keydown", handleKeyDown)
+    }
+  }, [directionsOpen])
 
   const handleShare = async () => {
     const url = getPlaceShareUrl(place._id)
@@ -104,21 +136,24 @@ export function PlaceCard({
 
     try {
       await navigator.clipboard.writeText(url)
+      setShareCopied(true)
+      window.setTimeout(() => setShareCopied(false), 2000)
+      return
     } catch {
-      // Clipboard API can be unavailable (e.g. permissions) — fall back to a
-      // temporary textarea + execCommand copy.
+      // Clipboard API can be unavailable — fall back to execCommand copy.
       const textarea = document.createElement("textarea")
       textarea.value = url
       textarea.style.position = "fixed"
       textarea.style.opacity = "0"
       document.body.appendChild(textarea)
       textarea.select()
-      document.execCommand("copy")
+      const copied = document.execCommand("copy")
       textarea.remove()
+      if (copied) {
+        setShareCopied(true)
+        window.setTimeout(() => setShareCopied(false), 2000)
+      }
     }
-
-    setShareCopied(true)
-    window.setTimeout(() => setShareCopied(false), 2000)
   }
 
   return (
@@ -194,10 +229,12 @@ export function PlaceCard({
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <div className="relative">
+          <div className="relative" ref={directionsRef}>
             <Button
               type="button"
               size="sm"
+              aria-expanded={directionsOpen}
+              aria-haspopup="menu"
               onClick={() => setDirectionsOpen((open) => !open)}
             >
               <NavigationIcon className="size-3.5" />
@@ -205,8 +242,12 @@ export function PlaceCard({
               <ChevronDownIcon className="size-3" />
             </Button>
             {directionsOpen ? (
-              <div className="absolute bottom-full left-0 z-10 mb-1 w-44 rounded-md border bg-popover p-1 shadow-md">
+              <div
+                role="menu"
+                className="absolute bottom-full left-0 z-10 mb-1 w-44 rounded-md border bg-popover p-1 shadow-md"
+              >
                 <a
+                  role="menuitem"
                   href={navigation.google}
                   target="_blank"
                   rel="noopener noreferrer"
@@ -217,6 +258,7 @@ export function PlaceCard({
                   <ExternalLinkIcon className="ml-auto size-3" />
                 </a>
                 <a
+                  role="menuitem"
                   href={navigation.apple}
                   target="_blank"
                   rel="noopener noreferrer"
@@ -228,6 +270,7 @@ export function PlaceCard({
                 </a>
                 <button
                   type="button"
+                  role="menuitem"
                   className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm hover:bg-muted"
                   onClick={() => {
                     setDirectionsOpen(false)
@@ -377,7 +420,7 @@ function PlacePhotosSection({ placeId, photos }: PhotosSectionProps) {
       setError(
         uploadError instanceof Error
           ? uploadError.message
-          : "Image upload failed"
+          : t("place.uploadError")
       )
     } finally {
       setUploading(false)
@@ -488,7 +531,7 @@ function PlaceCommentsSection({ placeId, comments }: CommentsSectionProps) {
       setError(
         submitError instanceof Error
           ? submitError.message
-          : "Could not add comment."
+          : t("place.commentError")
       )
     } finally {
       setSubmitting(false)
@@ -513,7 +556,7 @@ function PlaceCommentsSection({ placeId, comments }: CommentsSectionProps) {
             >
               <div className="flex items-center gap-1.5">
                 <span className="text-xs font-medium">
-                  {comment.authorName ?? "Anonymous"}
+                  {comment.authorName ?? t("place.anonymous")}
                 </span>
                 {comment.status === "pending" ? (
                   <Badge className="h-4 bg-amber-500/15 px-1 text-[10px] text-amber-600">
