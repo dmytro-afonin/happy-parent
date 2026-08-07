@@ -69,24 +69,27 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ## Deploy to Vercel
 
-Build command is `pnpm vercel-build` (via `vercel.json`):
+Build command is `pnpm vercel-build` (via `vercel.json`). With the Convex ↔ Vercel
+integration, `CONVEX_DEPLOY_KEY` is synced per environment:
 
-| `VERCEL_ENV` | Behavior |
-| --- | --- |
-| `production` | `convex deploy` (push functions/schema) then `pnpm build` |
-| `preview` / `development` | `pnpm build` only — uses `VITE_CONVEX_URL` from the Vercel env |
+| Vercel env | `CONVEX_DEPLOY_KEY` | Build behavior |
+| --- | --- | --- |
+| Production | Production deploy key | `convex deploy` → prod backend, then frontend build |
+| Preview | Preview deploy key | `convex deploy` → branch preview backend (+ `migrations:seedLabels`), then frontend build |
 
-### Recommended split: keep current project for dev, separate project for prod
+`convex deploy` injects `VITE_CONVEX_URL` for the frontend build. If that URL is
+missing, the client falls back to `placeholder.convex.cloud` and the browser shows
+`Couldn't parse deployment name placeholder`.
 
-1. **Dev (current Convex project)** — local `convex dev`, Vercel Development if you use it, Clerk Development keys.
-2. **Prod (new Convex project)** — create a second Convex project; deploy once with a production deploy key; set `CLERK_FRONTEND_API_URL` (and other Convex env vars) on that project's **Production** deployment; use Clerk **Production** keys.
-3. **Vercel Production** — `CONVEX_DEPLOY_KEY` for the **prod** project; Clerk Production keys; leave Convex deploy to `vercel-build`.
-4. **Vercel Preview** — same production data and auth as prod:
-   - Set `VITE_CONVEX_URL` (and `VITE_CONVEX_SITE_URL` if used) to the **prod** Convex URLs
-   - Set Clerk Preview env to the **same Production** Clerk keys as prod
-   - Do **not** attach a preview-scoped `CONVEX_DEPLOY_KEY` (or disconnect Preview from the Convex marketplace integration’s preview deploys). Preview builds must not create empty Convex backends or push branch code onto production.
+### Clerk (Vercel Marketplace)
 
-Preview therefore shows production data. Mutations from a preview URL hit production — that is intentional with this model.
+Marketplace maps Clerk **Development** → Vercel Preview and Clerk **Production** →
+Vercel Production. The app aliases `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` to the Vite
+names, so you do not need a manual `VITE_CLERK_PUBLISHABLE_KEY` on Vercel.
+
+Set `CLERK_FRONTEND_API_URL` on each Convex deployment (project defaults for Preview
++ Production deployment env) to the matching Clerk Frontend API URL so signed-in
+WebSocket auth works.
 
 ## Deferred (not in initial scaffold)
 
