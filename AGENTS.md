@@ -8,9 +8,10 @@ and `package.json` scripts; this section only covers non-obvious caveats.
 
 ### Node version
 
-- `package.json` requires Node `>=24.19`. The VM's default `node` (`/exec-daemon/node`)
-  is often older and ahead of nvm on `PATH`, so plain `node`/`pnpm dev` may not match
-  the engine. Prefer Node 24.19+ via nvm and prepend it for dev/build/test:
+- `package.json` requires Node `>=24.15` (matches current Vercel Node 24.x images).
+  The VM's default `node` (`/exec-daemon/node`) is often older and ahead of nvm on
+  `PATH`, so plain `node`/`pnpm dev` may not match the engine. Prefer Node 24 via nvm
+  and prepend it for dev/build/test:
   `export PATH="$HOME/.nvm/versions/node/v24.19.0/bin:$PATH"` (or `nvm use 24`).
 
 ### Two long-running processes (run in separate terminals/tmux sessions)

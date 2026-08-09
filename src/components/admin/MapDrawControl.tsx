@@ -87,7 +87,9 @@ export function MapDrawControl({
 }: MapDrawControlProps) {
   const drawRef = useRef<MapboxDraw | null>(null)
   const onVerticesChangeRef = useRef(onVerticesChange)
+  const verticesRef = useRef(vertices)
   onVerticesChangeRef.current = onVerticesChange
+  verticesRef.current = vertices
 
   useEffect(() => {
     if (!enabled) {
@@ -116,7 +118,9 @@ export function MapDrawControl({
     drawEvents.on("draw.update", syncFromDraw)
     drawEvents.on("draw.delete", syncFromDraw)
 
-    if (vertices.length >= 3) {
+    // Seed once on mount; ongoing vertex edits are handled by the effect below.
+    const initialVertices = verticesRef.current
+    if (initialVertices.length >= 3) {
       draw.add({
         type: "Feature",
         properties: {},
@@ -124,8 +128,8 @@ export function MapDrawControl({
           type: "Polygon",
           coordinates: [
             [
-              ...vertices.map((vertex) => [vertex.lng, vertex.lat]),
-              [vertices[0]?.lng ?? 0, vertices[0]?.lat ?? 0],
+              ...initialVertices.map((vertex) => [vertex.lng, vertex.lat]),
+              [initialVertices[0]?.lng ?? 0, initialVertices[0]?.lat ?? 0],
             ],
           ],
         },

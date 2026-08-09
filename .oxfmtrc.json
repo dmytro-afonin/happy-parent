@@ -17,6 +17,7 @@
     "yarn.lock",
     "src/routeTree.gen.ts",
     "convex/_generated",
-    ".agents"
+    ".agents",
+    "vercel.json"
   ]
 }

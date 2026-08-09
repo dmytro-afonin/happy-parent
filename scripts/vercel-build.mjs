@@ -24,9 +24,17 @@ if (publishable) {
 
 const vercelEnv = process.env.VERCEL_ENV ?? "development"
 
+console.log(
+  `[vercel-build] node=${process.version} env=${vercelEnv} cwd=${process.cwd()}`
+)
+
 function run(command, args) {
+  console.log(`[vercel-build] $ ${command} ${args.join(" ")}`)
   const result = spawnSync(command, args, { stdio: "inherit", shell: false })
   if (result.status !== 0) {
+    console.error(
+      `[vercel-build] command failed: ${command} ${args.join(" ")} (exit ${result.status ?? 1})`
+    )
     process.exit(result.status ?? 1)
   }
 }
