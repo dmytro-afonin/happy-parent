@@ -25,7 +25,6 @@ import {
 } from "@/components/ui/accordion"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { useSidebar } from "@/components/ui/sidebar"
 import { useLocalizedNames } from "@/hooks/use-localized-catalog"
 import type { PlaceLabel } from "@/hooks/use-localized-catalog"
 import { useI18n } from "@/lib/i18n"
@@ -53,6 +52,8 @@ type MapSidePanelProps = {
   onSelectPlace: (place: PlaceSearchResult) => void
   onSelectSavedPlace: (placeId: string) => void
   onSelectRecentCategory?: (category: PlaceCategoryId) => void
+  /** Close the floating/mobile panel after a navigation action. */
+  onRequestClose?: () => void
 }
 
 export function MapSidePanel({
@@ -71,10 +72,10 @@ export function MapSidePanel({
   onSelectPlace,
   onSelectSavedPlace,
   onSelectRecentCategory,
+  onRequestClose,
 }: MapSidePanelProps) {
   const { t } = useI18n()
   const { isAuthenticated } = useConvexAuth()
-  const { isMobile, setOpenMobile } = useSidebar()
   const { categoryName, labelName } = useLocalizedNames()
   const favourites = useQuery(
     api.favouritePlaces.list,
@@ -98,20 +99,14 @@ export function MapSidePanel({
   const removeFavourite = useMutation(api.favouritePlaces.remove)
   const toggleSavedPlace = useMutation(api.savedPlaces.toggle)
 
-  const closeMobileSidebar = () => {
-    if (isMobile) {
-      setOpenMobile(false)
-    }
-  }
-
   const handleSelectPlace = (place: PlaceSearchResult) => {
     onSelectPlace(place)
-    closeMobileSidebar()
+    onRequestClose?.()
   }
 
   const handleSelectCategory = (category: PlaceCategoryId) => {
     onSelectRecentCategory?.(category)
-    closeMobileSidebar()
+    onRequestClose?.()
   }
 
   const handleRemove = async (favouriteId: Id<"favouritePlaces">) => {
@@ -256,7 +251,7 @@ export function MapSidePanel({
                             className="flex min-w-0 flex-1 items-center gap-2 text-left"
                             onClick={() => {
                               onSelectSavedPlace(entry.placeId)
-                              closeMobileSidebar()
+                              onRequestClose?.()
                             }}
                           >
                             <MapPinIcon className="size-4 shrink-0 text-muted-foreground" />

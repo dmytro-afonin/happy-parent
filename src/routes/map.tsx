@@ -24,14 +24,14 @@ import { SuggestPlaceDialog } from "@/components/map/SuggestPlaceDialog"
 import { DEFAULT_MAP_STYLE_ID } from "@/components/map/map-styles"
 import type { MapStyleId } from "@/components/map/map-styles"
 import {
-  Sidebar,
-  SidebarContent,
-  SidebarHeader,
-  SidebarInset,
-  SidebarProvider,
-  SidebarRail,
-} from "@/components/ui/sidebar"
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet"
 import { useAdminStatus } from "@/hooks/use-admin-status"
+import { useIsMobile } from "@/hooks/use-mobile"
 import { useLabels } from "@/hooks/use-localized-catalog"
 import { useI18n } from "@/lib/i18n"
 import {
@@ -99,6 +99,7 @@ function MapPage() {
 
   const { isAuthenticated, isLoading: isAuthLoading } = useConvexAuth()
   const { isAdmin } = useAdminStatus()
+  const isMobile = useIsMobile()
   const isAuthenticatedRef = useRef(isAuthenticated)
   useEffect(() => {
     isAuthenticatedRef.current = isAuthenticated
@@ -330,6 +331,10 @@ function MapPage() {
     [isAuthenticated, updatePreferences]
   )
 
+  const closeSidePanel = useCallback(() => {
+    handleSidebarOpenChange(false)
+  }, [handleSidebarOpenChange])
+
   const handleClearRoute = useCallback(() => {
     if (mapInstance) {
       clearRoute(mapInstance)
@@ -468,76 +473,103 @@ function MapPage() {
       handleSelectPlace(place, place.query ?? place.label),
     onSelectSavedPlace: handleSelectSavedPlace,
     onSelectRecentCategory: handleSelectCategory,
+    onRequestClose: isMobile ? closeSidePanel : undefined,
   }
 
+  const placeCardLeftOffset =
+    !isMobile && sidebarOpen ? "md:left-[22rem]" : "sm:left-3"
+
   return (
-    <SidebarProvider
-      open={sidebarOpen}
-      onOpenChange={handleSidebarOpenChange}
-      className="h-svh min-h-0"
-    >
-      <Sidebar collapsible="offcanvas" variant="sidebar">
-        <SidebarHeader className="border-b px-3 py-2">
-          <p className="text-sm font-medium">Happy Parent</p>
-          <p className="text-xs text-muted-foreground">
-            {t("map.categories")} · {t("map.labels")}
-          </p>
-        </SidebarHeader>
-        <SidebarContent>
-          <MapSidePanel {...sidePanelProps} />
-        </SidebarContent>
-        <SidebarRail />
-      </Sidebar>
-
-      <SidebarInset className="min-h-0 overflow-hidden">
-        <MapCompactToolbar
-          onOpenSearch={() => setSearchOpen(true)}
-          onAddPlace={() => setSuggestOpen(true)}
-        />
-
-        <div className="relative min-h-0 flex-1">
-          {isPreferenceReady ? (
-            <MapView
-              ref={mapRef}
-              className="absolute inset-0 h-full w-full"
-              initialStyleId={initialStyleId}
-              onStyleChange={handleStyleChange}
-              onUserLocationChange={setUserLocation}
-              onMapReady={setMapInstance}
-            >
-              {(map) => (
-                <PlaceCategoryLayers
-                  map={map}
-                  places={visiblePlaces}
-                  activeCategories={activeCategories}
-                  selectedPlaceId={selectedPlace?._id ?? null}
-                  onSelectPlace={setSelectedPlace}
-                />
-              )}
-            </MapView>
-          ) : (
-            <div className="absolute inset-0 flex items-center justify-center bg-muted/30 text-sm text-muted-foreground">
-              {t("map.loading")}
-            </div>
+    <div className="relative h-svh min-h-0 overflow-hidden bg-muted/20">
+      {isPreferenceReady ? (
+        <MapView
+          ref={mapRef}
+          className="absolute inset-0 h-full w-full"
+          initialStyleId={initialStyleId}
+          onStyleChange={handleStyleChange}
+          onUserLocationChange={setUserLocation}
+          onMapReady={setMapInstance}
+        >
+          {(map) => (
+            <PlaceCategoryLayers
+              map={map}
+              places={visiblePlaces}
+              activeCategories={activeCategories}
+              selectedPlaceId={selectedPlace?._id ?? null}
+              onSelectPlace={setSelectedPlace}
+            />
           )}
-
-          {selectedPlace ? (
-            <div className="pointer-events-none absolute inset-x-3 bottom-3 z-10 flex max-h-[min(70%,480px)] justify-start sm:inset-x-auto sm:left-3">
-              <PlaceCard
-                key={selectedPlace._id}
-                place={selectedPlace}
-                labels={labels}
-                onClose={handleCloseCard}
-                onShowRoute={() => void handleShowRoute()}
-                onClearRoute={handleClearRoute}
-                routeLoading={routeLoading}
-                routeSummary={routeSummary}
-                routeError={routeError}
-              />
-            </div>
-          ) : null}
+        </MapView>
+      ) : (
+        <div className="absolute inset-0 flex items-center justify-center bg-muted/30 text-sm text-muted-foreground">
+          {t("map.loading")}
         </div>
-      </SidebarInset>
+      )}
+
+      <MapCompactToolbar
+        onOpenSearch={() => setSearchOpen(true)}
+        onAddPlace={() => setSuggestOpen(true)}
+        panelOpen={sidebarOpen}
+        onTogglePanel={() => handleSidebarOpenChange(!sidebarOpen)}
+      />
+
+      {/* Desktop: float above the map without shrinking the canvas. */}
+      {!isMobile && sidebarOpen ? (
+        <aside className="pointer-events-none absolute top-16 bottom-3 left-3 z-20 hidden w-[20rem] md:block">
+          <div className="pointer-events-auto flex h-full flex-col overflow-hidden rounded-2xl border bg-background/95 shadow-lg backdrop-blur supports-[backdrop-filter]:bg-background/90">
+            <div className="border-b px-3 py-2">
+              <p className="text-sm font-medium">Happy Parent</p>
+              <p className="text-xs text-muted-foreground">
+                {t("map.categories")} · {t("map.labels")}
+              </p>
+            </div>
+            <div className="min-h-0 flex-1 overflow-y-auto">
+              <MapSidePanel {...sidePanelProps} />
+            </div>
+          </div>
+        </aside>
+      ) : null}
+
+      {/* Mobile: sheet overlay (map stays full-bleed underneath). */}
+      {isMobile ? (
+        <Sheet open={sidebarOpen} onOpenChange={handleSidebarOpenChange}>
+          <SheetContent
+            side="left"
+            showCloseButton={false}
+            className="w-[min(100%,20rem)] gap-0 p-0"
+          >
+            <SheetHeader className="border-b px-3 py-2 text-left">
+              <SheetTitle className="text-sm font-medium">
+                Happy Parent
+              </SheetTitle>
+              <SheetDescription className="text-xs">
+                {t("map.categories")} · {t("map.labels")}
+              </SheetDescription>
+            </SheetHeader>
+            <div className="min-h-0 flex-1 overflow-y-auto">
+              <MapSidePanel {...sidePanelProps} />
+            </div>
+          </SheetContent>
+        </Sheet>
+      ) : null}
+
+      {selectedPlace ? (
+        <div
+          className={`pointer-events-none absolute inset-x-3 bottom-3 z-10 flex max-h-[min(70%,480px)] justify-start transition-[left] duration-200 sm:inset-x-auto ${placeCardLeftOffset}`}
+        >
+          <PlaceCard
+            key={selectedPlace._id}
+            place={selectedPlace}
+            labels={labels}
+            onClose={handleCloseCard}
+            onShowRoute={() => void handleShowRoute()}
+            onClearRoute={handleClearRoute}
+            routeLoading={routeLoading}
+            routeSummary={routeSummary}
+            routeError={routeError}
+          />
+        </div>
+      ) : null}
 
       <MapSearchModal
         open={searchOpen}
@@ -556,6 +588,6 @@ function MapPage() {
         isAdmin={isAdmin}
         getMapCenter={() => mapRef.current?.getSearchViewport()?.center ?? null}
       />
-    </SidebarProvider>
+    </div>
   )
 }
