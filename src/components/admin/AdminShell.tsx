@@ -130,7 +130,7 @@ function AdminNav({
         {NAV_ITEMS.map((item) => {
           const Icon = item.icon
           const active = item.exact
-            ? pathname === item.to
+            ? pathname === item.to || pathname === `${item.to}/`
             : pathname === item.to || pathname.startsWith(`${item.to}/`)
 
           return (
