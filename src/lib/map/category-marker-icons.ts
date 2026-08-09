@@ -1,4 +1,4 @@
-import type maplibregl from "maplibre-gl"
+import type * as maplibregl from "maplibre-gl"
 
 import { PLACE_CATEGORIES, PLACE_CATEGORY_META } from "@/lib/place-categories"
 import type { PlaceCategoryId } from "@/lib/place-categories"

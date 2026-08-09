@@ -33,7 +33,7 @@ function run(command, args) {
 
 if (process.env.CONVEX_DEPLOY_KEY) {
   console.log(
-    `[vercel-build] VERCEL_ENV=${vercelEnv}: running convex deploy (sets VITE_CONVEX_URL)`,
+    `[vercel-build] VERCEL_ENV=${vercelEnv}: running convex deploy (sets VITE_CONVEX_URL)`
   )
   run("pnpm", [
     "dlx",
@@ -49,12 +49,12 @@ if (process.env.CONVEX_DEPLOY_KEY) {
   if (!url || url.includes("placeholder.convex")) {
     console.error(
       "[vercel-build] CONVEX_DEPLOY_KEY is unset and VITE_CONVEX_URL is missing or placeholder. " +
-        "Set a Preview/Production CONVEX_DEPLOY_KEY (Convex ↔ Vercel integration) or a real VITE_CONVEX_URL.",
+        "Set a Preview/Production CONVEX_DEPLOY_KEY (Convex ↔ Vercel integration) or a real VITE_CONVEX_URL."
     )
     process.exit(1)
   }
   console.log(
-    `[vercel-build] VERCEL_ENV=${vercelEnv}: no CONVEX_DEPLOY_KEY; building against VITE_CONVEX_URL=${url}`,
+    `[vercel-build] VERCEL_ENV=${vercelEnv}: no CONVEX_DEPLOY_KEY; building against VITE_CONVEX_URL=${url}`
   )
   run("pnpm", ["run", "build"])
 }

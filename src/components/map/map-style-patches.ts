@@ -1,5 +1,5 @@
 import type { ExpressionSpecification } from "maplibre-gl"
-import type maplibregl from "maplibre-gl"
+import type * as maplibregl from "maplibre-gl"
 
 import { isMapAlive } from "@/lib/map-utils"
 
@@ -82,18 +82,16 @@ function layerFilter(layer: maplibregl.LayerSpecification) {
 
 /** OpenFreeMap styles reference POI sprites that are not in the sprite sheet yet. */
 export function installMissingImageHandler(map: maplibregl.Map) {
-  const onStyleImageMissing = (event: maplibregl.MapStyleImageMissingEvent) => {
-    if (map.hasImage(event.id)) {
-      return
+  // MapLibre v6: listeners can no longer satisfy missing images via addImage;
+  // use the dedicated resolver API instead.
+  map.setMissingStyleImageResolver((id) => {
+    if (!map.hasImage(id)) {
+      map.addImage(id, TRANSPARENT_PIXEL)
     }
-
-    map.addImage(event.id, TRANSPARENT_PIXEL)
-  }
-
-  map.on("styleimagemissing", onStyleImageMissing)
+  })
 
   return () => {
-    map.off("styleimagemissing", onStyleImageMissing)
+    map.setMissingStyleImageResolver(null)
   }
 }
 

@@ -1,4 +1,4 @@
-import type maplibregl from "maplibre-gl"
+import type * as maplibregl from "maplibre-gl"
 
 import { isMapAlive } from "@/lib/map-utils"
 
@@ -22,7 +22,9 @@ export type RouteResult = {
 
 /** Stable codes — translate in the UI before display. */
 export type RouteErrorCode =
-  "route_request_failed" | "route_not_found" | "route_aborted"
+  | "route_request_failed"
+  | "route_not_found"
+  | "route_aborted"
 
 export function isRouteErrorCode(value: string): value is RouteErrorCode {
   return (
@@ -93,7 +95,8 @@ export function drawRoute(map: maplibregl.Map, route: RouteResult) {
   const source = map.getSource<maplibregl.GeoJSONSource>(ROUTE_SOURCE_ID)
 
   if (source) {
-    source.setData(data)
+    // MapLibre v6 setData returns a Promise; fire-and-forget is intentional here.
+    void source.setData(data)
   } else {
     map.addSource(ROUTE_SOURCE_ID, { type: "geojson", data })
   }

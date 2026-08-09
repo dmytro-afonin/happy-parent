@@ -1,0 +1,67 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["typescript", "react", "react-hooks", "import", "unicorn", "oxc"],
+  "jsPlugins": ["@convex-dev/eslint-plugin"],
+  "categories": {
+    "correctness": "error",
+    "suspicious": "warn"
+  },
+  "env": {
+    "builtin": true
+  },
+  "settings": {
+    "jsx-a11y": {},
+    "react": {
+      "version": "19.0"
+    },
+    "next": {},
+    "jsdoc": {}
+  },
+  "ignorePatterns": [
+    "convex/_generated/**",
+    ".output/**",
+    "node_modules/**",
+    ".agents/**",
+    "src/routeTree.gen.ts"
+  ],
+  "rules": {
+    "react/react-in-jsx-scope": "off",
+    "react-hooks/exhaustive-deps": "warn",
+    "import/no-unassigned-import": "off",
+    "unicorn/prefer-add-event-listener": "off",
+    "eslint/no-shadow": "off",
+    "eslint/preserve-caught-error": "off",
+    "eslint/no-underscore-dangle": [
+      "warn",
+      {
+        "allow": ["_id", "_creationTime", "_creation_time"]
+      }
+    ],
+    "eslint/no-await-in-loop": "off",
+    "unicorn/no-array-sort": "off",
+    "unicorn/consistent-function-scoping": "off",
+    "typescript/no-unsafe-type-assertion": "off",
+    "typescript/consistent-return": "off",
+    "typescript/no-unnecessary-type-assertion": "off",
+    "typescript/restrict-template-expressions": "off",
+    "typescript/no-floating-promises": "error",
+    "@convex-dev/import-wrong-runtime": "off",
+    "@convex-dev/no-old-registered-function-syntax": "error",
+    "@convex-dev/require-args-validator": "error",
+    "@convex-dev/explicit-table-ids": "error",
+    "@convex-dev/no-filter-in-query": "warn",
+    "@convex-dev/no-top-of-hour-crons": "warn"
+  },
+  "overrides": [
+    {
+      "files": ["convex/**/*.{ts,js}"],
+      "rules": {
+        "@convex-dev/require-args-validator": "error",
+        "@convex-dev/explicit-table-ids": "error"
+      }
+    }
+  ],
+  "options": {
+    "typeAware": true
+  }
+}

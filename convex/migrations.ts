@@ -345,7 +345,7 @@ export const migrateLegacyCategories = internalMutation({
 
       if (!isLegacyPlaceCategoryId(place.category)) {
         throw new Error(
-          `migrateLegacyCategories: no mapping for category "${place.category}" on place ${place._id}`
+          `migrateLegacyCategories: no mapping for category "${String(place.category)}" on place ${String(place._id)}`
         )
       }
 

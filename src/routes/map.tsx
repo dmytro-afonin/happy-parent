@@ -2,7 +2,7 @@
 
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { useConvexAuth, useMutation, useQuery } from "convex/react"
-import type maplibregl from "maplibre-gl"
+import type * as maplibregl from "maplibre-gl"
 import {
   useCallback,
   useEffect,
@@ -221,7 +221,8 @@ function MapPage() {
   const persistCategories = useCallback(
     (
       updater:
-        PlaceCategoryId[] | ((current: PlaceCategoryId[]) => PlaceCategoryId[]),
+        | PlaceCategoryId[]
+        | ((current: PlaceCategoryId[]) => PlaceCategoryId[]),
       options?: { clearUrl?: boolean }
     ) => {
       setActiveCategories((current) => {

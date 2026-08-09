@@ -49,7 +49,8 @@ export function upsertGeoJsonSource(
 
   const existing = map.getSource(sourceId)
   if (existing?.type === "geojson") {
-    ;(existing as GeoJSONSource).setData(data)
+    // MapLibre v6 setData returns a Promise; fire-and-forget is intentional here.
+    void (existing as GeoJSONSource).setData(data)
     return true
   }
 

@@ -1,33 +1,61 @@
 packages: []
 
+# Supply-chain hardening (see https://pnpm.io/supply-chain-security)
+# allowBuilds already blocks unlisted dependency lifecycle scripts (pnpm v10+/v11).
 allowBuilds:
   esbuild: true
   lightningcss: true
   unrs-resolver: true
   msw: false
-  '@clerk/shared': true
+  "@clerk/shared": true
   bufferutil: false
   core-js: false
   utf-8-validate: false
 
+# Delay resolving brand-new publishes (pnpm v11 default is 1440; keep 3 days).
+minimumReleaseAge: 4320
+
+# Fast-moving / intentionally-fresh packages allowed before the age window.
+# Prefer package names (not version pins) so the exclude list stays maintainable.
 minimumReleaseAgeExclude:
-  - '@clerk/backend@3.16.1'
-  - '@clerk/localizations@4.14.2'
-  - '@clerk/react@6.13.1'
-  - '@clerk/shared@4.27.1'
-  - '@clerk/tanstack-react-start@1.4.29'
-  - '@clerk/ui@1.29.1'
-  - '@tanstack/react-router@1.170.23'
-  - '@tanstack/react-start-client@1.168.21'
-  - '@tanstack/react-start-rsc@0.1.39'
-  - '@tanstack/react-start-server@1.167.28'
-  - '@tanstack/react-start@1.168.40'
-  - '@tanstack/router-core@1.171.19'
-  - '@tanstack/router-generator@1.167.25'
-  - '@tanstack/router-plugin@1.168.27'
-  - '@tanstack/start-client-core@1.170.19'
-  - '@tanstack/start-plugin-core@1.171.31'
-  - '@tanstack/start-server-core@1.169.23'
-  - '@tanstack/start-storage-context@1.167.21'
-  - '@types/node@26.2.0'
-  - lucide-react@1.30.0
+  - "@clerk/*"
+  - "@tanstack/*"
+  - "@types/node"
+  - "@convex-dev/eslint-plugin"
+  - eslint
+  - lucide-react
+  - maplibre-gl
+  - nitro
+  - oxfmt
+  - oxlint
+  - oxlint-tsgolint
+  - shadcn
+  - typescript
+  - vite
+  - vitest
+
+# Fail when a package's trust evidence drops vs prior releases.
+trustPolicy: no-downgrade
+# Older packages often predate provenance; ignore trust checks after 90 days.
+trustPolicyIgnoreAfter: 129600
+
+# Disallow git/tarball transitive deps.
+blockExoticSubdeps: true
+
+# Fail installs on unmet peer dependencies.
+strictPeerDependencies: true
+
+# Ensure node_modules matches the lockfile before running scripts.
+verifyDepsBeforeRun: install
+
+# Known peer mismatches that are safe for this stack:
+# - typescript-eslint (via @convex-dev/eslint-plugin) has not widened to TS 7 yet
+# - ws optional peers bufferutil/utf-8-validate (disabled in allowBuilds)
+peerDependencyRules:
+  allowAny:
+    - bufferutil
+    - utf-8-validate
+  allowedVersions:
+    typescript: "*"
+    utf-8-validate: "*"
+    bufferutil: "*"

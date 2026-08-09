@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react"
 import { useAction } from "convex/react"
-import type maplibregl from "maplibre-gl"
+import type * as maplibregl from "maplibre-gl"
 import { SearchIcon } from "lucide-react"
 
 import { MapDrawControl } from "@/components/admin/MapDrawControl"
