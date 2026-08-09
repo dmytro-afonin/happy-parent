@@ -434,7 +434,7 @@ export function MapSearchBar({ onOpenSearch }: { onOpenSearch: () => void }) {
       type="button"
       onClick={onOpenSearch}
       className={cn(
-        "flex h-7 min-w-0 flex-1 items-center gap-2 rounded-lg border border-input bg-background px-2 text-left text-sm transition-colors",
+        "flex h-9 min-w-0 flex-1 items-center gap-2 rounded-lg border border-input bg-background px-2.5 text-left text-sm transition-colors",
         "hover:bg-muted/40 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
       )}
     >
