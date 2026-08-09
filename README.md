@@ -89,10 +89,9 @@ Marketplace maps Clerk **Development** → Vercel Preview and Clerk **Production
 Vercel Production. The app aliases `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` to the Vite
 names, so you do not need a manual `VITE_CLERK_PUBLISHABLE_KEY` on Vercel.
 
-Set `CLERK_FRONTEND_API_URL` on each Convex deployment (project defaults for Preview
-
-- Production deployment env) to the matching Clerk Frontend API URL so signed-in
-  WebSocket auth works.
+Set `CLERK_FRONTEND_API_URL` on each Convex deployment (project defaults for
+Preview and Production deployment env) to the matching Clerk Frontend API URL so
+signed-in WebSocket auth works.
 
 ## Deferred (not in initial scaffold)
 
