@@ -1,5 +1,6 @@
 import type * as maplibregl from "maplibre-gl"
 
+import { upsertGeoJsonSource } from "@/lib/map/map-layer-utils"
 import { isMapAlive } from "@/lib/map-utils"
 
 const ROUTE_SOURCE_ID = "in-app-route-source"
@@ -92,14 +93,7 @@ export function drawRoute(map: maplibregl.Map, route: RouteResult) {
     properties: {},
   }
 
-  const source = map.getSource<maplibregl.GeoJSONSource>(ROUTE_SOURCE_ID)
-
-  if (source) {
-    // MapLibre v6 setData returns a Promise; fire-and-forget is intentional here.
-    void source.setData(data)
-  } else {
-    map.addSource(ROUTE_SOURCE_ID, { type: "geojson", data })
-  }
+  upsertGeoJsonSource(map, ROUTE_SOURCE_ID, data)
 
   if (!map.getLayer(ROUTE_CASING_LAYER_ID)) {
     map.addLayer({

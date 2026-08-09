@@ -1,7 +1,13 @@
 import type { ExpressionSpecification } from "maplibre-gl"
 import type * as maplibregl from "maplibre-gl"
 
+import { categoryMarkerImageId } from "@/lib/map/category-marker-icons"
+import { PLACE_CATEGORIES } from "@/lib/place-categories"
 import { isMapAlive } from "@/lib/map-utils"
+
+const CATEGORY_MARKER_IMAGE_IDS = new Set(
+  PLACE_CATEGORIES.map((category) => categoryMarkerImageId(category))
+)
 
 const TRANSPARENT_PIXEL: maplibregl.StyleImageInterface = {
   width: 1,
@@ -85,9 +91,13 @@ export function installMissingImageHandler(map: maplibregl.Map) {
   // MapLibre v6: listeners can no longer satisfy missing images via addImage;
   // use the dedicated resolver API instead.
   map.setMissingStyleImageResolver((id) => {
-    if (!map.hasImage(id)) {
-      map.addImage(id, TRANSPARENT_PIXEL)
+    // Leave category marker IDs unresolved so ensureCategoryMarkerImages can
+    // still register the real icons when preload finishes.
+    if (CATEGORY_MARKER_IMAGE_IDS.has(id) || map.hasImage(id)) {
+      return
     }
+
+    map.addImage(id, TRANSPARENT_PIXEL)
   })
 
   return () => {

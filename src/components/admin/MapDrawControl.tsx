@@ -88,8 +88,11 @@ export function MapDrawControl({
   const drawRef = useRef<MapboxDraw | null>(null)
   const onVerticesChangeRef = useRef(onVerticesChange)
   const verticesRef = useRef(vertices)
-  onVerticesChangeRef.current = onVerticesChange
-  verticesRef.current = vertices
+
+  useEffect(() => {
+    onVerticesChangeRef.current = onVerticesChange
+    verticesRef.current = vertices
+  }, [onVerticesChange, vertices])
 
   useEffect(() => {
     if (!enabled) {
