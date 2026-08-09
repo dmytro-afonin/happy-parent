@@ -37,5 +37,3 @@ export {
   categoryMarkerImageId,
   ensureCategoryMarkerImages,
 } from "./category-marker-icons"
-
-export { PlaceMapPopupController } from "./place-map-popup"

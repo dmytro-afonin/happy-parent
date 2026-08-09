@@ -31,7 +31,7 @@ export function clearAdminPreviewLayers(map: maplibregl.Map) {
 
 export function renderAdminPreviewLayers(
   map: maplibregl.Map,
-  { geometryType, point, vertices }: AdminPreviewState,
+  { geometryType, point, vertices }: AdminPreviewState
 ) {
   clearAdminPreviewLayers(map)
 

@@ -7,7 +7,7 @@ export const latLngValidator = v.object({
 
 export const geometryTypeValidator = v.union(
   v.literal("point"),
-  v.literal("polygon"),
+  v.literal("polygon")
 )
 
 export type LatLng = { lat: number; lng: number }
@@ -18,7 +18,7 @@ export function computeCentroid(vertices: LatLng[]): LatLng {
       lat: acc.lat + vertex.lat,
       lng: acc.lng + vertex.lng,
     }),
-    { lat: 0, lng: 0 },
+    { lat: 0, lng: 0 }
   )
 
   return {
@@ -30,7 +30,7 @@ export function computeCentroid(vertices: LatLng[]): LatLng {
 export function validateGeometry(
   geometryType: "point" | "polygon",
   point: LatLng | undefined,
-  boundary: LatLng[] | undefined,
+  boundary: LatLng[] | undefined
 ): { lat: number; lng: number; boundary?: LatLng[] } {
   if (geometryType === "point") {
     if (!point) {

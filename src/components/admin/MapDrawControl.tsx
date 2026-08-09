@@ -5,10 +5,8 @@ import MapboxDraw from "@mapbox/mapbox-gl-draw"
 import "@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css"
 import type maplibregl from "maplibre-gl"
 
-import {
-  geoJsonRingToVertices,
-  type LatLng,
-} from "@/lib/geometry"
+import { geoJsonRingToVertices } from "@/lib/geometry"
+import type { LatLng } from "@/lib/geometry"
 
 MapboxDraw.constants.classes.CONTROL_BASE =
   "maplibregl-ctrl" as typeof MapboxDraw.constants.classes.CONTROL_BASE
@@ -56,7 +54,7 @@ function readPolygonVertices(draw: MapboxDraw): LatLng[] {
   try {
     const data = draw.getAll()
     const polygon = data.features.find(
-      (feature) => feature.geometry.type === "Polygon",
+      (feature) => feature.geometry.type === "Polygon"
     )
 
     if (!polygon || polygon.geometry.type !== "Polygon") {
@@ -152,7 +150,7 @@ export function MapDrawControl({
       current.every(
         (vertex, index) =>
           vertex.lat === vertices[index]?.lat &&
-          vertex.lng === vertices[index]?.lng,
+          vertex.lng === vertices[index]?.lng
       )
 
     if (sameValues) {

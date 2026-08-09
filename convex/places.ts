@@ -3,13 +3,20 @@ import { v } from "convex/values"
 import type { Doc, Id } from "./_generated/dataModel"
 import type { QueryCtx } from "./_generated/server"
 
+import { internal } from "./_generated/api"
 import {
   geometryTypeValidator,
   latLngValidator,
   validateGeometry,
 } from "./lib/geometry"
-import { placeCategoryValidator } from "./lib/placeCategories"
-import { ensureAuthUser, requireAdminUser } from "./lib/users"
+import { effectiveStatus, moderationStatusValidator } from "./lib/moderation"
+import type { PlaceCategoryId } from "./lib/placeCategories"
+import {
+  normalizePlaceCategory,
+  placeCategoryValidator,
+} from "./lib/placeCategories"
+import { isAdminRole } from "./lib/roles"
+import { ensureAuthUser, getAuthUser, requireAdminUser } from "./lib/users"
 
 const placeListItemValidator = v.object({
   _id: v.id("places"),
@@ -22,10 +29,14 @@ const placeListItemValidator = v.object({
   geometryType: v.optional(geometryTypeValidator),
   boundary: v.optional(v.array(latLngValidator)),
   category: placeCategoryValidator,
+  labelIds: v.array(v.id("labels")),
   tags: v.array(v.string()),
   createdBy: v.id("users"),
   createdAt: v.number(),
   updatedAt: v.number(),
+  status: moderationStatusValidator,
+  rejectionComment: v.optional(v.string()),
+  isOwn: v.boolean(),
   coverPhotoUrl: v.optional(v.string()),
   coverPhotoThumbnailUrl: v.optional(v.string()),
 })
@@ -37,9 +48,32 @@ const photoInputValidator = v.object({
   fileName: v.optional(v.string()),
 })
 
-async function enrichPlacesWithCoverPhotos(
+function toListItem(place: Doc<"places">, viewerId: Id<"users"> | null) {
+  return {
+    _id: place._id,
+    _creationTime: place._creationTime,
+    name: place.name,
+    description: place.description,
+    address: place.address,
+    lat: place.lat,
+    lng: place.lng,
+    geometryType: place.geometryType,
+    boundary: place.boundary,
+    category: normalizePlaceCategory(place.category),
+    labelIds: place.labelIds ?? [],
+    tags: place.tags,
+    createdBy: place.createdBy,
+    createdAt: place.createdAt,
+    updatedAt: place.updatedAt,
+    status: effectiveStatus(place.status),
+    rejectionComment: place.rejectionComment,
+    isOwn: viewerId !== null && place.createdBy === viewerId,
+  }
+}
+
+async function enrichPlacesWithCoverPhotos<T extends { _id: Id<"places"> }>(
   ctx: QueryCtx,
-  places: Doc<"places">[],
+  places: T[]
 ) {
   if (places.length === 0) {
     return []
@@ -52,6 +86,10 @@ async function enrichPlacesWithCoverPhotos(
   >()
 
   for (const photo of photos) {
+    if (effectiveStatus(photo.status) !== "approved") {
+      continue
+    }
+
     const current = coverByPlace.get(photo.placeId)
     if (!current || photo.sortOrder < current.sortOrder) {
       coverByPlace.set(photo.placeId, {
@@ -72,30 +110,34 @@ async function enrichPlacesWithCoverPhotos(
   })
 }
 
+/**
+ * Approved places are public. Pending/rejected submissions are only visible
+ * to the submitter and to admins.
+ */
 export const list = query({
-  args: {
-    categories: v.optional(v.array(placeCategoryValidator)),
-  },
+  args: {},
   returns: v.array(placeListItemValidator),
-  handler: async (ctx, args) => {
-    let places: Doc<"places">[]
+  handler: async (ctx) => {
+    const viewer = await getAuthUser(ctx)
+    const isAdmin = isAdminRole(viewer?.role)
 
-    if (args.categories && args.categories.length > 0) {
-      const results = await Promise.all(
-        args.categories.map((category) =>
-          ctx.db
-            .query("places")
-            .withIndex("by_category", (q) => q.eq("category", category))
-            .collect(),
-        ),
-      )
+    const places = await ctx.db.query("places").order("desc").collect()
 
-      places = results.flat().sort((a, b) => b.updatedAt - a.updatedAt)
-    } else {
-      places = await ctx.db.query("places").order("desc").collect()
-    }
+    const visible = places.filter((place) => {
+      const status = effectiveStatus(place.status)
+      if (status === "approved") {
+        return true
+      }
+      if (isAdmin) {
+        return true
+      }
+      return viewer !== null && place.createdBy === viewer._id
+    })
 
-    return enrichPlacesWithCoverPhotos(ctx, places)
+    return enrichPlacesWithCoverPhotos(
+      ctx,
+      visible.map((place) => toListItem(place, viewer?._id ?? null))
+    )
   },
 })
 
@@ -103,12 +145,65 @@ export const listAllAdmin = query({
   args: {},
   returns: v.array(placeListItemValidator),
   handler: async (ctx) => {
-    await requireAdminUser(ctx)
+    const admin = await requireAdminUser(ctx)
     const places = await ctx.db.query("places").order("desc").collect()
-    return enrichPlacesWithCoverPhotos(ctx, places)
+    return enrichPlacesWithCoverPhotos(
+      ctx,
+      places.map((place) => toListItem(place, admin._id))
+    )
   },
 })
 
+async function validateLabelIds(
+  ctx: QueryCtx,
+  labelIds: Id<"labels">[] | undefined,
+  category: PlaceCategoryId
+) {
+  if (!labelIds) {
+    return []
+  }
+
+  const unique = [...new Set(labelIds)]
+  for (const labelId of unique) {
+    const label = await ctx.db.get("labels", labelId)
+    if (!label) {
+      throw new Error("Unknown label")
+    }
+    if (label.category !== category) {
+      throw new Error(
+        `Label "${label.slug}" belongs to ${label.category}, not ${category}`
+      )
+    }
+  }
+
+  return unique
+}
+
+/** Keep labels that still match the place category; drop the rest. */
+async function labelsForCategory(
+  ctx: QueryCtx,
+  labelIds: Id<"labels">[] | undefined,
+  category: PlaceCategoryId
+) {
+  if (!labelIds || labelIds.length === 0) {
+    return []
+  }
+
+  const kept: Id<"labels">[] = []
+  for (const labelId of labelIds) {
+    const label = await ctx.db.get("labels", labelId)
+    if (label && label.category === category) {
+      kept.push(labelId)
+    }
+  }
+  return kept
+}
+
+/**
+ * Any signed-in user can add a place. Admin submissions are approved
+ * immediately; regular users' submissions go through moderation and admins
+ * are notified by email.
+ */
 export const create = mutation({
   args: {
     name: v.string(),
@@ -119,18 +214,22 @@ export const create = mutation({
     lng: v.optional(v.number()),
     boundary: v.optional(v.array(latLngValidator)),
     category: placeCategoryValidator,
+    labelIds: v.optional(v.array(v.id("labels"))),
     tags: v.optional(v.array(v.string())),
     photos: v.optional(v.array(photoInputValidator)),
   },
   returns: v.id("places"),
   handler: async (ctx, args) => {
-    await requireAdminUser(ctx)
     const userId = await ensureAuthUser(ctx)
-    const name = args.name.trim()
+    const user = await ctx.db.get("users", userId)
+    const isAdmin = isAdminRole(user?.role)
 
+    const name = args.name.trim()
     if (name.length === 0) {
       throw new Error("Name is required")
     }
+
+    const labelIds = await validateLabelIds(ctx, args.labelIds, args.category)
 
     const point =
       args.lat !== undefined && args.lng !== undefined
@@ -139,6 +238,7 @@ export const create = mutation({
 
     const geometry = validateGeometry(args.geometryType, point, args.boundary)
     const now = Date.now()
+    const status = isAdmin ? ("approved" as const) : ("pending" as const)
 
     const placeId = await ctx.db.insert("places", {
       name,
@@ -149,10 +249,12 @@ export const create = mutation({
       geometryType: args.geometryType,
       boundary: geometry.boundary,
       category: args.category,
+      labelIds,
       tags: args.tags ?? [],
       createdBy: userId,
       createdAt: now,
       updatedAt: now,
+      status,
     })
 
     if (args.photos && args.photos.length > 0) {
@@ -167,9 +269,18 @@ export const create = mutation({
           fileName: photo.fileName,
           sortOrder,
           createdAt: now,
+          status,
         })
         sortOrder += 1
       }
+    }
+
+    if (status === "pending") {
+      await ctx.scheduler.runAfter(0, internal.emails.notifyModerationRequest, {
+        kind: "place",
+        summary: name,
+        submitterName: user?.name ?? user?.email,
+      })
     }
 
     return placeId
@@ -187,13 +298,14 @@ export const update = mutation({
     lng: v.optional(v.number()),
     boundary: v.optional(v.array(latLngValidator)),
     category: v.optional(placeCategoryValidator),
+    labelIds: v.optional(v.array(v.id("labels"))),
     tags: v.optional(v.array(v.string())),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
     await requireAdminUser(ctx)
 
-    const place = await ctx.db.get(args.placeId)
+    const place = await ctx.db.get("places", args.placeId)
     if (!place) {
       throw new Error("Place not found")
     }
@@ -201,6 +313,16 @@ export const update = mutation({
     const name = args.name?.trim()
     if (name !== undefined && name.length === 0) {
       throw new Error("Name is required")
+    }
+
+    const nextCategory = normalizePlaceCategory(args.category ?? place.category)
+
+    let labelIds: Id<"labels">[] | undefined
+    if (args.labelIds !== undefined) {
+      labelIds = await validateLabelIds(ctx, args.labelIds, nextCategory)
+    } else if (args.category !== undefined) {
+      // Category-only update: drop labels that no longer match.
+      labelIds = await labelsForCategory(ctx, place.labelIds, nextCategory)
     }
 
     const geometryType = args.geometryType ?? place.geometryType ?? "point"
@@ -214,15 +336,13 @@ export const update = mutation({
       args.lng !== undefined ||
       args.boundary !== undefined
     ) {
-      const point =
-        lat !== undefined && lng !== undefined ? { lat, lng } : undefined
-      const geometry = validateGeometry(geometryType, point, boundary)
+      const geometry = validateGeometry(geometryType, { lat, lng }, boundary)
       lat = geometry.lat
       lng = geometry.lng
       boundary = geometry.boundary
     }
 
-    await ctx.db.patch(args.placeId, {
+    await ctx.db.patch("places", args.placeId, {
       ...(name !== undefined ? { name } : {}),
       ...(args.description !== undefined
         ? { description: args.description.trim() || undefined }
@@ -242,6 +362,7 @@ export const update = mutation({
           }
         : {}),
       ...(args.category !== undefined ? { category: args.category } : {}),
+      ...(labelIds !== undefined ? { labelIds } : {}),
       ...(args.tags !== undefined ? { tags: args.tags } : {}),
       updatedAt: Date.now(),
     })
@@ -258,7 +379,7 @@ export const remove = mutation({
   handler: async (ctx, args) => {
     await requireAdminUser(ctx)
 
-    const place = await ctx.db.get(args.placeId)
+    const place = await ctx.db.get("places", args.placeId)
     if (!place) {
       throw new Error("Place not found")
     }
@@ -269,10 +390,26 @@ export const remove = mutation({
       .collect()
 
     for (const photo of photos) {
-      await ctx.db.delete(photo._id)
+      await ctx.db.delete("photos", photo._id)
     }
 
-    await ctx.db.delete(args.placeId)
+    const comments = await ctx.db
+      .query("placeComments")
+      .withIndex("by_place", (q) => q.eq("placeId", args.placeId))
+      .collect()
+
+    for (const comment of comments) {
+      await ctx.db.delete("placeComments", comment._id)
+    }
+
+    const saved = await ctx.db.query("savedPlaces").collect()
+    for (const entry of saved) {
+      if (entry.placeId === args.placeId) {
+        await ctx.db.delete("savedPlaces", entry._id)
+      }
+    }
+
+    await ctx.db.delete("places", args.placeId)
     return null
   },
 })

@@ -1,4 +1,4 @@
-type NominatimAddress = Record<string, string>
+type NominatimAddress = Record<string, string | undefined>
 
 type NominatimPlace = {
   name?: string
@@ -120,8 +120,8 @@ function fallbackSubtitle(displayName: string, label: string) {
 /** Single-line readable address for place cards and map popups. */
 export function formatNominatimAddress(place: NominatimPlace) {
   const { label, subtitle } = formatNominatimPlace(place)
-  const parts = [label, subtitle].filter(
-    (part): part is string => Boolean(part && part.trim()),
+  const parts = [label, subtitle].filter((part): part is string =>
+    Boolean(part && part.trim())
   )
 
   if (parts.length > 0) {

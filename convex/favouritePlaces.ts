@@ -71,13 +71,13 @@ export const remove = mutation({
   returns: v.null(),
   handler: async (ctx, args) => {
     const userId = await ensureAuthUser(ctx)
-    const favourite = await ctx.db.get(args.favouriteId)
+    const favourite = await ctx.db.get("favouritePlaces", args.favouriteId)
 
     if (!favourite || favourite.userId !== userId) {
       throw new Error("Favourite not found")
     }
 
-    await ctx.db.delete(args.favouriteId)
+    await ctx.db.delete("favouritePlaces", args.favouriteId)
     return null
   },
 })

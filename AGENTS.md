@@ -10,8 +10,8 @@ and `package.json` scripts; this section only covers non-obvious caveats.
 - `package.json` requires Node `>=24`. The VM's default `node` (`/exec-daemon/node`)
   is v22 and is hard-wired ahead of nvm on `PATH`, so plain `node`/`pnpm dev` will run
   on v22. Node 24 is installed via nvm; prepend it for dev/build/test:
-  `export PATH="$HOME/.nvm/versions/node/v24.16.0/bin:$PATH"`. v22 also runs the app,
-  but use v24 to match the engine.
+  `export PATH="$HOME/.nvm/versions/node/v24.19.0/bin:$PATH"` (or `nvm use 24`).
+  v22 also runs the app, but use v24 to match the engine.
 
 ### Two long-running processes (run in separate terminals/tmux sessions)
 - Backend: `CONVEX_AGENT_MODE=anonymous pnpm dlx convex dev` — starts a **local**
@@ -26,11 +26,11 @@ and `package.json` scripts; this section only covers non-obvious caveats.
   — answer `n` (do not commit AI files). It also halts function push until
   `CLERK_FRONTEND_API_URL` is set **on the Convex deployment**:
   `pnpm dlx convex env set CLERK_FRONTEND_API_URL "$CLERK_FRONTEND_API_URL"` (the value
-  is available as an env var here). Note `convex/auth.config.ts` reads
-  `CLERK_FRONTEND_API_URL`, even though `.env.example`/README mention `CLERK_JWT_ISSUER_DOMAIN`.
-- `.env.local` is gitignored. Clerk keys (`VITE_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`,
-  `CLERK_FRONTEND_API_URL`) are injected as env vars; copy them into `.env.local` for the
-  Vite/SSR server to pick them up.
+  is available as an env var here). `convex/auth.config.ts` reads `CLERK_FRONTEND_API_URL`.
+- `.env.local` is gitignored. Clerk keys (`VITE_CLERK_PUBLISHABLE_KEY` or Marketplace
+  `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, plus `CLERK_SECRET_KEY`, `CLERK_FRONTEND_API_URL`)
+  are injected as env vars; copy them into `.env.local` for the Vite/SSR server. The app
+  aliases `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` → `VITE_`/`CLERK_PUBLISHABLE_KEY`.
 - Map tiles (`tiles.openfreemap.org`) and place search (`nominatim.openstreetmap.org`)
   require outbound internet; both work from this VM. ImageKit (admin photo upload) is
   optional and unconfigured by default — its config gracefully returns null.

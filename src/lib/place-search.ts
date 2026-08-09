@@ -22,7 +22,7 @@ export function distanceKm(
   lat1: number,
   lng1: number,
   lat2: number,
-  lng2: number,
+  lng2: number
 ) {
   const toRad = (value: number) => (value * Math.PI) / 180
   const dLat = toRad(lat2 - lat1)
@@ -52,32 +52,35 @@ export function formatDistance(km: number) {
 
 export function enrichResultsWithDistance(
   results: PlaceSearchResult[],
-  origin: { lat: number; lng: number } | null,
+  origin: { lat: number; lng: number } | null
 ): PlaceSearchResultWithDistance[] {
-  if (!origin) {
-    return results
-  }
+  const enriched: PlaceSearchResultWithDistance[] = origin
+    ? results.map((result) => {
+        const distance = distanceKm(
+          origin.lat,
+          origin.lng,
+          result.lat,
+          result.lng
+        )
 
-  return results
-    .map((result) => {
-      const distance = distanceKm(origin.lat, origin.lng, result.lat, result.lng)
+        return {
+          ...result,
+          distanceKm: distance,
+          distanceLabel: formatDistance(distance),
+        }
+      })
+    : results
 
-      return {
-        ...result,
-        distanceKm: distance,
-        distanceLabel: formatDistance(distance),
-      }
-    })
-    .sort(
-      (left, right) =>
-        (left.distanceKm ?? Number.POSITIVE_INFINITY) -
-        (right.distanceKm ?? Number.POSITIVE_INFINITY),
-    )
+  return [...enriched].sort(
+    (left, right) =>
+      (left.distanceKm ?? Number.POSITIVE_INFINITY) -
+      (right.distanceKm ?? Number.POSITIVE_INFINITY)
+  )
 }
 
 export function mergeSearchResults(
   recents: PlaceSearchResult[],
-  geocoding: PlaceSearchResult[],
+  geocoding: PlaceSearchResult[]
 ) {
   const seen = new Set<string>()
   const merged: PlaceSearchResult[] = []
@@ -97,7 +100,7 @@ export function mergeSearchResults(
 export function filterResultsByTab(
   tab: SearchResultsTab,
   recents: PlaceSearchResult[],
-  geocoding: PlaceSearchResult[],
+  geocoding: PlaceSearchResult[]
 ) {
   switch (tab) {
     case "recent":
@@ -126,7 +129,7 @@ export function buildFavouriteLookup<
 
     lookup.set(
       `coords:${favourite.lat.toFixed(5)}:${favourite.lng.toFixed(5)}`,
-      favourite,
+      favourite
     )
   }
 
@@ -142,7 +145,7 @@ export function findFavouriteForPlace<
   },
 >(
   place: Pick<PlaceSearchResult, "lat" | "lng" | "externalId">,
-  lookup: Map<string, T>,
+  lookup: Map<string, T>
 ) {
   if (place.externalId) {
     const byExternalId = lookup.get(`id:${place.externalId}`)

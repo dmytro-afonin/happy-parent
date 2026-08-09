@@ -15,7 +15,7 @@ Discover and save family-friendly places on an interactive map.
 
 ## Prerequisites
 
-- Node.js 20+
+- Node.js 24+
 - [pnpm](https://pnpm.io)
 - [Convex](https://convex.dev) account
 - [Clerk](https://clerk.com) account
@@ -42,11 +42,11 @@ Discover and save family-friendly places on an interactive map.
    ```
 
 4. Configure Clerk:
-   - Create an application in the [Clerk Dashboard](https://dashboard.clerk.com)
-   - Add `VITE_CLERK_PUBLISHABLE_KEY` and `CLERK_SECRET_KEY` to `.env.local`
+   - Create an application in the [Clerk Dashboard](https://dashboard.clerk.com) (or connect the Vercel Marketplace Clerk integration)
+   - Local: add `VITE_CLERK_PUBLISHABLE_KEY` and `CLERK_SECRET_KEY` to `.env.local`
+   - Vercel + Marketplace: integration syncs `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` and `CLERK_SECRET_KEY` for Preview/Production — enough for this app (we alias `NEXT_PUBLIC_*` to the Vite names). You can remove any old manual `VITE_CLERK_PUBLISHABLE_KEY` on Vercel
    - Create a JWT template named exactly **`convex`**
-   - Copy the template Issuer URL into `CLERK_JWT_ISSUER_DOMAIN` in `.env.local`
-   - Set the same Issuer in `convex/auth.config.ts` via the env var above
+   - Set `CLERK_FRONTEND_API_URL` on the Convex deployment to the Clerk Frontend API URL (Dashboard → API keys)
 
 5. Run the app (two terminals):
 
@@ -69,10 +69,27 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ## Deploy to Vercel
 
-1. Import the GitHub repo on Vercel
-2. Set environment variables from `.env.example`
-3. Build command: `pnpm build` (configured in `vercel.json`)
-4. Ensure Nitro plugin is present in `vite.config.ts`
+Build command is `pnpm vercel-build` (via `vercel.json`). With the Convex ↔ Vercel
+integration, `CONVEX_DEPLOY_KEY` is synced per environment:
+
+| Vercel env | `CONVEX_DEPLOY_KEY` | Build behavior |
+| --- | --- | --- |
+| Production | Production deploy key | `convex deploy` → prod backend, then frontend build |
+| Preview | Preview deploy key | `convex deploy` → branch preview backend (+ `migrations:seedLabels`), then frontend build |
+
+`convex deploy` injects `VITE_CONVEX_URL` for the frontend build. If that URL is
+missing, the client falls back to `placeholder.convex.cloud` and the browser shows
+`Couldn't parse deployment name placeholder`.
+
+### Clerk (Vercel Marketplace)
+
+Marketplace maps Clerk **Development** → Vercel Preview and Clerk **Production** →
+Vercel Production. The app aliases `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` to the Vite
+names, so you do not need a manual `VITE_CLERK_PUBLISHABLE_KEY` on Vercel.
+
+Set `CLERK_FRONTEND_API_URL` on each Convex deployment (project defaults for Preview
++ Production deployment env) to the matching Clerk Frontend API URL so signed-in
+WebSocket auth works.
 
 ## Deferred (not in initial scaffold)
 

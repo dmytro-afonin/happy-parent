@@ -16,7 +16,7 @@ export function useMapOverlay<T>(
   map: maplibregl.Map | null | undefined,
   handlers: MapOverlayHandlers<T>,
   state: T,
-  revision: string,
+  revision: string
 ) {
   const overlayId = useId()
   const handlersRef = useRef(handlers)

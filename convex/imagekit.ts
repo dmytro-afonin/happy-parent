@@ -21,7 +21,7 @@ function getImageKitClient() {
 
   if (!publicKey || !privateKey || !urlEndpoint) {
     throw new Error(
-      "ImageKit is not configured. Set IMAGEKIT_PUBLIC_KEY, IMAGEKIT_PRIVATE_KEY, and IMAGEKIT_URL_ENDPOINT in Convex.",
+      "ImageKit is not configured. Set IMAGEKIT_PUBLIC_KEY, IMAGEKIT_PRIVATE_KEY, and IMAGEKIT_URL_ENDPOINT in Convex."
     )
   }
 
@@ -66,7 +66,7 @@ export const getPublicConfig = action({
       publicKey: v.string(),
       urlEndpoint: v.string(),
     }),
-    v.null(),
+    v.null()
   ),
   handler: async () => {
     const publicKey = process.env.IMAGEKIT_PUBLIC_KEY

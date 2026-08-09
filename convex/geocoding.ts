@@ -51,16 +51,15 @@ export const search = action({
     if (hasBounds) {
       url.searchParams.set(
         "viewbox",
-        `${args.minLng},${args.maxLat},${args.maxLng},${args.minLat}`,
+        `${args.minLng},${args.maxLat},${args.maxLng},${args.minLat}`
       )
     } else if (centerLat !== undefined && centerLng !== undefined) {
       const radiusKm = args.radiusKm ?? 30
       const latDelta = radiusKm / 111
-      const lngDelta =
-        radiusKm / (111 * Math.cos((centerLat * Math.PI) / 180))
+      const lngDelta = radiusKm / (111 * Math.cos((centerLat * Math.PI) / 180))
       url.searchParams.set(
         "viewbox",
-        `${centerLng - lngDelta},${centerLat + latDelta},${centerLng + lngDelta},${centerLat - latDelta}`,
+        `${centerLng - lngDelta},${centerLat + latDelta},${centerLng + lngDelta},${centerLat - latDelta}`
       )
     }
 
@@ -95,7 +94,7 @@ export const search = action({
       mapped.sort(
         (a, b) =>
           distanceKm(centerLat, centerLng, a.lat, a.lng) -
-          distanceKm(centerLat, centerLng, b.lat, b.lng),
+          distanceKm(centerLat, centerLng, b.lat, b.lng)
       )
     }
 
@@ -133,12 +132,7 @@ export const reverse = action({
   },
 })
 
-function distanceKm(
-  lat1: number,
-  lng1: number,
-  lat2: number,
-  lng2: number,
-) {
+function distanceKm(lat1: number, lng1: number, lat2: number, lng2: number) {
   const toRad = (value: number) => (value * Math.PI) / 180
   const dLat = toRad(lat2 - lat1)
   const dLng = toRad(lng2 - lng1)

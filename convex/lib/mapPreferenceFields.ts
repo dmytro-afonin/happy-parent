@@ -5,7 +5,7 @@ import { placeCategoryValidator } from "./placeCategories"
 export const sidePanelSectionValidator = v.union(
   v.literal("categories"),
   v.literal("my-places"),
-  v.literal("recents"),
+  v.literal("recents")
 )
 
 export type SidePanelSection = "categories" | "my-places" | "recents"

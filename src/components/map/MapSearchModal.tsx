@@ -14,23 +14,23 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
+import { useLocalizedNames } from "@/hooks/use-localized-catalog"
 import { cn } from "@/lib/utils"
 import {
   buildFavouriteLookup,
   enrichResultsWithDistance,
   filterResultsByTab,
   findFavouriteForPlace,
-  type PlaceSearchResult,
-  type SearchResultsTab,
 } from "@/lib/place-search"
+import type { PlaceSearchResult, SearchResultsTab } from "@/lib/place-search"
 import { SaveFavouriteDialog } from "@/components/map/SaveFavouriteDialog"
 import type { MapSearchViewport } from "@/components/map/MapView"
 import {
   matchPlaceCategories,
   PLACE_CATEGORY_LIST,
   PLACE_CATEGORY_META,
-  type PlaceCategoryId,
 } from "@/lib/place-categories"
+import type { PlaceCategoryId } from "@/lib/place-categories"
 import { api } from "../../../convex/_generated/api"
 
 type MapSearchModalProps = {
@@ -61,37 +61,37 @@ export function MapSearchModal({
   activeCategories = [],
 }: MapSearchModalProps) {
   const { isAuthenticated } = useConvexAuth()
+  const { categoryName } = useLocalizedNames()
   const [query, setQuery] = useState(initialQuery)
   const [tab, setTab] = useState<SearchResultsTab>("all")
   const [geocodingResults, setGeocodingResults] = useState<PlaceSearchResult[]>(
-    [],
+    []
   )
   const [isGeocoding, setIsGeocoding] = useState(false)
   const [geocodingError, setGeocodingError] = useState<string | null>(null)
-  const [favouritePlace, setFavouritePlace] = useState<PlaceSearchResult | null>(
-    null,
-  )
+  const [favouritePlace, setFavouritePlace] =
+    useState<PlaceSearchResult | null>(null)
   const [favouriteDialogOpen, setFavouriteDialogOpen] = useState(false)
 
   const searchGeocoding = useAction(api.geocoding.search)
   const saveFavourite = useMutation(api.favouritePlaces.save)
   const favourites = useQuery(
     api.favouritePlaces.list,
-    isAuthenticated ? {} : "skip",
+    isAuthenticated ? {} : "skip"
   )
   const favouriteLookup = useMemo(
     () => buildFavouriteLookup(favourites ?? []),
-    [favourites],
+    [favourites]
   )
   const recentResults = useQuery(
     api.recentSearches.search,
     isAuthenticated && query.trim().length >= 2
       ? { query: query.trim(), limit: 20 }
-      : "skip",
+      : "skip"
   )
   const recentCategories = useQuery(
     api.recentCategories.list,
-    isAuthenticated ? { limit: 8 } : "skip",
+    isAuthenticated ? { limit: 8 } : "skip"
   )
 
   useEffect(() => {
@@ -149,10 +149,15 @@ export function MapSearchModal({
     return enrichResultsWithDistance(results, userLocation)
   }, [tab, recents, geocodingResults, userLocation])
 
-  const matchingCategories = useMemo(
-    () => matchPlaceCategories(query),
-    [query],
-  )
+  const matchingCategories = useMemo(() => {
+    const localizedNames = Object.fromEntries(
+      PLACE_CATEGORY_LIST.map((category) => [
+        category.id,
+        categoryName(category.id),
+      ])
+    ) as Partial<Record<PlaceCategoryId, string>>
+    return matchPlaceCategories(query, localizedNames)
+  }, [categoryName, query])
 
   const handleCategorySelect = (category: PlaceCategoryId) => {
     onCategorySelect?.(category)
@@ -220,7 +225,7 @@ export function MapSearchModal({
                           "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs transition-colors",
                           isActive
                             ? "border-primary bg-primary/10"
-                            : "bg-muted/40 hover:bg-muted",
+                            : "bg-muted/40 hover:bg-muted"
                         )}
                       >
                         <span
@@ -229,7 +234,7 @@ export function MapSearchModal({
                         >
                           <Icon className="size-3" />
                         </span>
-                        {category.label}
+                        {categoryName(category.id)}
                       </button>
                     )
                   })}
@@ -248,7 +253,7 @@ export function MapSearchModal({
                   {recentCategories.map((entry) => {
                     const meta = PLACE_CATEGORY_META[entry.category]
                     const categoryEntry = PLACE_CATEGORY_LIST.find(
-                      (item) => item.id === entry.category,
+                      (item) => item.id === entry.category
                     )
                     const Icon = categoryEntry?.icon
 
@@ -326,80 +331,83 @@ export function MapSearchModal({
                 {visibleResults.map((place) => {
                   const savedFavourite = findFavouriteForPlace(
                     place,
-                    favouriteLookup,
+                    favouriteLookup
                   )
 
                   return (
-                  <li key={place.id}>
-                    <div className="flex items-start gap-2 rounded-lg border border-transparent px-2 py-2 hover:border-border hover:bg-muted/40">
-                      <div className="mt-0.5 shrink-0 text-muted-foreground">
-                        {place.source === "recent" ? (
-                          <StarIcon className="size-4" />
-                        ) : (
-                          <MapPinIcon className="size-4" />
-                        )}
-                      </div>
-                      <button
-                        type="button"
-                        className="min-w-0 flex-1 text-left"
-                        onClick={() => handleSelect(place)}
-                      >
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="truncate text-sm font-medium">
-                            {place.label}
-                          </div>
-                          {place.distanceLabel ? (
-                            <span className="shrink-0 text-xs text-muted-foreground">
-                              {place.distanceLabel}
-                            </span>
-                          ) : null}
+                    <li key={place.id}>
+                      <div className="flex items-start gap-2 rounded-lg border border-transparent px-2 py-2 hover:border-border hover:bg-muted/40">
+                        <div className="mt-0.5 shrink-0 text-muted-foreground">
+                          {place.source === "recent" ? (
+                            <StarIcon className="size-4" />
+                          ) : (
+                            <MapPinIcon className="size-4" />
+                          )}
                         </div>
-                        {place.subtitle ? (
-                          <div className="truncate text-xs text-muted-foreground">
-                            {place.subtitle}
-                          </div>
-                        ) : null}
-                        <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                          <span className="text-[0.7rem] text-muted-foreground uppercase">
-                            {place.source === "recent" ? "Recent" : "Map"}
-                          </span>
-                          {savedFavourite ? (
-                            <Badge variant="secondary" className="normal-case">
-                              Saved as {savedFavourite.name}
-                            </Badge>
-                          ) : null}
-                        </div>
-                      </button>
-                      {isAuthenticated ? (
-                        <Button
+                        <button
                           type="button"
-                          size="icon-sm"
-                          variant="ghost"
-                          aria-label={
-                            savedFavourite
-                              ? `Saved as ${savedFavourite.name}`
-                              : `Save ${place.label} to favourites`
-                          }
-                          disabled={Boolean(savedFavourite)}
-                          onClick={() => {
-                            if (savedFavourite) {
-                              return
-                            }
-
-                            setFavouritePlace(place)
-                            setFavouriteDialogOpen(true)
-                          }}
+                          className="min-w-0 flex-1 text-left"
+                          onClick={() => handleSelect(place)}
                         >
-                          <HeartIcon
-                            className={cn(
-                              "size-4",
-                              savedFavourite && "fill-current text-red-500",
-                            )}
-                          />
-                        </Button>
-                      ) : null}
-                    </div>
-                  </li>
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="truncate text-sm font-medium">
+                              {place.label}
+                            </div>
+                            {place.distanceLabel ? (
+                              <span className="shrink-0 text-xs text-muted-foreground">
+                                {place.distanceLabel}
+                              </span>
+                            ) : null}
+                          </div>
+                          {place.subtitle ? (
+                            <div className="truncate text-xs text-muted-foreground">
+                              {place.subtitle}
+                            </div>
+                          ) : null}
+                          <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                            <span className="text-[0.7rem] text-muted-foreground uppercase">
+                              {place.source === "recent" ? "Recent" : "Map"}
+                            </span>
+                            {savedFavourite ? (
+                              <Badge
+                                variant="secondary"
+                                className="normal-case"
+                              >
+                                Saved as {savedFavourite.name}
+                              </Badge>
+                            ) : null}
+                          </div>
+                        </button>
+                        {isAuthenticated ? (
+                          <Button
+                            type="button"
+                            size="icon-sm"
+                            variant="ghost"
+                            aria-label={
+                              savedFavourite
+                                ? `Saved as ${savedFavourite.name}`
+                                : `Save ${place.label} to favourites`
+                            }
+                            disabled={Boolean(savedFavourite)}
+                            onClick={() => {
+                              if (savedFavourite) {
+                                return
+                              }
+
+                              setFavouritePlace(place)
+                              setFavouriteDialogOpen(true)
+                            }}
+                          >
+                            <HeartIcon
+                              className={cn(
+                                "size-4",
+                                savedFavourite && "fill-current text-red-500"
+                              )}
+                            />
+                          </Button>
+                        ) : null}
+                      </div>
+                    </li>
                   )
                 })}
               </ul>
@@ -418,18 +426,14 @@ export function MapSearchModal({
   )
 }
 
-export function MapSearchBar({
-  onOpenSearch,
-}: {
-  onOpenSearch: () => void
-}) {
+export function MapSearchBar({ onOpenSearch }: { onOpenSearch: () => void }) {
   return (
     <button
       type="button"
       onClick={onOpenSearch}
       className={cn(
         "flex h-7 min-w-0 flex-1 items-center gap-2 rounded-lg border border-input bg-background px-2 text-left text-sm transition-colors",
-        "hover:bg-muted/40 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50",
+        "hover:bg-muted/40 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
       )}
     >
       <SearchIcon className="size-4 shrink-0 text-muted-foreground" />

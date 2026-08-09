@@ -7,27 +7,23 @@ import { Loader2Icon } from "lucide-react"
 
 import { AdminCoordinateEditor } from "@/components/admin/AdminCoordinateEditor"
 import { AdminPlaceMapEditor } from "@/components/admin/AdminPlaceMapEditor"
-import {
-  PlaceImageUploader,
-  type UploadedPlacePhoto,
-} from "@/components/admin/PlaceImageUploader"
+import { PlaceImageUploader } from "@/components/admin/PlaceImageUploader"
+import type { UploadedPlacePhoto } from "@/components/admin/PlaceImageUploader"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import {
-  type GeometryType,
-  type LatLng,
-  type LocationInputMode,
-  computeCentroid,
-  validatePlaceGeometry,
-} from "@/lib/geometry"
+import { computeCentroid, validatePlaceGeometry } from "@/lib/geometry"
+import type { GeometryType, LatLng, LocationInputMode } from "@/lib/geometry"
+import { Badge } from "@/components/ui/badge"
+import { useLabels } from "@/hooks/use-localized-catalog"
 import {
   PLACE_CATEGORY_LIST,
   PLACE_CATEGORY_META,
-  type PlaceCategoryId,
 } from "@/lib/place-categories"
+import type { PlaceCategoryId } from "@/lib/place-categories"
 import { cn } from "@/lib/utils"
 import { api } from "../../../convex/_generated/api"
+import type { Id } from "../../../convex/_generated/dataModel"
 
 type AdminPlaceFormProps = {
   onCreated?: () => void
@@ -59,10 +55,11 @@ export function AdminPlaceForm({ onCreated }: AdminPlaceFormProps) {
   const createPlace = useMutation(api.places.create)
   const reverseGeocode = useAction(api.geocoding.reverse)
 
+  const labels = useLabels()
   const [name, setName] = useState("")
   const [description, setDescription] = useState("")
-  const [category, setCategory] = useState<PlaceCategoryId>("playground")
-  const [tags, setTags] = useState("")
+  const [category, setCategory] = useState<PlaceCategoryId>("entertainment")
+  const [selectedLabelIds, setSelectedLabelIds] = useState<Id<"labels">[]>([])
   const [locationInputMode, setLocationInputMode] =
     useState<LocationInputMode>("map")
   const [geometryType, setGeometryType] = useState<GeometryType>("point")
@@ -75,14 +72,14 @@ export function AdminPlaceForm({ onCreated }: AdminPlaceFormProps) {
 
   const geometryError = useMemo(
     () => validatePlaceGeometry(geometryType, point, vertices),
-    [geometryType, point, vertices],
+    [geometryType, point, vertices]
   )
 
   const resetForm = () => {
     setName("")
     setDescription("")
-    setCategory("playground")
-    setTags("")
+    setCategory("entertainment")
+    setSelectedLabelIds([])
     setPoint(null)
     setVertices([])
     setPhotos([])
@@ -136,10 +133,7 @@ export function AdminPlaceForm({ onCreated }: AdminPlaceFormProps) {
         lng: geometryType === "point" ? point?.lng : undefined,
         boundary: geometryType === "polygon" ? vertices : undefined,
         category,
-        tags: tags
-          .split(",")
-          .map((tag) => tag.trim())
-          .filter(Boolean),
+        labelIds: selectedLabelIds,
         photos,
       })
 
@@ -150,7 +144,7 @@ export function AdminPlaceForm({ onCreated }: AdminPlaceFormProps) {
       setError(
         submitError instanceof Error
           ? submitError.message
-          : "Could not create place.",
+          : "Could not create place."
       )
     } finally {
       setSubmitting(false)
@@ -181,13 +175,13 @@ export function AdminPlaceForm({ onCreated }: AdminPlaceFormProps) {
               onChange={(event) => setDescription(event.target.value)}
               placeholder="What makes this place family-friendly?"
               rows={4}
-              className="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring flex min-h-24 w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+              className="flex min-h-24 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
             />
           </label>
 
           <div className="space-y-2">
             <span className="text-sm font-medium">Category</span>
-            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-2 sm:grid-cols-3">
               {PLACE_CATEGORY_LIST.map((entry) => {
                 const Icon = entry.icon
                 const selected = category === entry.id
@@ -196,12 +190,15 @@ export function AdminPlaceForm({ onCreated }: AdminPlaceFormProps) {
                   <button
                     key={entry.id}
                     type="button"
-                    onClick={() => setCategory(entry.id)}
+                    onClick={() => {
+                      setCategory(entry.id)
+                      setSelectedLabelIds([])
+                    }}
                     className={cn(
                       "flex items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm transition-colors",
                       selected
                         ? "border-primary bg-primary/5"
-                        : "hover:bg-muted/50",
+                        : "hover:bg-muted/50"
                     )}
                   >
                     <span
@@ -222,17 +219,37 @@ export function AdminPlaceForm({ onCreated }: AdminPlaceFormProps) {
             </div>
           </div>
 
-          <label className="block space-y-1 text-sm">
-            <span className="font-medium">Tags</span>
-            <Input
-              value={tags}
-              onChange={(event) => setTags(event.target.value)}
-              placeholder="stroller-friendly, shade, toilets"
-            />
+          <div className="space-y-2">
+            <span className="text-sm font-medium">Place types</span>
+            <div className="flex flex-wrap gap-1.5">
+              {(labels ?? [])
+                .filter((label) => label.category === category)
+                .map((label) => {
+                  const selected = selectedLabelIds.includes(label._id)
+
+                  return (
+                    <button
+                      key={label._id}
+                      type="button"
+                      onClick={() =>
+                        setSelectedLabelIds((current) =>
+                          current.includes(label._id)
+                            ? current.filter((entry) => entry !== label._id)
+                            : [...current, label._id]
+                        )
+                      }
+                    >
+                      <Badge variant={selected ? "default" : "outline"}>
+                        {label.name}
+                      </Badge>
+                    </button>
+                  )
+                })}
+            </div>
             <span className="text-xs text-muted-foreground">
-              Comma-separated optional tags.
+              Pick one or more place types describing this place.
             </span>
-          </label>
+          </div>
         </CardContent>
       </Card>
 

@@ -3,11 +3,12 @@ import { v } from "convex/values"
 
 import { getAuthUserId } from "./lib/auth"
 import { sidePanelSectionValidator } from "./lib/mapPreferenceFields"
+import { DEFAULT_MAP_STYLE_ID, mapStyleIdValidator } from "./lib/mapStyles"
 import {
-  DEFAULT_MAP_STYLE_ID,
-  mapStyleIdValidator,
-} from "./lib/mapStyles"
-import { PLACE_CATEGORIES, placeCategoryValidator } from "./lib/placeCategories"
+  PLACE_CATEGORIES,
+  normalizePlaceCategory,
+  placeCategoryValidator,
+} from "./lib/placeCategories"
 import { ensureAuthUser, getAuthUser } from "./lib/users"
 
 const mapPreferencesReturnValidator = v.object({
@@ -22,9 +23,11 @@ function normalizeActiveCategories(categories: string[] | undefined) {
     return [...PLACE_CATEGORIES]
   }
 
-  return categories.filter((category): category is (typeof PLACE_CATEGORIES)[number] =>
-    PLACE_CATEGORIES.includes(category as (typeof PLACE_CATEGORIES)[number]),
-  )
+  // Legacy specific categories (playground, cafe, …) map onto the new generic
+  // ones so previously saved preferences keep working.
+  return [
+    ...new Set(categories.map((category) => normalizePlaceCategory(category))),
+  ]
 }
 
 export const getPreferences = query({
@@ -65,7 +68,7 @@ export const getMapStyle = query({
       return null
     }
 
-    const user = await ctx.db.get(userId)
+    const user = await ctx.db.get("users", userId)
     if (!user) {
       return null
     }
@@ -85,7 +88,7 @@ export const updatePreferences = mutation({
   handler: async (ctx, args) => {
     const userId = await ensureAuthUser(ctx)
 
-    await ctx.db.patch(userId, {
+    await ctx.db.patch("users", userId, {
       ...(args.mapStyleId !== undefined ? { mapStyleId: args.mapStyleId } : {}),
       ...(args.activeCategories !== undefined
         ? { activeCategories: args.activeCategories }
@@ -110,7 +113,7 @@ export const setMapStyle = mutation({
   returns: v.null(),
   handler: async (ctx, args) => {
     const userId = await ensureAuthUser(ctx)
-    await ctx.db.patch(userId, { mapStyleId: args.mapStyleId })
+    await ctx.db.patch("users", userId, { mapStyleId: args.mapStyleId })
     return null
   },
 })
