@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react"
 import MapboxDraw from "@mapbox/mapbox-gl-draw"
 import "@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css"
-import type maplibregl from "maplibre-gl"
+import type * as maplibregl from "maplibre-gl"
 
 import { geoJsonRingToVertices } from "@/lib/geometry"
 import type { LatLng } from "@/lib/geometry"
@@ -50,6 +50,18 @@ type MapDrawControlProps = {
   onVerticesChange: (vertices: LatLng[]) => void
 }
 
+/** MapboxDraw custom events are not part of MapLibre's MapEventType (v6). */
+type DrawEventMap = {
+  on(
+    type: "draw.create" | "draw.update" | "draw.delete",
+    listener: () => void
+  ): void
+  off(
+    type: "draw.create" | "draw.update" | "draw.delete",
+    listener: () => void
+  ): void
+}
+
 function readPolygonVertices(draw: MapboxDraw): LatLng[] {
   try {
     const data = draw.getAll()
@@ -75,7 +87,12 @@ export function MapDrawControl({
 }: MapDrawControlProps) {
   const drawRef = useRef<MapboxDraw | null>(null)
   const onVerticesChangeRef = useRef(onVerticesChange)
-  onVerticesChangeRef.current = onVerticesChange
+  const verticesRef = useRef(vertices)
+
+  useEffect(() => {
+    onVerticesChangeRef.current = onVerticesChange
+    verticesRef.current = vertices
+  }, [onVerticesChange, vertices])
 
   useEffect(() => {
     if (!enabled) {
@@ -99,11 +116,14 @@ export function MapDrawControl({
       onVerticesChangeRef.current(readPolygonVertices(draw))
     }
 
-    map.on("draw.create", syncFromDraw)
-    map.on("draw.update", syncFromDraw)
-    map.on("draw.delete", syncFromDraw)
+    const drawEvents = map as unknown as DrawEventMap
+    drawEvents.on("draw.create", syncFromDraw)
+    drawEvents.on("draw.update", syncFromDraw)
+    drawEvents.on("draw.delete", syncFromDraw)
 
-    if (vertices.length >= 3) {
+    // Seed once on mount; ongoing vertex edits are handled by the effect below.
+    const initialVertices = verticesRef.current
+    if (initialVertices.length >= 3) {
       draw.add({
         type: "Feature",
         properties: {},
@@ -111,8 +131,8 @@ export function MapDrawControl({
           type: "Polygon",
           coordinates: [
             [
-              ...vertices.map((vertex) => [vertex.lng, vertex.lat]),
-              [vertices[0]?.lng ?? 0, vertices[0]?.lat ?? 0],
+              ...initialVertices.map((vertex) => [vertex.lng, vertex.lat]),
+              [initialVertices[0]?.lng ?? 0, initialVertices[0]?.lat ?? 0],
             ],
           ],
         },
@@ -121,9 +141,9 @@ export function MapDrawControl({
     }
 
     return () => {
-      map.off("draw.create", syncFromDraw)
-      map.off("draw.update", syncFromDraw)
-      map.off("draw.delete", syncFromDraw)
+      drawEvents.off("draw.create", syncFromDraw)
+      drawEvents.off("draw.update", syncFromDraw)
+      drawEvents.off("draw.delete", syncFromDraw)
 
       try {
         map.removeControl(draw as unknown as maplibregl.IControl)

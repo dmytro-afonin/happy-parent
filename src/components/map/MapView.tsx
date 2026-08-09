@@ -8,8 +8,9 @@ import {
   useState,
 } from "react"
 import type { ReactNode } from "react"
-import maplibregl from "maplibre-gl"
+import * as maplibregl from "maplibre-gl"
 import "maplibre-gl/dist/maplibre-gl.css"
+import "@/lib/map/maplibre-worker"
 
 import { MapStyleSwitcherControl } from "./MapStyleSwitcherControl"
 import {

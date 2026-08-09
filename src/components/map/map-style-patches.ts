@@ -1,7 +1,13 @@
 import type { ExpressionSpecification } from "maplibre-gl"
-import type maplibregl from "maplibre-gl"
+import type * as maplibregl from "maplibre-gl"
 
+import { categoryMarkerImageId } from "@/lib/map/category-marker-icons"
+import { PLACE_CATEGORIES } from "@/lib/place-categories"
 import { isMapAlive } from "@/lib/map-utils"
+
+const CATEGORY_MARKER_IMAGE_IDS = new Set(
+  PLACE_CATEGORIES.map((category) => categoryMarkerImageId(category))
+)
 
 const TRANSPARENT_PIXEL: maplibregl.StyleImageInterface = {
   width: 1,
@@ -82,18 +88,20 @@ function layerFilter(layer: maplibregl.LayerSpecification) {
 
 /** OpenFreeMap styles reference POI sprites that are not in the sprite sheet yet. */
 export function installMissingImageHandler(map: maplibregl.Map) {
-  const onStyleImageMissing = (event: maplibregl.MapStyleImageMissingEvent) => {
-    if (map.hasImage(event.id)) {
+  // MapLibre v6: listeners can no longer satisfy missing images via addImage;
+  // use the dedicated resolver API instead.
+  map.setMissingStyleImageResolver((id) => {
+    // Leave category marker IDs unresolved so ensureCategoryMarkerImages can
+    // still register the real icons when preload finishes.
+    if (CATEGORY_MARKER_IMAGE_IDS.has(id) || map.hasImage(id)) {
       return
     }
 
-    map.addImage(event.id, TRANSPARENT_PIXEL)
-  }
-
-  map.on("styleimagemissing", onStyleImageMissing)
+    map.addImage(id, TRANSPARENT_PIXEL)
+  })
 
   return () => {
-    map.off("styleimagemissing", onStyleImageMissing)
+    map.setMissingStyleImageResolver(null)
   }
 }
 

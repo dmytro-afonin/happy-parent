@@ -50,6 +50,8 @@ const tabs: Array<{ id: SearchResultsTab; label: string }> = [
   { id: "map", label: "Map" },
 ]
 
+const EMPTY_RESULTS: PlaceSearchResult[] = []
+
 export function MapSearchModal({
   open,
   onOpenChange,
@@ -143,7 +145,7 @@ export function MapSearchModal({
     }
   }, [getSearchViewport, open, query, searchGeocoding])
 
-  const recents = recentResults ?? []
+  const recents = recentResults ?? EMPTY_RESULTS
   const visibleResults = useMemo(() => {
     const results = filterResultsByTab(tab, recents, geocodingResults)
     return enrichResultsWithDistance(results, userLocation)

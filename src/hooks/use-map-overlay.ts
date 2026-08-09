@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef } from "react"
-import type maplibregl from "maplibre-gl"
+import type * as maplibregl from "maplibre-gl"
 
 import { getMapOverlayHost } from "@/lib/map/map-overlay-host"
 import type { MapOverlayHandlers } from "@/lib/map/map-overlay-host"

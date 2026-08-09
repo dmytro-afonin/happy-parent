@@ -1,5 +1,6 @@
-import type maplibregl from "maplibre-gl"
+import type * as maplibregl from "maplibre-gl"
 
+import { upsertGeoJsonSource } from "@/lib/map/map-layer-utils"
 import { isMapAlive } from "@/lib/map-utils"
 
 const ROUTE_SOURCE_ID = "in-app-route-source"
@@ -22,7 +23,9 @@ export type RouteResult = {
 
 /** Stable codes — translate in the UI before display. */
 export type RouteErrorCode =
-  "route_request_failed" | "route_not_found" | "route_aborted"
+  | "route_request_failed"
+  | "route_not_found"
+  | "route_aborted"
 
 export function isRouteErrorCode(value: string): value is RouteErrorCode {
   return (
@@ -90,13 +93,7 @@ export function drawRoute(map: maplibregl.Map, route: RouteResult) {
     properties: {},
   }
 
-  const source = map.getSource<maplibregl.GeoJSONSource>(ROUTE_SOURCE_ID)
-
-  if (source) {
-    source.setData(data)
-  } else {
-    map.addSource(ROUTE_SOURCE_ID, { type: "geojson", data })
-  }
+  upsertGeoJsonSource(map, ROUTE_SOURCE_ID, data)
 
   if (!map.getLayer(ROUTE_CASING_LAYER_ID)) {
     map.addLayer({

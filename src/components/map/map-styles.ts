@@ -1,10 +1,15 @@
-import type maplibregl from "maplibre-gl"
+import type * as maplibregl from "maplibre-gl"
 
 import { getMapOverlayHost } from "@/lib/map/map-overlay-host"
 import { patchOpenFreeMapStyle } from "./map-style-patches"
 
 export type MapStyleId =
-  "liberty" | "bright" | "positron" | "dark" | "fiord" | "3d"
+  | "liberty"
+  | "bright"
+  | "positron"
+  | "dark"
+  | "fiord"
+  | "3d"
 
 export type MapStyle = {
   id: MapStyleId

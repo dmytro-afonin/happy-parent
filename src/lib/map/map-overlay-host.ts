@@ -1,4 +1,4 @@
-import type maplibregl from "maplibre-gl"
+import type * as maplibregl from "maplibre-gl"
 
 import { isMapAlive } from "@/lib/map-utils"
 import { isStyleReady } from "@/lib/map/map-layer-utils"

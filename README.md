@@ -4,14 +4,15 @@ Discover and save family-friendly places on an interactive map.
 
 ## Stack
 
-| Layer | Choice |
-| --- | --- |
-| Framework | [TanStack Start](https://tanstack.com/start) |
-| UI | [shadcn/ui](https://ui.shadcn.com) + Tailwind CSS |
-| Auth | [Clerk](https://clerk.com) (`@clerk/tanstack-react-start`) |
-| Backend | [Convex](https://convex.dev) (database + file storage) |
-| Map | [MapLibre GL JS](https://maplibre.org) |
-| Hosting | [Vercel](https://vercel.com) via Nitro Vite plugin |
+| Layer         | Choice                                                                                                          |
+| ------------- | --------------------------------------------------------------------------------------------------------------- |
+| Framework     | [TanStack Start](https://tanstack.com/start)                                                                    |
+| UI            | [shadcn/ui](https://ui.shadcn.com) + Tailwind CSS                                                               |
+| Auth          | [Clerk](https://clerk.com) (`@clerk/tanstack-react-start`)                                                      |
+| Backend       | [Convex](https://convex.dev) (database + file storage)                                                          |
+| Map           | [MapLibre GL JS](https://maplibre.org)                                                                          |
+| Hosting       | [Vercel](https://vercel.com) via Nitro Vite plugin                                                              |
+| Lint / format | [Oxlint](https://oxc.rs/docs/guide/usage/linter.html) + [Oxfmt](https://oxc.rs/docs/guide/usage/formatter.html) |
 
 ## Prerequisites
 
@@ -59,23 +60,24 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ## Scripts
 
-| Command | Description |
-| --- | --- |
-| `pnpm dev` | Start TanStack Start dev server |
-| `pnpm build` | Production build (Nitro + TanStack) |
-| `pnpm lint` | ESLint (includes `@convex-dev/eslint-plugin`) |
-| `pnpm typecheck` | TypeScript check |
-| `pnpm format` | Prettier format |
+| Command          | Description                                                              |
+| ---------------- | ------------------------------------------------------------------------ |
+| `pnpm dev`       | Start TanStack Start dev server                                          |
+| `pnpm build`     | Production build (Nitro + TanStack)                                      |
+| `pnpm lint`      | Oxlint (type-aware; includes `@convex-dev/eslint-plugin` via JS plugins) |
+| `pnpm typecheck` | TypeScript check                                                         |
+| `pnpm format`    | Oxfmt format                                                             |
+| `pnpm check`     | Oxfmt check (CI-friendly)                                                |
 
 ## Deploy to Vercel
 
 Build command is `pnpm vercel-build` (via `vercel.json`). With the Convex ↔ Vercel
 integration, `CONVEX_DEPLOY_KEY` is synced per environment:
 
-| Vercel env | `CONVEX_DEPLOY_KEY` | Build behavior |
-| --- | --- | --- |
-| Production | Production deploy key | `convex deploy` → prod backend, then frontend build |
-| Preview | Preview deploy key | `convex deploy` → branch preview backend (+ `migrations:seedLabels`), then frontend build |
+| Vercel env | `CONVEX_DEPLOY_KEY`   | Build behavior                                                                            |
+| ---------- | --------------------- | ----------------------------------------------------------------------------------------- |
+| Production | Production deploy key | `convex deploy` → prod backend, then frontend build                                       |
+| Preview    | Preview deploy key    | `convex deploy` → branch preview backend (+ `migrations:seedLabels`), then frontend build |
 
 `convex deploy` injects `VITE_CONVEX_URL` for the frontend build. If that URL is
 missing, the client falls back to `placeholder.convex.cloud` and the browser shows
@@ -87,9 +89,9 @@ Marketplace maps Clerk **Development** → Vercel Preview and Clerk **Production
 Vercel Production. The app aliases `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` to the Vite
 names, so you do not need a manual `VITE_CLERK_PUBLISHABLE_KEY` on Vercel.
 
-Set `CLERK_FRONTEND_API_URL` on each Convex deployment (project defaults for Preview
-+ Production deployment env) to the matching Clerk Frontend API URL so signed-in
-WebSocket auth works.
+Set `CLERK_FRONTEND_API_URL` on each Convex deployment (project defaults for
+Preview and Production deployment env) to the matching Clerk Frontend API URL so
+signed-in WebSocket auth works.
 
 ## Deferred (not in initial scaffold)
 
