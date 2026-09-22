@@ -40,7 +40,7 @@ export const getPreferences = query({
         mapStyleId: DEFAULT_MAP_STYLE_ID,
         activeCategories: [...PLACE_CATEGORIES],
         sidePanelSection: "categories" as const,
-        sidebarOpen: true,
+        sidebarOpen: false,
       }
     }
 
@@ -53,7 +53,7 @@ export const getPreferences = query({
       mapStyleId: user.mapStyleId ?? DEFAULT_MAP_STYLE_ID,
       activeCategories: normalizeActiveCategories(user.activeCategories),
       sidePanelSection: user.sidePanelSection ?? "categories",
-      sidebarOpen: user.sidebarOpen ?? true,
+      sidebarOpen: user.sidebarOpen ?? false,
     }
   },
 })

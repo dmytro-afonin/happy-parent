@@ -13,6 +13,10 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as MapRouteImport } from './routes/map'
 import { Route as TranslationsRouteImport } from './routes/translations'
+import { Route as AdminIndexRouteImport } from './routes/admin/index'
+import { Route as AdminModerationRouteImport } from './routes/admin/moderation'
+import { Route as AdminPlacesRouteImport } from './routes/admin/places'
+import { Route as AdminTranslationsRouteImport } from './routes/admin/translations'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -34,37 +38,92 @@ const TranslationsRoute = TranslationsRouteImport.update({
   path: '/translations',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminIndexRoute = AdminIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminModerationRoute = AdminModerationRouteImport.update({
+  id: '/moderation',
+  path: '/moderation',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminPlacesRoute = AdminPlacesRouteImport.update({
+  id: '/places',
+  path: '/places',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminTranslationsRoute = AdminTranslationsRouteImport.update({
+  id: '/translations',
+  path: '/translations',
+  getParentRoute: () => AdminRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/admin': typeof AdminRoute
+  '/admin': typeof AdminRouteWithChildren
   '/map': typeof MapRoute
   '/translations': typeof TranslationsRoute
+  '/admin/moderation': typeof AdminModerationRoute
+  '/admin/places': typeof AdminPlacesRoute
+  '/admin/translations': typeof AdminTranslationsRoute
+  '/admin/': typeof AdminIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/admin': typeof AdminRoute
   '/map': typeof MapRoute
   '/translations': typeof TranslationsRoute
+  '/admin/moderation': typeof AdminModerationRoute
+  '/admin/places': typeof AdminPlacesRoute
+  '/admin/translations': typeof AdminTranslationsRoute
+  '/admin': typeof AdminIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/admin': typeof AdminRoute
+  '/admin': typeof AdminRouteWithChildren
   '/map': typeof MapRoute
   '/translations': typeof TranslationsRoute
+  '/admin/moderation': typeof AdminModerationRoute
+  '/admin/places': typeof AdminPlacesRoute
+  '/admin/translations': typeof AdminTranslationsRoute
+  '/admin/': typeof AdminIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/admin' | '/map' | '/translations'
+  fullPaths:
+    | '/'
+    | '/admin'
+    | '/map'
+    | '/translations'
+    | '/admin/moderation'
+    | '/admin/places'
+    | '/admin/translations'
+    | '/admin/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/admin' | '/map' | '/translations'
-  id: '__root__' | '/' | '/admin' | '/map' | '/translations'
+  to:
+    | '/'
+    | '/map'
+    | '/translations'
+    | '/admin/moderation'
+    | '/admin/places'
+    | '/admin/translations'
+    | '/admin'
+  id:
+    | '__root__'
+    | '/'
+    | '/admin'
+    | '/map'
+    | '/translations'
+    | '/admin/moderation'
+    | '/admin/places'
+    | '/admin/translations'
+    | '/admin/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AdminRoute: typeof AdminRoute
+  AdminRoute: typeof AdminRouteWithChildren
   MapRoute: typeof MapRoute
   TranslationsRoute: typeof TranslationsRoute
 }
@@ -99,12 +158,56 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TranslationsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/': {
+      id: '/admin/'
+      path: '/'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof AdminIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/moderation': {
+      id: '/admin/moderation'
+      path: '/moderation'
+      fullPath: '/admin/moderation'
+      preLoaderRoute: typeof AdminModerationRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/places': {
+      id: '/admin/places'
+      path: '/places'
+      fullPath: '/admin/places'
+      preLoaderRoute: typeof AdminPlacesRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/translations': {
+      id: '/admin/translations'
+      path: '/translations'
+      fullPath: '/admin/translations'
+      preLoaderRoute: typeof AdminTranslationsRouteImport
+      parentRoute: typeof AdminRoute
+    }
   }
 }
 
+interface AdminRouteChildren {
+  AdminModerationRoute: typeof AdminModerationRoute
+  AdminPlacesRoute: typeof AdminPlacesRoute
+  AdminTranslationsRoute: typeof AdminTranslationsRoute
+  AdminIndexRoute: typeof AdminIndexRoute
+}
+
+const AdminRouteChildren: AdminRouteChildren = {
+  AdminModerationRoute: AdminModerationRoute,
+  AdminPlacesRoute: AdminPlacesRoute,
+  AdminTranslationsRoute: AdminTranslationsRoute,
+  AdminIndexRoute: AdminIndexRoute,
+}
+
+const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AdminRoute: AdminRoute,
+  AdminRoute: AdminRouteWithChildren,
   MapRoute: MapRoute,
   TranslationsRoute: TranslationsRoute,
 }

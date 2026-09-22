@@ -223,6 +223,13 @@ export function PlaceCard({
           </p>
         ) : null}
 
+        {isAuthenticated ? (
+          <SuggestUpdateForm
+            placeId={placeId}
+            hasDescription={Boolean(place.description)}
+          />
+        ) : null}
+
         <div className="flex items-start gap-2 text-sm text-muted-foreground">
           <MapPinIcon className="mt-0.5 size-4 shrink-0" />
           <span className="leading-snug">{address}</span>
@@ -616,6 +623,93 @@ function PlaceCommentsSection({ placeId, comments }: CommentsSectionProps) {
       )}
 
       {error ? <p className="text-xs text-destructive">{error}</p> : null}
+    </div>
+  )
+}
+
+function SuggestUpdateForm({
+  placeId,
+  hasDescription,
+}: {
+  placeId: Id<"places">
+  hasDescription: boolean
+}) {
+  const { t } = useI18n()
+  const submit = useMutation(api.placeSuggestions.submit)
+  const [open, setOpen] = useState(false)
+  const [name, setName] = useState("")
+  const [description, setDescription] = useState("")
+  const [error, setError] = useState<string | null>(null)
+
+  const send = async (kind: "name" | "description", text: string) => {
+    const trimmed = text.trim()
+    if (trimmed.length === 0) {
+      return
+    }
+    setError(null)
+    try {
+      await submit({ placeId, kind, text: trimmed })
+      if (kind === "name") {
+        setName("")
+      } else {
+        setDescription("")
+      }
+    } catch (submitError) {
+      setError(
+        submitError instanceof Error ? submitError.message : t("suggest.error")
+      )
+    }
+  }
+
+  return (
+    <div className="space-y-2">
+      <button
+        type="button"
+        className="text-xs font-medium text-muted-foreground underline"
+        onClick={() => setOpen((current) => !current)}
+      >
+        {t("suggest.suggestChange")}
+      </button>
+      {open ? (
+        <div className="space-y-2">
+          <input
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            placeholder={t("suggest.name")}
+            className="h-8 w-full rounded-md border px-2 text-sm"
+          />
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            disabled={name.trim().length === 0}
+            onClick={() => void send("name", name)}
+          >
+            {t("suggest.submit")}
+          </Button>
+          {!hasDescription ? (
+            <>
+              <textarea
+                value={description}
+                onChange={(event) => setDescription(event.target.value)}
+                placeholder={t("suggest.description")}
+                rows={2}
+                className="w-full rounded-md border px-2 py-1 text-sm"
+              />
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={description.trim().length === 0}
+                onClick={() => void send("description", description)}
+              >
+                {t("suggest.submit")}
+              </Button>
+            </>
+          ) : null}
+          {error ? <p className="text-xs text-destructive">{error}</p> : null}
+        </div>
+      ) : null}
     </div>
   )
 }

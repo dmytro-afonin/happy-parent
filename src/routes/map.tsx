@@ -3,14 +3,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { useConvexAuth, useMutation, useQuery } from "convex/react"
 import type * as maplibregl from "maplibre-gl"
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
 import { MapCompactToolbar } from "@/components/map/MapCompactToolbar"
 import { MapSearchModal } from "@/components/map/MapSearchModal"
@@ -24,15 +17,15 @@ import { SuggestPlaceDialog } from "@/components/map/SuggestPlaceDialog"
 import { DEFAULT_MAP_STYLE_ID } from "@/components/map/map-styles"
 import type { MapStyleId } from "@/components/map/map-styles"
 import {
-  Sidebar,
-  SidebarContent,
-  SidebarHeader,
-  SidebarInset,
-  SidebarProvider,
-  SidebarRail,
-} from "@/components/ui/sidebar"
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet"
 import { useAdminStatus } from "@/hooks/use-admin-status"
-import { useLabels } from "@/hooks/use-localized-catalog"
+import { useIsMobile } from "@/hooks/use-mobile"
+import { useLabels, useLocalizedNames } from "@/hooks/use-localized-catalog"
 import { useI18n } from "@/lib/i18n"
 import {
   clearRoute,
@@ -74,18 +67,25 @@ function MapPage() {
   } = Route.useSearch()
   const navigate = useNavigate()
   const { t, locale } = useI18n()
+  const { categoryName, labelName } = useLocalizedNames()
   const mapRef = useRef<MapViewHandle>(null)
   const [mapInstance, setMapInstance] = useState<maplibregl.Map | null>(null)
   const [searchOpen, setSearchOpen] = useState(false)
   const [suggestOpen, setSuggestOpen] = useState(false)
+  const [pickedPoint, setPickedPoint] = useState<{
+    lat: number
+    lng: number
+  } | null>(null)
+  const [composerMode, setComposerMode] = useState<"point" | "polygon">("point")
   const [activeCategories, setActiveCategories] = useState<PlaceCategoryId[]>(
     () => (urlCategory ? [urlCategory] : [...PLACE_CATEGORIES])
   )
   const [activeLabelIds, setActiveLabelIds] = useState<string[]>([])
   const [selectedPlace, setSelectedPlace] = useState<MapPlace | null>(null)
-  const [sidePanelSection, setSidePanelSection] =
-    useState<SidePanelSection>("categories")
-  const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [sidePanelSection, setSidePanelSection] = useState<
+    SidePanelSection | undefined
+  >("categories")
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const [userLocation, setUserLocation] = useState<{
     lat: number
     lng: number
@@ -93,12 +93,22 @@ function MapPage() {
   const [routeLoading, setRouteLoading] = useState(false)
   const [routeSummary, setRouteSummary] = useState<string | null>(null)
   const [routeError, setRouteError] = useState<string | null>(null)
-  const uiPrefsHydratedRef = useRef(false)
-  const urlLabelAppliedRef = useRef(false)
-  const urlPlaceAppliedRef = useRef(false)
+  const urlPlaceAppliedRef = useRef<string | null>(null)
+  const [prefsHydrated, setPrefsHydrated] = useState(false)
+  const [trackedUrlCategory, setTrackedUrlCategory] = useState(urlCategory)
+  const [trackedUrlLabel, setTrackedUrlLabel] = useState<string | null>(null)
+  const [trackedUrlPlace, setTrackedUrlPlace] = useState<string | null>(null)
+
+  if (urlCategory !== trackedUrlCategory) {
+    setTrackedUrlCategory(urlCategory)
+    if (urlCategory) {
+      setActiveCategories([urlCategory])
+    }
+  }
 
   const { isAuthenticated, isLoading: isAuthLoading } = useConvexAuth()
   const { isAdmin } = useAdminStatus()
+  const isMobile = useIsMobile()
   const isAuthenticatedRef = useRef(isAuthenticated)
   useEffect(() => {
     isAuthenticatedRef.current = isAuthenticated
@@ -128,50 +138,25 @@ function MapPage() {
     })
   }, [navigate, urlPlace])
 
-  // URL category takes precedence (e.g. home page deep links).
-  useLayoutEffect(() => {
-    if (urlCategory) {
-      setActiveCategories([urlCategory])
-    }
-  }, [urlCategory])
-
-  // Label deep link (?label=<slug>) selects the label and its category.
-  useEffect(() => {
-    if (!urlLabel || urlLabelAppliedRef.current || !labels) {
-      return
-    }
-
+  if (urlLabel && labels && trackedUrlLabel !== urlLabel) {
+    setTrackedUrlLabel(urlLabel)
     const label = labels.find((entry) => entry.slug === urlLabel)
     if (label) {
       setActiveCategories([label.category])
       setActiveLabelIds([label._id])
     }
-    urlLabelAppliedRef.current = true
-  }, [labels, urlLabel])
+  }
 
-  // Saved preferences when URL is not steering category layers.
-  useLayoutEffect(() => {
-    if (!isAuthenticated) {
-      uiPrefsHydratedRef.current = false
-      return
-    }
-
-    if (savedPreferences === undefined || savedPreferences === null) {
-      return
-    }
-
-    if (uiPrefsHydratedRef.current) {
-      return
-    }
-
+  if (!isAuthenticated && prefsHydrated) {
+    setPrefsHydrated(false)
+  } else if (isAuthenticated && savedPreferences && !prefsHydrated) {
+    setPrefsHydrated(true)
     if (!urlCategory && !urlLabel) {
       setActiveCategories(savedPreferences.activeCategories)
     }
-
     setSidePanelSection(savedPreferences.sidePanelSection)
     setSidebarOpen(savedPreferences.sidebarOpen)
-    uiPrefsHydratedRef.current = true
-  }, [isAuthenticated, savedPreferences, urlCategory, urlLabel])
+  }
 
   const mapPlaces = useMemo<MapPlace[]>(
     () =>
@@ -194,29 +179,65 @@ function MapPage() {
     [systemPlaces]
   )
 
-  // Share deep link (?place=<id>) opens the place card and flies to it.
+  const catalogPlaces = useMemo(
+    () =>
+      mapPlaces.map((place) => ({
+        id: place._id,
+        name: place.name,
+        address: place.address,
+        description: place.description,
+        lat: place.lat,
+        lng: place.lng,
+        categoryLabel: categoryName(place.category),
+        labelNames: (place.labelIds ?? [])
+          .map((labelId) => {
+            const label = labels?.find((entry) => entry._id === labelId)
+            return label ? labelName(label) : ""
+          })
+          .filter((name) => name.length > 0),
+      })),
+    [categoryName, labelName, labels, mapPlaces]
+  )
+
+  const labelOptions = useMemo(
+    () =>
+      (labels ?? []).map((label) => ({
+        id: label._id,
+        name: labelName(label),
+        categoryLabel: categoryName(label.category),
+      })),
+    [categoryName, labelName, labels]
+  )
+
+  const linkedPlace =
+    urlPlace && systemPlaces !== undefined
+      ? mapPlaces.find((entry) => entry._id === urlPlace)
+      : undefined
+
+  if (urlPlace && linkedPlace && trackedUrlPlace !== urlPlace) {
+    setTrackedUrlPlace(urlPlace)
+    setSelectedPlace(linkedPlace)
+    setActiveCategories((current) =>
+      current.includes(linkedPlace.category)
+        ? current
+        : [...current, linkedPlace.category]
+    )
+  }
+
+  // Share deep link (?place=<id>) flies the map once the place is known.
   useEffect(() => {
     if (
       !urlPlace ||
-      urlPlaceAppliedRef.current ||
-      systemPlaces === undefined ||
-      !mapInstance
+      !linkedPlace ||
+      !mapInstance ||
+      urlPlaceAppliedRef.current === urlPlace
     ) {
       return
     }
 
-    const place = mapPlaces.find((entry) => entry._id === urlPlace)
-    if (place) {
-      setSelectedPlace(place)
-      setActiveCategories((current) =>
-        current.includes(place.category)
-          ? current
-          : [...current, place.category]
-      )
-      mapRef.current?.flyTo({ lat: place.lat, lng: place.lng })
-      urlPlaceAppliedRef.current = true
-    }
-  }, [mapInstance, mapPlaces, systemPlaces, urlPlace])
+    urlPlaceAppliedRef.current = urlPlace
+    mapRef.current?.flyTo({ lat: linkedPlace.lat, lng: linkedPlace.lng })
+  }, [linkedPlace, mapInstance, urlPlace])
 
   const persistCategories = useCallback(
     (
@@ -240,8 +261,15 @@ function MapPage() {
     [clearCategorySearchParam, updatePreferences, urlCategory, urlLabel]
   )
 
+  const preferredStyleId = isAuthenticated
+    ? (savedPreferences?.mapStyleId ?? DEFAULT_MAP_STYLE_ID)
+    : DEFAULT_MAP_STYLE_ID
+  const [chosenStyleId, setChosenStyleId] = useState<MapStyleId | null>(null)
+  const mapStyleId = chosenStyleId ?? preferredStyleId
+
   const handleStyleChange = useCallback(
     (styleId: MapStyleId) => {
+      setChosenStyleId(styleId)
       if (!isAuthenticated) {
         return
       }
@@ -263,9 +291,17 @@ function MapPage() {
 
   const handleSelectPlace = useCallback(
     (place: PlaceSearchResult, query: string) => {
-      mapRef.current?.flyTo({ lat: place.lat, lng: place.lng })
+      if (place.placeId) {
+        const saved = mapPlaces.find((entry) => entry._id === place.placeId)
+        if (saved) {
+          setSelectedPlace(saved)
+        }
+      }
+      if (place.source !== "label") {
+        mapRef.current?.flyTo({ lat: place.lat, lng: place.lng })
+      }
 
-      if (isAuthenticated) {
+      if (isAuthenticated && place.source !== "label") {
         void recordRecentSearch({
           query: query || place.label,
           label: place.label,
@@ -276,7 +312,26 @@ function MapPage() {
         })
       }
     },
-    [isAuthenticated, recordRecentSearch]
+    [isAuthenticated, mapPlaces, recordRecentSearch]
+  )
+
+  const handleSelectLabel = useCallback(
+    (labelId: string) => {
+      const label = labels?.find((entry) => entry._id === labelId)
+      if (!label) {
+        return
+      }
+      persistCategories((current) =>
+        current.includes(label.category)
+          ? current
+          : [...current, label.category]
+      )
+      setActiveLabelIds((current) =>
+        current.includes(labelId) ? current : [...current, labelId]
+      )
+      setSidePanelSection("categories")
+    },
+    [labels, persistCategories]
   )
 
   const handleSelectSavedPlace = useCallback(
@@ -311,10 +366,9 @@ function MapPage() {
 
   const handleSidePanelSectionChange = useCallback(
     (section: SidePanelSection | undefined) => {
-      const nextSection = section ?? "categories"
-      setSidePanelSection(nextSection)
-      if (isAuthenticated) {
-        void updatePreferences({ sidePanelSection: nextSection })
+      setSidePanelSection(section)
+      if (isAuthenticated && section) {
+        void updatePreferences({ sidePanelSection: section })
       }
     },
     [isAuthenticated, updatePreferences]
@@ -329,6 +383,10 @@ function MapPage() {
     },
     [isAuthenticated, updatePreferences]
   )
+
+  const closeSidePanel = useCallback(() => {
+    handleSidebarOpenChange(false)
+  }, [handleSidebarOpenChange])
 
   const handleClearRoute = useCallback(() => {
     if (mapInstance) {
@@ -443,9 +501,6 @@ function MapPage() {
     return counts
   }, [mapPlaces])
 
-  const initialStyleId = isAuthenticated
-    ? (savedPreferences?.mapStyleId ?? DEFAULT_MAP_STYLE_ID)
-    : DEFAULT_MAP_STYLE_ID
   const isPreferenceReady =
     !isAuthLoading &&
     (isAuthenticated
@@ -463,81 +518,102 @@ function MapPage() {
     onSidePanelSectionChange: handleSidePanelSectionChange,
     onToggleCategory: handleToggleCategory,
     onShowAllCategories: () => persistCategories([...PLACE_CATEGORIES]),
-    onHideAllCategories: () => persistCategories([]),
     onSelectPlace: (place: PlaceSearchResult) =>
       handleSelectPlace(place, place.query ?? place.label),
     onSelectSavedPlace: handleSelectSavedPlace,
-    onSelectRecentCategory: handleSelectCategory,
+    onRequestClose: closeSidePanel,
   }
 
+  const placeCardLeftOffset =
+    !isMobile && sidebarOpen ? "md:left-[22rem]" : "sm:left-3"
+
   return (
-    <SidebarProvider
-      open={sidebarOpen}
-      onOpenChange={handleSidebarOpenChange}
-      className="h-svh min-h-0"
-    >
-      <Sidebar collapsible="offcanvas" variant="sidebar">
-        <SidebarHeader className="border-b px-3 py-2">
-          <p className="text-sm font-medium">Happy Parent</p>
-          <p className="text-xs text-muted-foreground">
-            {t("map.categories")} · {t("map.labels")}
-          </p>
-        </SidebarHeader>
-        <SidebarContent>
-          <MapSidePanel {...sidePanelProps} />
-        </SidebarContent>
-        <SidebarRail />
-      </Sidebar>
-
-      <SidebarInset className="min-h-0 overflow-hidden">
-        <MapCompactToolbar
-          onOpenSearch={() => setSearchOpen(true)}
-          onAddPlace={() => setSuggestOpen(true)}
-        />
-
-        <div className="relative min-h-0 flex-1">
-          {isPreferenceReady ? (
-            <MapView
-              ref={mapRef}
-              className="absolute inset-0 h-full w-full"
-              initialStyleId={initialStyleId}
-              onStyleChange={handleStyleChange}
-              onUserLocationChange={setUserLocation}
-              onMapReady={setMapInstance}
-            >
-              {(map) => (
-                <PlaceCategoryLayers
-                  map={map}
-                  places={visiblePlaces}
-                  activeCategories={activeCategories}
-                  selectedPlaceId={selectedPlace?._id ?? null}
-                  onSelectPlace={setSelectedPlace}
-                />
-              )}
-            </MapView>
-          ) : (
-            <div className="absolute inset-0 flex items-center justify-center bg-muted/30 text-sm text-muted-foreground">
-              {t("map.loading")}
-            </div>
+    <div className="relative h-svh min-h-0 overflow-hidden bg-muted/20">
+      {isPreferenceReady ? (
+        <MapView
+          ref={mapRef}
+          className="absolute inset-0 h-full w-full"
+          initialStyleId={mapStyleId}
+          styleId={mapStyleId}
+          onUserLocationChange={setUserLocation}
+          onMapClick={
+            suggestOpen && composerMode === "point" ? setPickedPoint : undefined
+          }
+          onMapReady={setMapInstance}
+        >
+          {(map) => (
+            <PlaceCategoryLayers
+              map={map}
+              places={visiblePlaces}
+              activeCategories={activeCategories}
+              selectedPlaceId={selectedPlace?._id ?? null}
+              onSelectPlace={setSelectedPlace}
+            />
           )}
-
-          {selectedPlace ? (
-            <div className="pointer-events-none absolute inset-x-3 bottom-3 z-10 flex max-h-[min(70%,480px)] justify-start sm:inset-x-auto sm:left-3">
-              <PlaceCard
-                key={selectedPlace._id}
-                place={selectedPlace}
-                labels={labels}
-                onClose={handleCloseCard}
-                onShowRoute={() => void handleShowRoute()}
-                onClearRoute={handleClearRoute}
-                routeLoading={routeLoading}
-                routeSummary={routeSummary}
-                routeError={routeError}
-              />
-            </div>
-          ) : null}
+        </MapView>
+      ) : (
+        <div className="absolute inset-0 flex items-center justify-center bg-muted/30 text-sm text-muted-foreground">
+          {t("map.loading")}
         </div>
-      </SidebarInset>
+      )}
+
+      <MapCompactToolbar
+        sidebarOpen={sidebarOpen}
+        onToggleSidebar={() => handleSidebarOpenChange(!sidebarOpen)}
+        mapStyleId={mapStyleId}
+        onMapStyleChange={handleStyleChange}
+        onOpenSearch={() => setSearchOpen(true)}
+        onAddPlace={() => {
+          setSidebarOpen(false)
+          setSuggestOpen(true)
+        }}
+      />
+
+      {/* Desktop: float above the map without shrinking the canvas. */}
+      {!isMobile && sidebarOpen ? (
+        <aside className="pointer-events-none absolute top-16 bottom-3 left-3 z-20 hidden w-[20rem] md:flex">
+          <div className="pointer-events-auto flex min-h-0 w-full flex-1 flex-col overflow-hidden rounded-2xl border bg-background/95 shadow-lg backdrop-blur supports-[backdrop-filter]:bg-background/90">
+            <MapSidePanel {...sidePanelProps} />
+          </div>
+        </aside>
+      ) : null}
+
+      {/* Mobile: sheet overlay (map stays full-bleed underneath). */}
+      {isMobile ? (
+        <Sheet open={sidebarOpen} onOpenChange={handleSidebarOpenChange}>
+          <SheetContent
+            side="left"
+            showCloseButton={false}
+            className="w-[min(100%,20rem)] gap-0 p-0"
+          >
+            <SheetHeader className="sr-only">
+              <SheetTitle>{t("map.search")}</SheetTitle>
+              <SheetDescription>{t("map.search")}</SheetDescription>
+            </SheetHeader>
+            <div className="min-h-0 flex-1 overflow-hidden">
+              <MapSidePanel {...sidePanelProps} />
+            </div>
+          </SheetContent>
+        </Sheet>
+      ) : null}
+
+      {selectedPlace ? (
+        <div
+          className={`pointer-events-none absolute inset-x-3 bottom-3 z-10 flex max-h-[min(70%,480px)] justify-start transition-[left] duration-200 sm:inset-x-auto ${placeCardLeftOffset}`}
+        >
+          <PlaceCard
+            key={selectedPlace._id}
+            place={selectedPlace}
+            labels={labels}
+            onClose={handleCloseCard}
+            onShowRoute={() => void handleShowRoute()}
+            onClearRoute={handleClearRoute}
+            routeLoading={routeLoading}
+            routeSummary={routeSummary}
+            routeError={routeError}
+          />
+        </div>
+      ) : null}
 
       <MapSearchModal
         open={searchOpen}
@@ -546,16 +622,28 @@ function MapPage() {
         userLocation={userLocation}
         activeCategories={activeCategories}
         onSelectPlace={handleSelectPlace}
+        onSelectLabel={handleSelectLabel}
         onCategorySelect={handleSelectCategory}
+        catalogPlaces={catalogPlaces}
+        labelOptions={labelOptions}
       />
 
       <SuggestPlaceDialog
         open={suggestOpen}
-        onOpenChange={setSuggestOpen}
+        onOpenChange={(next) => {
+          setSuggestOpen(next)
+          if (!next) {
+            setPickedPoint(null)
+            setComposerMode("point")
+          }
+        }}
         labels={labels}
         isAdmin={isAdmin}
-        getMapCenter={() => mapRef.current?.getSearchViewport()?.center ?? null}
+        map={mapInstance}
+        pickedPoint={pickedPoint}
+        geometryMode={composerMode}
+        onGeometryModeChange={setComposerMode}
       />
-    </SidebarProvider>
+    </div>
   )
 }

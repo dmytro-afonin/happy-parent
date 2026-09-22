@@ -2,6 +2,7 @@ import { mutation, query } from "./_generated/server"
 import { v } from "convex/values"
 
 import { scheduleModerationNotify } from "./lib/moderationNotify"
+import { noteRequested } from "./lib/reliability"
 import { moderationStatusValidator } from "./lib/moderation"
 import { isAdminRole } from "./lib/roles"
 import { ensureAuthUser, getAuthUser } from "./lib/users"
@@ -115,6 +116,7 @@ export const add = mutation({
     })
 
     if (status === "pending") {
+      await noteRequested(ctx, userId, "comment")
       await scheduleModerationNotify(ctx, userId, {
         kind: "comment",
         summary: `${place.name}: ${text.slice(0, 200)}`,

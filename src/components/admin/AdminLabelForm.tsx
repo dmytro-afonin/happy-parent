@@ -109,7 +109,7 @@ export function AdminLabelForm() {
         </div>
         {error ? <p className="text-sm text-destructive">{error}</p> : null}
         <p className="text-xs text-muted-foreground">
-          Add translations for new place types on the Translations page —
+          Add translations for new place types under Admin → Translations —
           changes apply immediately.
         </p>
       </CardContent>

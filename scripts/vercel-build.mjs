@@ -43,8 +43,11 @@ if (process.env.CONVEX_DEPLOY_KEY) {
   console.log(
     `[vercel-build] VERCEL_ENV=${vercelEnv}: running convex deploy (sets VITE_CONVEX_URL)`
   )
+  // Use the project's Convex CLI. `pnpm dlx convex` installs a fresh copy, and
+  // pnpm 12 refuses that install because esbuild's build script is not approved
+  // in the temporary dlx project (ERR_PNPM_IGNORED_BUILDS).
   run("pnpm", [
-    "dlx",
+    "exec",
     "convex",
     "deploy",
     "--cmd",
