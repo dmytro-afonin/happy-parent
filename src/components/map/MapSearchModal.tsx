@@ -71,6 +71,15 @@ export function MapSearchModal({
   )
   const [isGeocoding, setIsGeocoding] = useState(false)
   const [geocodingError, setGeocodingError] = useState<string | null>(null)
+  const [openedFor, setOpenedFor] = useState<string | null>(null)
+
+  if (open && openedFor !== initialQuery) {
+    setOpenedFor(initialQuery)
+    setQuery(initialQuery)
+    setTab("all")
+  } else if (!open && openedFor !== null) {
+    setOpenedFor(null)
+  }
   const [favouritePlace, setFavouritePlace] =
     useState<PlaceSearchResult | null>(null)
   const [favouriteDialogOpen, setFavouriteDialogOpen] = useState(false)
@@ -96,30 +105,32 @@ export function MapSearchModal({
     isAuthenticated ? { limit: 8 } : "skip"
   )
 
-  useEffect(() => {
-    if (open) {
-      setQuery(initialQuery)
-      setTab("all")
-    }
-  }, [initialQuery, open])
+  const trimmedQuery = query.trim()
+  const searchActive = open && trimmedQuery.length >= 2
+  const [geocodeFor, setGeocodeFor] = useState("")
+
+  if (!searchActive && (isGeocoding || geocodingError || geocodeFor !== "")) {
+    setGeocodeFor("")
+    setGeocodingResults([])
+    setGeocodingError(null)
+    setIsGeocoding(false)
+  } else if (searchActive && geocodeFor !== trimmedQuery) {
+    setGeocodeFor(trimmedQuery)
+    setGeocodingResults([])
+    setGeocodingError(null)
+    setIsGeocoding(true)
+  }
 
   useEffect(() => {
-    const trimmed = query.trim()
-    if (!open || trimmed.length < 2) {
-      setGeocodingResults([])
-      setGeocodingError(null)
-      setIsGeocoding(false)
+    if (!searchActive) {
       return
     }
-
-    setIsGeocoding(true)
-    setGeocodingError(null)
 
     const timeout = window.setTimeout(() => {
       const viewport = getSearchViewport?.() ?? null
 
       void searchGeocoding({
-        query: trimmed,
+        query: trimmedQuery,
         limit: 20,
         centerLat: viewport?.center.lat,
         centerLng: viewport?.center.lng,
@@ -143,7 +154,7 @@ export function MapSearchModal({
     return () => {
       window.clearTimeout(timeout)
     }
-  }, [getSearchViewport, open, query, searchGeocoding])
+  }, [getSearchViewport, searchActive, searchGeocoding, trimmedQuery])
 
   const recents = recentResults ?? EMPTY_RESULTS
   const visibleResults = useMemo(() => {

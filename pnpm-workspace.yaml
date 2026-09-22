@@ -12,8 +12,7 @@ allowBuilds:
   core-js: false
   utf-8-validate: false
 
-# Delay resolving brand-new publishes (pnpm v11 default is 1440; keep 3 days).
-minimumReleaseAge: 4320
+# Release age uses pnpm's built-in default (1440 minutes, non-strict).
 
 # Fast-moving / intentionally-fresh packages allowed before the age window.
 # Prefer package names (not version pins) so the exclude list stays maintainable.
@@ -26,11 +25,10 @@ minimumReleaseAgeExclude:
   - lucide-react
   - maplibre-gl
   - nitro
-  # oxlint and oxfmt used to be excluded, but their @oxlint/* and @oxfmt/*
-  # native bindings are not. Excluding only the parent makes `pnpm update`
-  # fail. Leave both on the age gate so resolution stops at the newest
-  # release whose bindings are old enough (oxlint 1.83 and oxfmt 0.68;
-  # 1.85 and 0.70 were published 2026-09-21).
+  - oxfmt
+  - "@oxfmt/*"
+  - oxlint
+  - "@oxlint/*"
   - oxlint-tsgolint
   - shadcn
   - typescript

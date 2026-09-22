@@ -85,10 +85,12 @@ export const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
   const onMapReadyRef = useRef(onMapReady)
   const initialStyleIdRef = useRef(initialStyleId)
 
-  onStyleChangeRef.current = onStyleChange
-  onUserLocationChangeRef.current = onUserLocationChange
-  onMapReadyRef.current = onMapReady
-  initialStyleIdRef.current = initialStyleId
+  useEffect(() => {
+    onStyleChangeRef.current = onStyleChange
+    onUserLocationChangeRef.current = onUserLocationChange
+    onMapReadyRef.current = onMapReady
+    initialStyleIdRef.current = initialStyleId
+  }, [initialStyleId, onMapReady, onStyleChange, onUserLocationChange])
 
   useImperativeHandle(ref, () => ({
     flyTo({ lat, lng, zoom: targetZoom = 15 }) {

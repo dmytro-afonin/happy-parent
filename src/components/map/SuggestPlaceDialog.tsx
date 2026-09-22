@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { useAction, useMutation } from "convex/react"
 import { CrosshairIcon, Loader2Icon } from "lucide-react"
 
@@ -79,11 +79,13 @@ export function SuggestPlaceDialog({
     setLocation(getMapCenter())
   }
 
-  useEffect(() => {
+  const [wasOpen, setWasOpen] = useState(false)
+  if (open !== wasOpen) {
+    setWasOpen(open)
     if (open && !location) {
       setLocation(getMapCenter())
     }
-  }, [open, location, getMapCenter])
+  }
 
   const handleOpenChange = (nextOpen: boolean) => {
     resetAndClose(nextOpen)

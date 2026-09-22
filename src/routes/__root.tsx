@@ -27,6 +27,10 @@ const fetchClerkAuth = createServerFn({ method: "GET" }).handler(async () => {
   return { userId }
 })
 
+function clerkAuthHook() {
+  return useAuth()
+}
+
 export const Route = createRootRoute({
   beforeLoad: async () => {
     const { userId } = await fetchClerkAuth()
@@ -52,7 +56,7 @@ export const Route = createRootRoute({
 function RootComponent() {
   return (
     <ClerkProvider appearance={{ theme: shadcn }}>
-      <ConvexProviderWithClerk client={convex} useAuth={useAuth}>
+      <ConvexProviderWithClerk client={convex} useAuth={clerkAuthHook}>
         <I18nProvider>
           <TooltipProvider>
             <RootDocument>

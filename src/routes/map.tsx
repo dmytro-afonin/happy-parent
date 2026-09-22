@@ -3,14 +3,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { useConvexAuth, useMutation, useQuery } from "convex/react"
 import type * as maplibregl from "maplibre-gl"
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
 import { MapCompactToolbar } from "@/components/map/MapCompactToolbar"
 import { MapSearchModal } from "@/components/map/MapSearchModal"
@@ -93,9 +86,18 @@ function MapPage() {
   const [routeLoading, setRouteLoading] = useState(false)
   const [routeSummary, setRouteSummary] = useState<string | null>(null)
   const [routeError, setRouteError] = useState<string | null>(null)
-  const uiPrefsHydratedRef = useRef(false)
-  const urlLabelAppliedRef = useRef(false)
-  const urlPlaceAppliedRef = useRef(false)
+  const urlPlaceAppliedRef = useRef<string | null>(null)
+  const [prefsHydrated, setPrefsHydrated] = useState(false)
+  const [trackedUrlCategory, setTrackedUrlCategory] = useState(urlCategory)
+  const [trackedUrlLabel, setTrackedUrlLabel] = useState<string | null>(null)
+  const [trackedUrlPlace, setTrackedUrlPlace] = useState<string | null>(null)
+
+  if (urlCategory !== trackedUrlCategory) {
+    setTrackedUrlCategory(urlCategory)
+    if (urlCategory) {
+      setActiveCategories([urlCategory])
+    }
+  }
 
   const { isAuthenticated, isLoading: isAuthLoading } = useConvexAuth()
   const { isAdmin } = useAdminStatus()
@@ -129,50 +131,25 @@ function MapPage() {
     })
   }, [navigate, urlPlace])
 
-  // URL category takes precedence (e.g. home page deep links).
-  useLayoutEffect(() => {
-    if (urlCategory) {
-      setActiveCategories([urlCategory])
-    }
-  }, [urlCategory])
-
-  // Label deep link (?label=<slug>) selects the label and its category.
-  useEffect(() => {
-    if (!urlLabel || urlLabelAppliedRef.current || !labels) {
-      return
-    }
-
+  if (urlLabel && labels && trackedUrlLabel !== urlLabel) {
+    setTrackedUrlLabel(urlLabel)
     const label = labels.find((entry) => entry.slug === urlLabel)
     if (label) {
       setActiveCategories([label.category])
       setActiveLabelIds([label._id])
     }
-    urlLabelAppliedRef.current = true
-  }, [labels, urlLabel])
+  }
 
-  // Saved preferences when URL is not steering category layers.
-  useLayoutEffect(() => {
-    if (!isAuthenticated) {
-      uiPrefsHydratedRef.current = false
-      return
-    }
-
-    if (savedPreferences === undefined || savedPreferences === null) {
-      return
-    }
-
-    if (uiPrefsHydratedRef.current) {
-      return
-    }
-
+  if (!isAuthenticated && prefsHydrated) {
+    setPrefsHydrated(false)
+  } else if (isAuthenticated && savedPreferences && !prefsHydrated) {
+    setPrefsHydrated(true)
     if (!urlCategory && !urlLabel) {
       setActiveCategories(savedPreferences.activeCategories)
     }
-
     setSidePanelSection(savedPreferences.sidePanelSection)
     setSidebarOpen(savedPreferences.sidebarOpen)
-    uiPrefsHydratedRef.current = true
-  }, [isAuthenticated, savedPreferences, urlCategory, urlLabel])
+  }
 
   const mapPlaces = useMemo<MapPlace[]>(
     () =>
@@ -195,29 +172,35 @@ function MapPage() {
     [systemPlaces]
   )
 
-  // Share deep link (?place=<id>) opens the place card and flies to it.
+  const linkedPlace =
+    urlPlace && systemPlaces !== undefined
+      ? mapPlaces.find((entry) => entry._id === urlPlace)
+      : undefined
+
+  if (urlPlace && linkedPlace && trackedUrlPlace !== urlPlace) {
+    setTrackedUrlPlace(urlPlace)
+    setSelectedPlace(linkedPlace)
+    setActiveCategories((current) =>
+      current.includes(linkedPlace.category)
+        ? current
+        : [...current, linkedPlace.category]
+    )
+  }
+
+  // Share deep link (?place=<id>) flies the map once the place is known.
   useEffect(() => {
     if (
       !urlPlace ||
-      urlPlaceAppliedRef.current ||
-      systemPlaces === undefined ||
-      !mapInstance
+      !linkedPlace ||
+      !mapInstance ||
+      urlPlaceAppliedRef.current === urlPlace
     ) {
       return
     }
 
-    const place = mapPlaces.find((entry) => entry._id === urlPlace)
-    if (place) {
-      setSelectedPlace(place)
-      setActiveCategories((current) =>
-        current.includes(place.category)
-          ? current
-          : [...current, place.category]
-      )
-      mapRef.current?.flyTo({ lat: place.lat, lng: place.lng })
-      urlPlaceAppliedRef.current = true
-    }
-  }, [mapInstance, mapPlaces, systemPlaces, urlPlace])
+    urlPlaceAppliedRef.current = urlPlace
+    mapRef.current?.flyTo({ lat: linkedPlace.lat, lng: linkedPlace.lng })
+  }, [linkedPlace, mapInstance, urlPlace])
 
   const persistCategories = useCallback(
     (
