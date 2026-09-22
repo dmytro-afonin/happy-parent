@@ -48,7 +48,7 @@ export function CategoryLayerControl({
 
   return (
     <div className={cn("space-y-1 p-1", className)}>
-      <div className="flex justify-end px-1">
+      <div className="flex justify-start px-1">
         <Button type="button" size="sm" variant="ghost" onClick={onShowAll}>
           {t("map.selectAll")}
         </Button>

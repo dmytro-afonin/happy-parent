@@ -82,9 +82,10 @@ function MapPage() {
   )
   const [activeLabelIds, setActiveLabelIds] = useState<string[]>([])
   const [selectedPlace, setSelectedPlace] = useState<MapPlace | null>(null)
-  const [sidePanelSection, setSidePanelSection] =
-    useState<SidePanelSection>("categories")
-  const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [sidePanelSection, setSidePanelSection] = useState<
+    SidePanelSection | undefined
+  >("categories")
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const [userLocation, setUserLocation] = useState<{
     lat: number
     lng: number
@@ -322,7 +323,6 @@ function MapPage() {
         current.includes(labelId) ? current : [...current, labelId]
       )
       setSidePanelSection("categories")
-      setSidebarOpen(true)
     },
     [labels, persistCategories]
   )
@@ -359,10 +359,9 @@ function MapPage() {
 
   const handleSidePanelSectionChange = useCallback(
     (section: SidePanelSection | undefined) => {
-      const nextSection = section ?? "categories"
-      setSidePanelSection(nextSection)
-      if (isAuthenticated) {
-        void updatePreferences({ sidePanelSection: nextSection })
+      setSidePanelSection(section)
+      if (isAuthenticated && section) {
+        void updatePreferences({ sidePanelSection: section })
       }
     },
     [isAuthenticated, updatePreferences]
@@ -518,8 +517,7 @@ function MapPage() {
     onSelectPlace: (place: PlaceSearchResult) =>
       handleSelectPlace(place, place.query ?? place.label),
     onSelectSavedPlace: handleSelectSavedPlace,
-    onSelectRecentCategory: handleSelectCategory,
-    onRequestClose: isMobile ? closeSidePanel : undefined,
+    onRequestClose: closeSidePanel,
   }
 
   const placeCardLeftOffset =
@@ -556,11 +554,9 @@ function MapPage() {
       )}
 
       <MapCompactToolbar
-        onOpenSearch={() => {
-          setSidePanelSection("categories")
-          setSidebarOpen(true)
-          setSearchOpen(true)
-        }}
+        sidebarOpen={sidebarOpen}
+        onToggleSidebar={() => handleSidebarOpenChange(!sidebarOpen)}
+        onOpenSearch={() => setSearchOpen(true)}
         onAddPlace={() => {
           setSidebarOpen(false)
           setSuggestOpen(true)
@@ -569,11 +565,9 @@ function MapPage() {
 
       {/* Desktop: float above the map without shrinking the canvas. */}
       {!isMobile && sidebarOpen ? (
-        <aside className="pointer-events-none absolute top-16 bottom-3 left-3 z-20 hidden w-[20rem] md:block">
-          <div className="pointer-events-auto flex h-full flex-col overflow-hidden rounded-2xl border bg-background/95 shadow-lg backdrop-blur supports-[backdrop-filter]:bg-background/90">
-            <div className="min-h-0 flex-1 overflow-y-auto pt-2">
-              <MapSidePanel {...sidePanelProps} />
-            </div>
+        <aside className="pointer-events-none absolute top-16 bottom-3 left-3 z-20 hidden w-[20rem] md:flex">
+          <div className="pointer-events-auto flex min-h-0 w-full flex-1 flex-col overflow-hidden rounded-2xl border bg-background/95 shadow-lg backdrop-blur supports-[backdrop-filter]:bg-background/90">
+            <MapSidePanel {...sidePanelProps} />
           </div>
         </aside>
       ) : null}
@@ -590,7 +584,7 @@ function MapPage() {
               <SheetTitle>{t("map.search")}</SheetTitle>
               <SheetDescription>{t("map.search")}</SheetDescription>
             </SheetHeader>
-            <div className="min-h-0 flex-1 overflow-y-auto pt-2">
+            <div className="min-h-0 flex-1 overflow-hidden">
               <MapSidePanel {...sidePanelProps} />
             </div>
           </SheetContent>
