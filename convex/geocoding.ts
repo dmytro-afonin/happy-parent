@@ -64,6 +64,7 @@ export const search = action({
         "viewbox",
         `${centerLng - lngDelta},${centerLat + latDelta},${centerLng + lngDelta},${centerLat - latDelta}`
       )
+      url.searchParams.set("bounded", "1")
     }
 
     let response: Response
