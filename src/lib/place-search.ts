@@ -1,4 +1,4 @@
-export type PlaceSearchSource = "recent" | "geocoding"
+export type PlaceSearchSource = "recent" | "geocoding" | "local" | "label"
 
 export type PlaceSearchResult = {
   id: string
@@ -9,6 +9,133 @@ export type PlaceSearchResult = {
   source: PlaceSearchSource
   query?: string
   externalId?: string
+  /** Set when the hit is a label, so the row can name its category. */
+  categoryLabel?: string
+  /** Outside the current map view. Shown after in-view matches. */
+  farther?: boolean
+  placeId?: string
+}
+
+export type SearchViewport = {
+  center: { lat: number; lng: number }
+  bounds: {
+    minLat: number
+    maxLat: number
+    minLng: number
+    maxLng: number
+  }
+}
+
+const NEARBY_RADIUS_KM = 25
+
+function fold(value: string) {
+  return value.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase()
+}
+
+function includesQuery(query: string, value: string | undefined) {
+  if (!value) {
+    return false
+  }
+  return fold(value).includes(fold(query))
+}
+
+export function pointInBounds(
+  lat: number,
+  lng: number,
+  bounds: SearchViewport["bounds"]
+) {
+  return (
+    lat >= bounds.minLat &&
+    lat <= bounds.maxLat &&
+    lng >= bounds.minLng &&
+    lng <= bounds.maxLng
+  )
+}
+
+export type CatalogPlace = {
+  id: string
+  name: string
+  address?: string
+  description?: string
+  lat: number
+  lng: number
+  categoryLabel: string
+  labelNames: string[]
+}
+
+/** Local catalog hits, nearest first, split into the map view and a 25 km ring. */
+export function searchCatalogPlaces(
+  query: string,
+  places: CatalogPlace[],
+  viewport: SearchViewport | null
+): PlaceSearchResult[] {
+  const trimmed = query.trim()
+  if (trimmed.length < 2) {
+    return []
+  }
+
+  const matches = places.filter(
+    (place) =>
+      includesQuery(trimmed, place.name) ||
+      includesQuery(trimmed, place.address) ||
+      includesQuery(trimmed, place.description) ||
+      includesQuery(trimmed, place.categoryLabel) ||
+      place.labelNames.some((name) => includesQuery(trimmed, name))
+  )
+
+  const origin = viewport?.center ?? null
+  const ranked = matches
+    .map((place) => {
+      const inView = viewport
+        ? pointInBounds(place.lat, place.lng, viewport.bounds)
+        : false
+      const km = origin
+        ? distanceKm(origin.lat, origin.lng, place.lat, place.lng)
+        : 0
+      const nearby = inView || km <= NEARBY_RADIUS_KM
+      return { place, inView, km, nearby }
+    })
+    .filter((entry) => entry.nearby)
+    .sort((left, right) => {
+      if (left.inView !== right.inView) {
+        return left.inView ? -1 : 1
+      }
+      return left.km - right.km
+    })
+
+  return ranked.map(({ place, inView }) => ({
+    id: `local:${place.id}`,
+    label: place.name,
+    subtitle: place.address,
+    lat: place.lat,
+    lng: place.lng,
+    source: "local" as const,
+    categoryLabel: place.categoryLabel,
+    farther: !inView,
+    placeId: place.id,
+  }))
+}
+
+export function searchLabelHits(
+  query: string,
+  labels: Array<{ id: string; name: string; categoryLabel: string }>
+): PlaceSearchResult[] {
+  const trimmed = query.trim()
+  if (trimmed.length < 2) {
+    return []
+  }
+
+  return labels
+    .filter((label) => includesQuery(trimmed, label.name))
+    .map((label) => ({
+      id: `label:${label.id}`,
+      label: label.name,
+      subtitle: label.categoryLabel,
+      lat: 0,
+      lng: 0,
+      source: "label" as const,
+      categoryLabel: label.categoryLabel,
+    }))
 }
 
 export type SearchResultsTab = "all" | "recent" | "map"

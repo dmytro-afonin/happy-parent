@@ -59,6 +59,7 @@ type MapViewProps = {
   initialStyleId?: MapStyleId
   onStyleChange?: (styleId: MapStyleId) => void
   onUserLocationChange?: (location: { lat: number; lng: number } | null) => void
+  onMapClick?: (location: { lat: number; lng: number }) => void
   onMapReady?: (map: maplibregl.Map) => void
   children?: (map: maplibregl.Map) => ReactNode
 }
@@ -71,6 +72,7 @@ export const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
     initialStyleId = DEFAULT_MAP_STYLE_ID,
     onStyleChange,
     onUserLocationChange,
+    onMapClick,
     onMapReady,
     children,
   },
@@ -82,15 +84,23 @@ export const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
   const userLocationRef = useRef<{ lat: number; lng: number } | null>(null)
   const onStyleChangeRef = useRef(onStyleChange)
   const onUserLocationChangeRef = useRef(onUserLocationChange)
+  const onMapClickRef = useRef(onMapClick)
   const onMapReadyRef = useRef(onMapReady)
   const initialStyleIdRef = useRef(initialStyleId)
 
   useEffect(() => {
     onStyleChangeRef.current = onStyleChange
     onUserLocationChangeRef.current = onUserLocationChange
+    onMapClickRef.current = onMapClick
     onMapReadyRef.current = onMapReady
     initialStyleIdRef.current = initialStyleId
-  }, [initialStyleId, onMapReady, onStyleChange, onUserLocationChange])
+  }, [
+    initialStyleId,
+    onMapClick,
+    onMapReady,
+    onStyleChange,
+    onUserLocationChange,
+  ])
 
   useImperativeHandle(ref, () => ({
     flyTo({ lat, lng, zoom: targetZoom = 15 }) {
@@ -147,7 +157,7 @@ export const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
     const removeStylePatches = installOpenFreeMapStylePatches(map)
 
     map.addControl(styleSwitcher, "top-left")
-    map.addControl(new maplibregl.NavigationControl(), "top-right")
+    map.addControl(new maplibregl.NavigationControl(), "bottom-right")
 
     const geolocate = new maplibregl.GeolocateControl({
       positionOptions: GEOLOCATION_OPTIONS,
@@ -155,7 +165,15 @@ export const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
       showUserLocation: true,
       fitBoundsOptions: MAP_MOVE_OPTIONS,
     })
-    map.addControl(geolocate, "top-right")
+    map.addControl(geolocate, "bottom-right")
+
+    const onClick = (event: maplibregl.MapMouseEvent) => {
+      onMapClickRef.current?.({
+        lat: event.lngLat.lat,
+        lng: event.lngLat.lng,
+      })
+    }
+    map.on("click", onClick)
 
     geolocate.on("geolocate", (event) => {
       const location = {
@@ -195,6 +213,7 @@ export const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
     map.on("load", onMapLoad)
 
     return () => {
+      map.off("click", onClick)
       map.off("load", onMapLoad)
       removeStylePatches()
       removeMissingImageHandler()
@@ -204,6 +223,13 @@ export const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
       mapRef.current = null
     }
   }, [center, zoom])
+
+  useEffect(() => {
+    if (!readyMap) {
+      return
+    }
+    readyMap.getCanvas().style.cursor = onMapClick ? "crosshair" : ""
+  }, [onMapClick, readyMap])
 
   return (
     <>

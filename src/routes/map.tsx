@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/sheet"
 import { useAdminStatus } from "@/hooks/use-admin-status"
 import { useIsMobile } from "@/hooks/use-mobile"
-import { useLabels } from "@/hooks/use-localized-catalog"
+import { useLabels, useLocalizedNames } from "@/hooks/use-localized-catalog"
 import { useI18n } from "@/lib/i18n"
 import {
   clearRoute,
@@ -67,10 +67,16 @@ function MapPage() {
   } = Route.useSearch()
   const navigate = useNavigate()
   const { t, locale } = useI18n()
+  const { categoryName, labelName } = useLocalizedNames()
   const mapRef = useRef<MapViewHandle>(null)
   const [mapInstance, setMapInstance] = useState<maplibregl.Map | null>(null)
   const [searchOpen, setSearchOpen] = useState(false)
   const [suggestOpen, setSuggestOpen] = useState(false)
+  const [pickedPoint, setPickedPoint] = useState<{
+    lat: number
+    lng: number
+  } | null>(null)
+  const [composerMode, setComposerMode] = useState<"point" | "polygon">("point")
   const [activeCategories, setActiveCategories] = useState<PlaceCategoryId[]>(
     () => (urlCategory ? [urlCategory] : [...PLACE_CATEGORIES])
   )
@@ -172,6 +178,36 @@ function MapPage() {
     [systemPlaces]
   )
 
+  const catalogPlaces = useMemo(
+    () =>
+      mapPlaces.map((place) => ({
+        id: place._id,
+        name: place.name,
+        address: place.address,
+        description: place.description,
+        lat: place.lat,
+        lng: place.lng,
+        categoryLabel: categoryName(place.category),
+        labelNames: (place.labelIds ?? [])
+          .map((labelId) => {
+            const label = labels?.find((entry) => entry._id === labelId)
+            return label ? labelName(label) : ""
+          })
+          .filter((name) => name.length > 0),
+      })),
+    [categoryName, labelName, labels, mapPlaces]
+  )
+
+  const labelOptions = useMemo(
+    () =>
+      (labels ?? []).map((label) => ({
+        id: label._id,
+        name: labelName(label),
+        categoryLabel: categoryName(label.category),
+      })),
+    [categoryName, labelName, labels]
+  )
+
   const linkedPlace =
     urlPlace && systemPlaces !== undefined
       ? mapPlaces.find((entry) => entry._id === urlPlace)
@@ -247,9 +283,17 @@ function MapPage() {
 
   const handleSelectPlace = useCallback(
     (place: PlaceSearchResult, query: string) => {
-      mapRef.current?.flyTo({ lat: place.lat, lng: place.lng })
+      if (place.placeId) {
+        const saved = mapPlaces.find((entry) => entry._id === place.placeId)
+        if (saved) {
+          setSelectedPlace(saved)
+        }
+      }
+      if (place.source !== "label") {
+        mapRef.current?.flyTo({ lat: place.lat, lng: place.lng })
+      }
 
-      if (isAuthenticated) {
+      if (isAuthenticated && place.source !== "label") {
         void recordRecentSearch({
           query: query || place.label,
           label: place.label,
@@ -260,7 +304,27 @@ function MapPage() {
         })
       }
     },
-    [isAuthenticated, recordRecentSearch]
+    [isAuthenticated, mapPlaces, recordRecentSearch]
+  )
+
+  const handleSelectLabel = useCallback(
+    (labelId: string) => {
+      const label = labels?.find((entry) => entry._id === labelId)
+      if (!label) {
+        return
+      }
+      persistCategories((current) =>
+        current.includes(label.category)
+          ? current
+          : [...current, label.category]
+      )
+      setActiveLabelIds((current) =>
+        current.includes(labelId) ? current : [...current, labelId]
+      )
+      setSidePanelSection("categories")
+      setSidebarOpen(true)
+    },
+    [labels, persistCategories]
   )
 
   const handleSelectSavedPlace = useCallback(
@@ -451,7 +515,6 @@ function MapPage() {
     onSidePanelSectionChange: handleSidePanelSectionChange,
     onToggleCategory: handleToggleCategory,
     onShowAllCategories: () => persistCategories([...PLACE_CATEGORIES]),
-    onHideAllCategories: () => persistCategories([]),
     onSelectPlace: (place: PlaceSearchResult) =>
       handleSelectPlace(place, place.query ?? place.label),
     onSelectSavedPlace: handleSelectSavedPlace,
@@ -471,6 +534,9 @@ function MapPage() {
           initialStyleId={initialStyleId}
           onStyleChange={handleStyleChange}
           onUserLocationChange={setUserLocation}
+          onMapClick={
+            suggestOpen && composerMode === "point" ? setPickedPoint : undefined
+          }
           onMapReady={setMapInstance}
         >
           {(map) => (
@@ -490,23 +556,22 @@ function MapPage() {
       )}
 
       <MapCompactToolbar
-        onOpenSearch={() => setSearchOpen(true)}
-        onAddPlace={() => setSuggestOpen(true)}
-        panelOpen={sidebarOpen}
-        onTogglePanel={() => handleSidebarOpenChange(!sidebarOpen)}
+        onOpenSearch={() => {
+          setSidePanelSection("categories")
+          setSidebarOpen(true)
+          setSearchOpen(true)
+        }}
+        onAddPlace={() => {
+          setSidebarOpen(false)
+          setSuggestOpen(true)
+        }}
       />
 
       {/* Desktop: float above the map without shrinking the canvas. */}
       {!isMobile && sidebarOpen ? (
         <aside className="pointer-events-none absolute top-16 bottom-3 left-3 z-20 hidden w-[20rem] md:block">
           <div className="pointer-events-auto flex h-full flex-col overflow-hidden rounded-2xl border bg-background/95 shadow-lg backdrop-blur supports-[backdrop-filter]:bg-background/90">
-            <div className="border-b px-3 py-2">
-              <p className="text-sm font-medium">Happy Parent</p>
-              <p className="text-xs text-muted-foreground">
-                {t("map.categories")} · {t("map.labels")}
-              </p>
-            </div>
-            <div className="min-h-0 flex-1 overflow-y-auto">
+            <div className="min-h-0 flex-1 overflow-y-auto pt-2">
               <MapSidePanel {...sidePanelProps} />
             </div>
           </div>
@@ -521,15 +586,11 @@ function MapPage() {
             showCloseButton={false}
             className="w-[min(100%,20rem)] gap-0 p-0"
           >
-            <SheetHeader className="border-b px-3 py-2 text-left">
-              <SheetTitle className="text-sm font-medium">
-                Happy Parent
-              </SheetTitle>
-              <SheetDescription className="text-xs">
-                {t("map.categories")} · {t("map.labels")}
-              </SheetDescription>
+            <SheetHeader className="sr-only">
+              <SheetTitle>{t("map.search")}</SheetTitle>
+              <SheetDescription>{t("map.search")}</SheetDescription>
             </SheetHeader>
-            <div className="min-h-0 flex-1 overflow-y-auto">
+            <div className="min-h-0 flex-1 overflow-y-auto pt-2">
               <MapSidePanel {...sidePanelProps} />
             </div>
           </SheetContent>
@@ -561,15 +622,27 @@ function MapPage() {
         userLocation={userLocation}
         activeCategories={activeCategories}
         onSelectPlace={handleSelectPlace}
+        onSelectLabel={handleSelectLabel}
         onCategorySelect={handleSelectCategory}
+        catalogPlaces={catalogPlaces}
+        labelOptions={labelOptions}
       />
 
       <SuggestPlaceDialog
         open={suggestOpen}
-        onOpenChange={setSuggestOpen}
+        onOpenChange={(next) => {
+          setSuggestOpen(next)
+          if (!next) {
+            setPickedPoint(null)
+            setComposerMode("point")
+          }
+        }}
         labels={labels}
         isAdmin={isAdmin}
-        getMapCenter={() => mapRef.current?.getSearchViewport()?.center ?? null}
+        map={mapInstance}
+        pickedPoint={pickedPoint}
+        geometryMode={composerMode}
+        onGeometryModeChange={setComposerMode}
       />
     </div>
   )

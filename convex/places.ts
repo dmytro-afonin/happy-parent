@@ -9,7 +9,9 @@ import {
   latLngValidator,
   validateGeometry,
 } from "./lib/geometry"
+import { localeValidator } from "./lib/locales"
 import { effectiveStatus, moderationStatusValidator } from "./lib/moderation"
+import { noteRequested } from "./lib/reliability"
 import type { PlaceCategoryId } from "./lib/placeCategories"
 import {
   normalizePlaceCategory,
@@ -17,6 +19,7 @@ import {
 } from "./lib/placeCategories"
 import { isAdminRole } from "./lib/roles"
 import { ensureAuthUser, getAuthUser, requireAdminUser } from "./lib/users"
+import { insertSuggestion } from "./placeSuggestions"
 
 const placeListItemValidator = v.object({
   _id: v.id("places"),
@@ -217,6 +220,17 @@ export const create = mutation({
     labelIds: v.optional(v.array(v.id("labels"))),
     tags: v.optional(v.array(v.string())),
     photos: v.optional(v.array(photoInputValidator)),
+    sourceLocale: v.optional(localeValidator),
+    suggestedLabel: v.optional(v.string()),
+    translations: v.optional(
+      v.array(
+        v.object({
+          locale: localeValidator,
+          name: v.optional(v.string()),
+          description: v.optional(v.string()),
+        })
+      )
+    ),
   },
   returns: v.id("places"),
   handler: async (ctx, args) => {
@@ -254,6 +268,7 @@ export const create = mutation({
       createdBy: userId,
       createdAt: now,
       updatedAt: now,
+      sourceLocale: args.sourceLocale,
       status,
     })
 
@@ -272,7 +287,52 @@ export const create = mutation({
           status,
         })
         sortOrder += 1
+        if (!isAdmin) {
+          await noteRequested(ctx, userId, "photo")
+        }
       }
+    }
+
+    const suggestedLabel = args.suggestedLabel?.trim()
+    if (suggestedLabel) {
+      await insertSuggestion(ctx, {
+        placeId,
+        authorId: userId,
+        kind: "label",
+        text: suggestedLabel,
+        autoApprove: isAdmin,
+      })
+    }
+
+    for (const translation of args.translations ?? []) {
+      const translatedName = translation.name?.trim()
+      const translatedDescription = translation.description?.trim()
+      if (translatedName) {
+        await insertSuggestion(ctx, {
+          placeId,
+          authorId: userId,
+          kind: "translation",
+          text: translatedName,
+          locale: translation.locale,
+          translationField: "name",
+          autoApprove: isAdmin,
+        })
+      }
+      if (translatedDescription) {
+        await insertSuggestion(ctx, {
+          placeId,
+          authorId: userId,
+          kind: "translation",
+          text: translatedDescription,
+          locale: translation.locale,
+          translationField: "description",
+          autoApprove: isAdmin,
+        })
+      }
+    }
+
+    if (!isAdmin) {
+      await noteRequested(ctx, userId, "place")
     }
 
     if (status === "pending") {

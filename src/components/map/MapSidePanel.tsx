@@ -9,10 +9,9 @@ import {
 import {
   ClockIcon,
   HeartIcon,
-  LayersIcon,
   MapPinIcon,
+  SearchIcon,
   StarIcon,
-  TagIcon,
   Trash2Icon,
 } from "lucide-react"
 
@@ -30,9 +29,7 @@ import type { PlaceLabel } from "@/hooks/use-localized-catalog"
 import { useI18n } from "@/lib/i18n"
 import type { PlaceSearchResult } from "@/lib/place-search"
 import type { SidePanelSection } from "@/lib/map-preferences"
-import { PLACE_CATEGORY_META } from "@/lib/place-categories"
 import type { PlaceCategoryId } from "@/lib/place-categories"
-import { cn } from "@/lib/utils"
 import { api } from "../../../convex/_generated/api"
 import type { Id } from "../../../convex/_generated/dataModel"
 
@@ -48,7 +45,6 @@ type MapSidePanelProps = {
   onSidePanelSectionChange: (section: SidePanelSection | undefined) => void
   onToggleCategory: (category: PlaceCategoryId) => void
   onShowAllCategories: () => void
-  onHideAllCategories: () => void
   onSelectPlace: (place: PlaceSearchResult) => void
   onSelectSavedPlace: (placeId: string) => void
   onSelectRecentCategory?: (category: PlaceCategoryId) => void
@@ -68,7 +64,6 @@ export function MapSidePanel({
   onSidePanelSectionChange,
   onToggleCategory,
   onShowAllCategories,
-  onHideAllCategories,
   onSelectPlace,
   onSelectSavedPlace,
   onSelectRecentCategory,
@@ -76,7 +71,7 @@ export function MapSidePanel({
 }: MapSidePanelProps) {
   const { t } = useI18n()
   const { isAuthenticated } = useConvexAuth()
-  const { categoryName, labelName } = useLocalizedNames()
+  const { categoryName } = useLocalizedNames()
   const favourites = useQuery(
     api.favouritePlaces.list,
     isAuthenticated ? {} : "skip"
@@ -113,10 +108,6 @@ export function MapSidePanel({
     await removeFavourite({ favouriteId })
   }
 
-  const activeCategoryCount = activeCategories.length
-  const visibleLabels = (labels ?? []).filter((label) =>
-    activeCategories.includes(label.category)
-  )
   const savedPlacesHasMore =
     savedPlacesStatus === "CanLoadMore" || savedPlacesStatus === "LoadingMore"
   const savedCountValue = (favourites?.length ?? 0) + savedPlaces.length
@@ -137,75 +128,48 @@ export function MapSidePanel({
       <AccordionItem value="categories">
         <AccordionTrigger className="px-2 hover:no-underline">
           <span className="flex items-center gap-2">
-            <LayersIcon className="size-4 text-muted-foreground" />
-            {t("map.categories")}
-            <Badge variant="secondary" className="ml-1">
-              {activeCategoryCount}
-            </Badge>
+            <SearchIcon className="size-4 text-muted-foreground" />
+            {t("map.search")}
           </span>
         </AccordionTrigger>
         <AccordionContent className="px-1">
+          {recentCategories && recentCategories.length > 0 ? (
+            <div className="mb-2 flex flex-wrap gap-1.5 px-2">
+              {recentCategories.map((entry) => (
+                <button
+                  key={`${entry.category}-${entry.searchedAt}`}
+                  type="button"
+                  onClick={() => handleSelectCategory(entry.category)}
+                  className="rounded-full border bg-muted/40 px-3 py-1 text-sm hover:bg-muted"
+                >
+                  {categoryName(entry.category)}
+                </button>
+              ))}
+            </div>
+          ) : null}
           <CategoryLayerControl
-            variant="panel"
             activeCategories={activeCategories}
             placeCounts={placeCounts}
+            labels={labels}
+            activeLabelIds={activeLabelIds}
+            labelCounts={labelCounts}
             onToggleCategory={onToggleCategory}
+            onToggleLabel={onToggleLabel}
             onShowAll={onShowAllCategories}
-            onHideAll={onHideAllCategories}
           />
-
-          <div className="px-3 pb-3">
-            <div className="mb-2 flex items-center justify-between gap-2">
-              <div className="flex items-center gap-1.5 text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                <TagIcon className="size-3.5" />
-                {t("map.labels")}
-              </div>
-              {activeLabelIds.length > 0 ? (
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="ghost"
-                  className="h-6 px-1.5 text-xs"
-                  onClick={onClearLabels}
-                >
-                  {t("map.all")}
-                </Button>
-              ) : null}
+          {activeLabelIds.length > 0 ? (
+            <div className="px-2 pb-2">
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                className="h-7 px-2 text-xs"
+                onClick={onClearLabels}
+              >
+                {t("map.all")}
+              </Button>
             </div>
-            <div className="flex flex-wrap gap-1">
-              {visibleLabels.map((label) => {
-                const isActive = activeLabelIds.includes(label._id)
-                const count = labelCounts[label._id] ?? 0
-
-                return (
-                  <button
-                    key={label._id}
-                    type="button"
-                    aria-pressed={isActive}
-                    onClick={() => onToggleLabel(label._id)}
-                    className={cn(
-                      "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs transition-colors",
-                      isActive
-                        ? "border-primary bg-primary/10 text-primary"
-                        : "bg-muted/40 hover:bg-muted"
-                    )}
-                  >
-                    <span
-                      className="size-1.5 rounded-full"
-                      style={{
-                        backgroundColor:
-                          PLACE_CATEGORY_META[label.category].color,
-                      }}
-                    />
-                    {labelName(label)}
-                    {count > 0 ? (
-                      <span className="text-muted-foreground">{count}</span>
-                    ) : null}
-                  </button>
-                )
-              })}
-            </div>
-          </div>
+          ) : null}
         </AccordionContent>
       </AccordionItem>
 
@@ -213,7 +177,7 @@ export function MapSidePanel({
         <AccordionTrigger className="px-2 hover:no-underline">
           <span className="flex items-center gap-2">
             <HeartIcon className="size-4 text-red-500" />
-            {t("map.myPlaces")}
+            {t("map.favourites")}
             {isAuthenticated ? (
               <Badge variant="secondary" className="ml-1">
                 {savedCountLabel}
@@ -239,9 +203,6 @@ export function MapSidePanel({
             <div className="space-y-3">
               {savedPlaces.length > 0 ? (
                 <div>
-                  <p className="mb-1.5 px-1 text-xs font-medium text-muted-foreground">
-                    {t("map.savedPlaces")}
-                  </p>
                   <ul className="space-y-1">
                     {savedPlaces.map((entry) => (
                       <li key={entry._id}>
@@ -291,9 +252,6 @@ export function MapSidePanel({
 
               {favourites.length > 0 ? (
                 <div>
-                  <p className="mb-1.5 px-1 text-xs font-medium text-muted-foreground">
-                    {t("map.favourites")}
-                  </p>
                   <ul className="space-y-1">
                     {favourites.map((favourite) => (
                       <li key={favourite._id}>
@@ -345,11 +303,10 @@ export function MapSidePanel({
         <AccordionTrigger className="px-2 hover:no-underline">
           <span className="flex items-center gap-2">
             <ClockIcon className="size-4 text-muted-foreground" />
-            {t("map.recents")}
-            {isAuthenticated && (recentSearches || recentCategories) ? (
+            {t("map.history")}
+            {isAuthenticated && recentSearches ? (
               <Badge variant="secondary" className="ml-1">
-                {(recentCategories?.length ?? 0) +
-                  (recentSearches?.length ?? 0)}
+                {recentSearches.length}
               </Badge>
             ) : null}
           </span>
@@ -359,86 +316,49 @@ export function MapSidePanel({
             <p className="px-2 py-3 text-sm text-muted-foreground">
               {t("map.signInToSave")}
             </p>
-          ) : recentSearches === undefined || recentCategories === undefined ? (
+          ) : recentSearches === undefined ? (
             <p className="px-2 py-3 text-sm text-muted-foreground">
               {t("common.loading")}
             </p>
-          ) : recentCategories.length === 0 && recentSearches.length === 0 ? (
+          ) : recentSearches.length === 0 ? (
             <p className="px-2 py-3 text-sm text-muted-foreground">
               {t("map.noSaved")}
             </p>
           ) : (
-            <div className="space-y-3">
-              {recentCategories.length > 0 ? (
-                <div>
-                  <p className="mb-1.5 px-1 text-xs font-medium text-muted-foreground">
-                    {t("map.categories")}
-                  </p>
-                  <div className="flex flex-wrap gap-1 px-1">
-                    {recentCategories.map((entry) => {
-                      const meta = PLACE_CATEGORY_META[entry.category]
-
-                      return (
-                        <button
-                          key={`${entry.category}-${entry.searchedAt}`}
-                          type="button"
-                          onClick={() => handleSelectCategory(entry.category)}
-                          className="inline-flex items-center gap-1 rounded-full border bg-muted/40 px-2 py-0.5 text-xs hover:bg-muted"
-                        >
-                          <span
-                            className="size-2 rounded-full"
-                            style={{ backgroundColor: meta.color }}
-                          />
-                          {categoryName(entry.category)}
-                        </button>
-                      )
-                    })}
-                  </div>
-                </div>
-              ) : null}
-
-              {recentSearches.length > 0 ? (
-                <div>
-                  <p className="mb-1.5 px-1 text-xs font-medium text-muted-foreground">
-                    {t("map.recents")}
-                  </p>
-                  <ul className="space-y-1">
-                    {recentSearches.map((entry) => (
-                      <li key={entry._id}>
-                        <button
-                          type="button"
-                          className="flex w-full items-start gap-2 rounded-lg px-1 py-1.5 text-left hover:bg-sidebar-accent"
-                          onClick={() =>
-                            handleSelectPlace({
-                              id: `recent:${entry._id}`,
-                              label: entry.label,
-                              subtitle: entry.subtitle,
-                              lat: entry.lat,
-                              lng: entry.lng,
-                              source: "recent",
-                              query: entry.query,
-                              externalId: entry.externalId,
-                            })
-                          }
-                        >
-                          <StarIcon className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
-                          <span className="min-w-0">
-                            <span className="block truncate text-sm font-medium">
-                              {entry.label}
-                            </span>
-                            {entry.subtitle ? (
-                              <span className="block truncate text-xs text-muted-foreground">
-                                {entry.subtitle}
-                              </span>
-                            ) : null}
-                          </span>
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ) : null}
-            </div>
+            <ul className="space-y-1">
+              {recentSearches.map((entry) => (
+                <li key={entry._id}>
+                  <button
+                    type="button"
+                    className="flex w-full items-start gap-2 rounded-lg px-1 py-1.5 text-left hover:bg-sidebar-accent"
+                    onClick={() =>
+                      handleSelectPlace({
+                        id: `recent:${entry._id}`,
+                        label: entry.label,
+                        subtitle: entry.subtitle,
+                        lat: entry.lat,
+                        lng: entry.lng,
+                        source: "recent",
+                        query: entry.query,
+                        externalId: entry.externalId,
+                      })
+                    }
+                  >
+                    <StarIcon className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+                    <span className="min-w-0">
+                      <span className="block truncate text-sm font-medium">
+                        {entry.label}
+                      </span>
+                      {entry.subtitle ? (
+                        <span className="block truncate text-xs text-muted-foreground">
+                          {entry.subtitle}
+                        </span>
+                      ) : null}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
           )}
         </AccordionContent>
       </AccordionItem>

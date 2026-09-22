@@ -27,12 +27,14 @@ export function LanguageSwitcher({ className }: { className?: string }) {
         <Button
           type="button"
           variant="ghost"
-          size="icon"
-          className={cn("size-9 text-lg leading-none", className)}
+          className={cn("h-9 gap-1 px-2 text-sm", className)}
           aria-label={t("nav.language")}
           title={LOCALE_NAMES[locale]}
         >
           <span aria-hidden="true">{LOCALE_FLAGS[locale]}</span>
+          <span className="text-xs font-medium tracking-wide">
+            {locale.toUpperCase()}
+          </span>
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-48 p-1">

@@ -15,14 +15,23 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { useLocalizedNames } from "@/hooks/use-localized-catalog"
+import { useI18n } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 import {
   buildFavouriteLookup,
   enrichResultsWithDistance,
   filterResultsByTab,
   findFavouriteForPlace,
+  pointInBounds,
+  searchCatalogPlaces,
+  searchLabelHits,
 } from "@/lib/place-search"
-import type { PlaceSearchResult, SearchResultsTab } from "@/lib/place-search"
+import type {
+  CatalogPlace,
+  PlaceSearchResult,
+  PlaceSearchResultWithDistance,
+  SearchResultsTab,
+} from "@/lib/place-search"
 import { SaveFavouriteDialog } from "@/components/map/SaveFavouriteDialog"
 import type { MapSearchViewport } from "@/components/map/MapView"
 import {
@@ -41,7 +50,14 @@ type MapSearchModalProps = {
   userLocation?: { lat: number; lng: number } | null
   onSelectPlace: (place: PlaceSearchResult, query: string) => void
   onCategorySelect?: (category: PlaceCategoryId) => void
+  onSelectLabel?: (labelId: string) => void
   activeCategories?: PlaceCategoryId[]
+  catalogPlaces?: CatalogPlace[]
+  labelOptions?: Array<{
+    id: string
+    name: string
+    categoryLabel: string
+  }>
 }
 
 const tabs: Array<{ id: SearchResultsTab; label: string }> = [
@@ -60,8 +76,12 @@ export function MapSearchModal({
   userLocation = null,
   onSelectPlace,
   onCategorySelect,
+  onSelectLabel,
   activeCategories = [],
+  catalogPlaces = [],
+  labelOptions = [],
 }: MapSearchModalProps) {
+  const { t } = useI18n()
   const { isAuthenticated } = useConvexAuth()
   const { categoryName } = useLocalizedNames()
   const [query, setQuery] = useState(initialQuery)
@@ -128,19 +148,47 @@ export function MapSearchModal({
 
     const timeout = window.setTimeout(() => {
       const viewport = getSearchViewport?.() ?? null
+      const centerLat = viewport?.center.lat
+      const centerLng = viewport?.center.lng
 
-      void searchGeocoding({
+      const bounded =
+        viewport === null
+          ? Promise.resolve([] as PlaceSearchResult[])
+          : searchGeocoding({
+              query: trimmedQuery,
+              limit: 8,
+              centerLat,
+              centerLng,
+              minLat: viewport.bounds.minLat,
+              maxLat: viewport.bounds.maxLat,
+              minLng: viewport.bounds.minLng,
+              maxLng: viewport.bounds.maxLng,
+            })
+
+      const wider = searchGeocoding({
         query: trimmedQuery,
-        limit: 20,
-        centerLat: viewport?.center.lat,
-        centerLng: viewport?.center.lng,
-        minLat: viewport?.bounds.minLat,
-        maxLat: viewport?.bounds.maxLat,
-        minLng: viewport?.bounds.minLng,
-        maxLng: viewport?.bounds.maxLng,
+        limit: 8,
+        centerLat,
+        centerLng,
+        radiusKm: 80,
       })
-        .then((results) => {
-          setGeocodingResults(results)
+
+      void Promise.all([bounded, wider])
+        .then(([near, wide]) => {
+          const seen = new Set(near.map((result) => result.id))
+          const farther = wide.filter((result) => {
+            if (seen.has(result.id)) {
+              return false
+            }
+            if (!viewport) {
+              return false
+            }
+            return !pointInBounds(result.lat, result.lng, viewport.bounds)
+          })
+          setGeocodingResults([
+            ...near.map((result) => ({ ...result, farther: false })),
+            ...farther.map((result) => ({ ...result, farther: true })),
+          ])
         })
         .catch(() => {
           setGeocodingError("Could not search the map right now.")
@@ -157,10 +205,45 @@ export function MapSearchModal({
   }, [getSearchViewport, searchActive, searchGeocoding, trimmedQuery])
 
   const recents = recentResults ?? EMPTY_RESULTS
-  const visibleResults = useMemo(() => {
-    const results = filterResultsByTab(tab, recents, geocodingResults)
-    return enrichResultsWithDistance(results, userLocation)
-  }, [tab, recents, geocodingResults, userLocation])
+  const viewport = open ? (getSearchViewport?.() ?? null) : null
+  const origin = userLocation ?? viewport?.center ?? null
+  const localResults = searchCatalogPlaces(
+    trimmedQuery,
+    catalogPlaces,
+    viewport
+  )
+  const labelResults = searchLabelHits(trimmedQuery, labelOptions)
+  const visibleResults = useMemo((): {
+    near: PlaceSearchResultWithDistance[]
+    farther: PlaceSearchResultWithDistance[]
+  } => {
+    const geocoded = filterResultsByTab(tab, recents, geocodingResults)
+    const includeCatalog = tab !== "recent"
+    const near = [
+      ...(includeCatalog ? labelResults : []),
+      ...enrichResultsWithDistance(
+        [
+          ...(includeCatalog
+            ? localResults.filter((result) => !result.farther)
+            : []),
+          ...geocoded.filter(
+            (result) => result.source !== "label" && !result.farther
+          ),
+        ],
+        origin
+      ),
+    ]
+    const farther = enrichResultsWithDistance(
+      [
+        ...(includeCatalog
+          ? localResults.filter((result) => result.farther)
+          : []),
+        ...geocoded.filter((result) => result.farther),
+      ],
+      origin
+    )
+    return { near, farther }
+  }, [geocodingResults, labelResults, localResults, origin, recents, tab])
 
   const matchingCategories = useMemo(() => {
     const localizedNames = Object.fromEntries(
@@ -179,6 +262,11 @@ export function MapSearchModal({
   }
 
   const handleSelect = (place: PlaceSearchResult) => {
+    if (place.source === "label") {
+      onSelectLabel?.(place.id.slice("label:".length))
+      onOpenChange(false)
+      return
+    }
     onSelectPlace(place, query.trim())
     onOpenChange(false)
   }
@@ -327,103 +415,156 @@ export function MapSearchModal({
               <p className="px-2 py-4 text-center text-sm text-muted-foreground">
                 Pick a category above or type to search places.
               </p>
-            ) : isGeocoding && visibleResults.length === 0 ? (
+            ) : isGeocoding &&
+              visibleResults.near.length + visibleResults.farther.length ===
+                0 ? (
               <p className="px-2 py-8 text-center text-sm text-muted-foreground">
                 Searching…
               </p>
-            ) : geocodingError && visibleResults.length === 0 ? (
+            ) : geocodingError &&
+              visibleResults.near.length + visibleResults.farther.length ===
+                0 ? (
               <p className="px-2 py-8 text-center text-sm text-destructive">
                 {geocodingError}
               </p>
-            ) : visibleResults.length === 0 ? (
+            ) : visibleResults.near.length + visibleResults.farther.length ===
+              0 ? (
               <p className="px-2 py-8 text-center text-sm text-muted-foreground">
                 No results for this tab.
               </p>
             ) : (
-              <ul className="space-y-1">
-                {visibleResults.map((place) => {
-                  const savedFavourite = findFavouriteForPlace(
-                    place,
-                    favouriteLookup
-                  )
+              <div className="space-y-3">
+                <ul className="space-y-1">
+                  {visibleResults.near.map((place) => {
+                    const savedFavourite = findFavouriteForPlace(
+                      place,
+                      favouriteLookup
+                    )
 
-                  return (
-                    <li key={place.id}>
-                      <div className="flex items-start gap-2 rounded-lg border border-transparent px-2 py-2 hover:border-border hover:bg-muted/40">
-                        <div className="mt-0.5 shrink-0 text-muted-foreground">
-                          {place.source === "recent" ? (
-                            <StarIcon className="size-4" />
-                          ) : (
-                            <MapPinIcon className="size-4" />
-                          )}
-                        </div>
-                        <button
-                          type="button"
-                          className="min-w-0 flex-1 text-left"
-                          onClick={() => handleSelect(place)}
-                        >
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="truncate text-sm font-medium">
-                              {place.label}
+                    return (
+                      <li key={place.id}>
+                        <div className="flex items-start gap-2 rounded-lg border border-transparent px-2 py-2 hover:border-border hover:bg-muted/40">
+                          <div className="mt-0.5 shrink-0 text-muted-foreground">
+                            {place.source === "recent" ? (
+                              <StarIcon className="size-4" />
+                            ) : (
+                              <MapPinIcon className="size-4" />
+                            )}
+                          </div>
+                          <button
+                            type="button"
+                            className="min-w-0 flex-1 text-left"
+                            onClick={() => handleSelect(place)}
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="truncate text-sm font-medium">
+                                {place.label}
+                              </div>
+                              {place.distanceLabel ? (
+                                <span className="shrink-0 text-xs text-muted-foreground">
+                                  {place.distanceLabel}
+                                </span>
+                              ) : null}
                             </div>
+                            {place.subtitle ? (
+                              <div className="truncate text-xs text-muted-foreground">
+                                {place.subtitle}
+                              </div>
+                            ) : null}
+                            {place.categoryLabel && place.source !== "label" ? (
+                              <div className="truncate text-xs text-muted-foreground">
+                                {place.categoryLabel}
+                              </div>
+                            ) : null}
+                            <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                              <span className="text-[0.7rem] text-muted-foreground uppercase">
+                                {place.source === "recent"
+                                  ? "Recent"
+                                  : place.source === "local"
+                                    ? "Nearby"
+                                    : place.source === "label"
+                                      ? "Label"
+                                      : "Map"}
+                              </span>
+                              {savedFavourite ? (
+                                <Badge
+                                  variant="secondary"
+                                  className="normal-case"
+                                >
+                                  Saved as {savedFavourite.name}
+                                </Badge>
+                              ) : null}
+                            </div>
+                          </button>
+                          {isAuthenticated && place.source !== "label" ? (
+                            <Button
+                              type="button"
+                              size="icon-sm"
+                              variant="ghost"
+                              aria-label={
+                                savedFavourite
+                                  ? `Saved as ${savedFavourite.name}`
+                                  : `Save ${place.label} to favourites`
+                              }
+                              disabled={Boolean(savedFavourite)}
+                              onClick={() => {
+                                if (savedFavourite) {
+                                  return
+                                }
+
+                                setFavouritePlace(place)
+                                setFavouriteDialogOpen(true)
+                              }}
+                            >
+                              <HeartIcon
+                                className={cn(
+                                  "size-4",
+                                  savedFavourite && "fill-current text-red-500"
+                                )}
+                              />
+                            </Button>
+                          ) : null}
+                        </div>
+                      </li>
+                    )
+                  })}
+                </ul>
+                {visibleResults.farther.length > 0 ? (
+                  <div className="space-y-1">
+                    <p className="px-2 text-xs font-medium text-muted-foreground">
+                      {t("map.farther")}
+                    </p>
+                    <ul className="space-y-1">
+                      {visibleResults.farther.map((place) => (
+                        <li key={place.id}>
+                          <button
+                            type="button"
+                            className="flex w-full items-start gap-2 rounded-lg px-2 py-2 text-left hover:bg-muted/40"
+                            onClick={() => handleSelect(place)}
+                          >
+                            <MapPinIcon className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+                            <span className="min-w-0 flex-1">
+                              <span className="block truncate text-sm font-medium">
+                                {place.label}
+                              </span>
+                              {place.subtitle ? (
+                                <span className="block truncate text-xs text-muted-foreground">
+                                  {place.subtitle}
+                                </span>
+                              ) : null}
+                            </span>
                             {place.distanceLabel ? (
                               <span className="shrink-0 text-xs text-muted-foreground">
                                 {place.distanceLabel}
                               </span>
                             ) : null}
-                          </div>
-                          {place.subtitle ? (
-                            <div className="truncate text-xs text-muted-foreground">
-                              {place.subtitle}
-                            </div>
-                          ) : null}
-                          <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                            <span className="text-[0.7rem] text-muted-foreground uppercase">
-                              {place.source === "recent" ? "Recent" : "Map"}
-                            </span>
-                            {savedFavourite ? (
-                              <Badge
-                                variant="secondary"
-                                className="normal-case"
-                              >
-                                Saved as {savedFavourite.name}
-                              </Badge>
-                            ) : null}
-                          </div>
-                        </button>
-                        {isAuthenticated ? (
-                          <Button
-                            type="button"
-                            size="icon-sm"
-                            variant="ghost"
-                            aria-label={
-                              savedFavourite
-                                ? `Saved as ${savedFavourite.name}`
-                                : `Save ${place.label} to favourites`
-                            }
-                            disabled={Boolean(savedFavourite)}
-                            onClick={() => {
-                              if (savedFavourite) {
-                                return
-                              }
-
-                              setFavouritePlace(place)
-                              setFavouriteDialogOpen(true)
-                            }}
-                          >
-                            <HeartIcon
-                              className={cn(
-                                "size-4",
-                                savedFavourite && "fill-current text-red-500"
-                              )}
-                            />
-                          </Button>
-                        ) : null}
-                      </div>
-                    </li>
-                  )
-                })}
-              </ul>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+              </div>
             )}
           </div>
         </DialogContent>
@@ -440,6 +581,7 @@ export function MapSearchModal({
 }
 
 export function MapSearchBar({ onOpenSearch }: { onOpenSearch: () => void }) {
+  const { t } = useI18n()
   return (
     <button
       type="button"
@@ -450,7 +592,9 @@ export function MapSearchBar({ onOpenSearch }: { onOpenSearch: () => void }) {
       )}
     >
       <SearchIcon className="size-4 shrink-0 text-muted-foreground" />
-      <span className="truncate text-muted-foreground">Search places…</span>
+      <span className="truncate text-muted-foreground">
+        {t("map.searchPlaceholder")}
+      </span>
     </button>
   )
 }

@@ -115,10 +115,11 @@ export function AdminPlaceForm({ onCreated }: AdminPlaceFormProps) {
       let address: string | undefined
       if (resolvedPoint) {
         try {
-          address = await reverseGeocode({
-            lat: resolvedPoint.lat,
-            lng: resolvedPoint.lng,
-          })
+          address =
+            (await reverseGeocode({
+              lat: resolvedPoint.lat,
+              lng: resolvedPoint.lng,
+            })) ?? undefined
         } catch {
           address = undefined
         }

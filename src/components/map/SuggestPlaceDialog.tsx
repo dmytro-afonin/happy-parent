@@ -2,23 +2,21 @@
 
 import { useState } from "react"
 import { useAction, useMutation } from "convex/react"
-import { CrosshairIcon, Loader2Icon } from "lucide-react"
+import { Loader2Icon, XIcon } from "lucide-react"
+import type * as maplibregl from "maplibre-gl"
 
+import { MapDrawControl } from "@/components/admin/MapDrawControl"
 import { PlaceImageUploader } from "@/components/admin/PlaceImageUploader"
 import type { UploadedPlacePhoto } from "@/components/admin/PlaceImageUploader"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { useLocalizedNames } from "@/hooks/use-localized-catalog"
 import type { PlaceLabel } from "@/hooks/use-localized-catalog"
 import { useI18n } from "@/lib/i18n"
+import type { Locale } from "@/lib/i18n"
+import { SUPPORTED_LOCALES } from "@/lib/i18n"
+import type { LatLng } from "@/lib/geometry"
 import { formatCoordinatesAddress } from "@/lib/navigation-links"
 import { PLACE_CATEGORY_LIST } from "@/lib/place-categories"
 import type { PlaceCategoryId } from "@/lib/place-categories"
@@ -30,18 +28,26 @@ type SuggestPlaceDialogProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
   labels: PlaceLabel[] | undefined
-  getMapCenter: () => { lat: number; lng: number } | null
   isAdmin: boolean
+  map: maplibregl.Map | null
+  pickedPoint: { lat: number; lng: number } | null
+  geometryMode: "point" | "polygon"
+  onGeometryModeChange: (mode: "point" | "polygon") => void
 }
+
+type TranslationDraft = { name: string; description: string }
 
 export function SuggestPlaceDialog({
   open,
   onOpenChange,
   labels,
-  getMapCenter,
   isAdmin,
+  map,
+  pickedPoint,
+  geometryMode,
+  onGeometryModeChange,
 }: SuggestPlaceDialogProps) {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
   const { categoryName, labelName } = useLocalizedNames()
   const createPlace = useMutation(api.places.create)
   const reverseGeocode = useAction(api.geocoding.reverse)
@@ -50,45 +56,45 @@ export function SuggestPlaceDialog({
   const [description, setDescription] = useState("")
   const [category, setCategory] = useState<PlaceCategoryId>("entertainment")
   const [selectedLabelIds, setSelectedLabelIds] = useState<Id<"labels">[]>([])
-  const [location, setLocation] = useState<{ lat: number; lng: number } | null>(
-    null
-  )
+  const [customLabel, setCustomLabel] = useState("")
+  const [boundary, setBoundary] = useState<LatLng[]>([])
   const [photos, setPhotos] = useState<UploadedPlacePhoto[]>([])
+  const [translationsOpen, setTranslationsOpen] = useState(false)
+  const [translations, setTranslations] = useState<
+    Partial<Record<Locale, TranslationDraft>>
+  >({})
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [submitted, setSubmitted] = useState(false)
+  const [seenPoint, setSeenPoint] = useState(pickedPoint)
+  const [location, setLocation] = useState<{ lat: number; lng: number } | null>(
+    null
+  )
+
+  if (pickedPoint !== seenPoint) {
+    setSeenPoint(pickedPoint)
+    if (pickedPoint && geometryMode === "point") {
+      setLocation(pickedPoint)
+    }
+  }
 
   const categoryLabels = (labels ?? []).filter(
     (label) => label.category === category
   )
 
-  const resetAndClose = (nextOpen: boolean) => {
-    if (!nextOpen) {
-      setName("")
-      setDescription("")
-      setSelectedLabelIds([])
-      setLocation(null)
-      setPhotos([])
-      setError(null)
-      setSubmitted(false)
-    }
-    onOpenChange(nextOpen)
-  }
-
-  const captureMapCenter = () => {
-    setLocation(getMapCenter())
-  }
-
-  const [wasOpen, setWasOpen] = useState(false)
-  if (open !== wasOpen) {
-    setWasOpen(open)
-    if (open && !location) {
-      setLocation(getMapCenter())
-    }
-  }
-
-  const handleOpenChange = (nextOpen: boolean) => {
-    resetAndClose(nextOpen)
+  const resetAndClose = () => {
+    setName("")
+    setDescription("")
+    setSelectedLabelIds([])
+    setCustomLabel("")
+    setBoundary([])
+    setLocation(null)
+    setPhotos([])
+    setTranslations({})
+    setError(null)
+    setSubmitted(false)
+    onGeometryModeChange("point")
+    onOpenChange(false)
   }
 
   const toggleLabel = (labelId: Id<"labels">) => {
@@ -108,31 +114,69 @@ export function SuggestPlaceDialog({
       return
     }
 
-    const point = location ?? getMapCenter()
-    if (!point) {
-      setError(t("suggest.location"))
+    if (geometryMode === "polygon" && boundary.length < 3) {
+      setError(t("suggest.drawArea"))
+      return
+    }
+
+    const point = geometryMode === "point" ? location : null
+    if (geometryMode === "point" && !point) {
+      setError(t("suggest.tapMap"))
       return
     }
 
     setSubmitting(true)
     try {
       let address: string | undefined
-      try {
-        address = await reverseGeocode({ lat: point.lat, lng: point.lng })
-      } catch {
-        address = undefined
+      const geocodePoint =
+        point ??
+        (boundary[0] ? { lat: boundary[0].lat, lng: boundary[0].lng } : null)
+      if (geocodePoint) {
+        try {
+          address =
+            (await reverseGeocode({
+              lat: geocodePoint.lat,
+              lng: geocodePoint.lng,
+            })) ?? undefined
+        } catch {
+          address = undefined
+        }
       }
+
+      const translationPayload = SUPPORTED_LOCALES.flatMap((entry) => {
+        if (entry === locale) {
+          return []
+        }
+        const draft = translations[entry]
+        const translatedName = draft?.name.trim()
+        const translatedDescription = draft?.description.trim()
+        if (!translatedName && !translatedDescription) {
+          return []
+        }
+        return [
+          {
+            locale: entry,
+            name: translatedName || undefined,
+            description: translatedDescription || undefined,
+          },
+        ]
+      })
 
       await createPlace({
         name: trimmedName,
         description: description.trim() || undefined,
         address,
-        geometryType: "point",
-        lat: point.lat,
-        lng: point.lng,
+        geometryType: geometryMode,
+        lat: point?.lat,
+        lng: point?.lng,
+        boundary: geometryMode === "polygon" ? boundary : undefined,
         category,
         labelIds: selectedLabelIds,
         photos,
+        sourceLocale: locale,
+        suggestedLabel: customLabel.trim() || undefined,
+        translations:
+          translationPayload.length > 0 ? translationPayload : undefined,
       })
 
       setSubmitted(true)
@@ -145,22 +189,48 @@ export function SuggestPlaceDialog({
     }
   }
 
+  if (!open) {
+    return null
+  }
+
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle>
-            {isAdmin ? t("map.addPlace") : t("suggest.title")}
-          </DialogTitle>
-          <DialogDescription>{t("suggest.intro")}</DialogDescription>
-        </DialogHeader>
+    <>
+      {map ? (
+        <MapDrawControl
+          map={map}
+          enabled={geometryMode === "polygon"}
+          vertices={boundary}
+          onVerticesChange={setBoundary}
+          position="top-left"
+        />
+      ) : null}
+      <div className="pointer-events-auto absolute inset-x-3 bottom-3 z-30 max-h-[48%] overflow-y-auto rounded-2xl border bg-background p-4 shadow-xl sm:inset-x-auto sm:top-16 sm:bottom-3 sm:left-3 sm:max-h-none sm:w-[22rem]">
+        <div className="mb-3 flex items-start justify-between gap-2">
+          <div>
+            <h2 className="text-base font-semibold">
+              {isAdmin ? t("map.addPlace") : t("suggest.title")}
+            </h2>
+            <p className="text-xs text-muted-foreground">
+              {t("suggest.intro")}
+            </p>
+          </div>
+          <Button
+            type="button"
+            size="icon-sm"
+            variant="ghost"
+            aria-label={t("common.close")}
+            onClick={resetAndClose}
+          >
+            <XIcon className="size-4" />
+          </Button>
+        </div>
 
         {submitted ? (
           <div className="space-y-4">
             <p className="text-sm text-green-600">
               {isAdmin ? t("suggest.created") : t("suggest.submitted")}
             </p>
-            <Button type="button" onClick={() => resetAndClose(false)}>
+            <Button type="button" onClick={resetAndClose}>
               {t("common.close")}
             </Button>
           </div>
@@ -221,46 +291,108 @@ export function SuggestPlaceDialog({
               </div>
             </div>
 
-            <div className="space-y-1.5">
-              <span className="text-sm font-medium">{t("suggest.labels")}</span>
-              <div className="flex flex-wrap gap-1.5">
-                {categoryLabels.map((label) => {
-                  const selected = selectedLabelIds.includes(label._id)
-                  return (
-                    <button
-                      key={label._id}
-                      type="button"
-                      onClick={() => toggleLabel(label._id)}
+            <div className="flex flex-wrap gap-1.5">
+              {categoryLabels.map((label) => {
+                const selected = selectedLabelIds.includes(label._id)
+                return (
+                  <button
+                    key={label._id}
+                    type="button"
+                    onClick={() => toggleLabel(label._id)}
+                  >
+                    <Badge
+                      variant={selected ? "default" : "outline"}
+                      className="px-2.5 py-1 text-sm"
                     >
-                      <Badge variant={selected ? "default" : "outline"}>
-                        {labelName(label)}
-                      </Badge>
-                    </button>
-                  )
-                })}
-              </div>
+                      {labelName(label)}
+                    </Badge>
+                  </button>
+                )
+              })}
             </div>
+
+            <label className="block space-y-1 text-sm">
+              <span className="font-medium">{t("suggest.customLabel")}</span>
+              <Input
+                value={customLabel}
+                onChange={(event) => setCustomLabel(event.target.value)}
+                placeholder={t("suggest.customLabelPlaceholder")}
+              />
+            </label>
 
             <div className="space-y-1.5">
               <span className="text-sm font-medium">
                 {t("suggest.location")}
               </span>
-              <div className="flex items-center gap-2 text-sm">
-                <Badge variant="secondary">
-                  {location
-                    ? formatCoordinatesAddress(location.lat, location.lng)
-                    : "—"}
-                </Badge>
+              <div className="flex gap-1.5">
                 <Button
                   type="button"
                   size="sm"
-                  variant="outline"
-                  onClick={captureMapCenter}
+                  variant={geometryMode === "point" ? "secondary" : "outline"}
+                  onClick={() => onGeometryModeChange("point")}
                 >
-                  <CrosshairIcon className="size-3.5" />
-                  {t("suggest.useMapCenter")}
+                  {t("suggest.pin")}
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={geometryMode === "polygon" ? "secondary" : "outline"}
+                  onClick={() => onGeometryModeChange("polygon")}
+                >
+                  {t("suggest.drawArea")}
                 </Button>
               </div>
+              <p className="text-xs text-muted-foreground">
+                {t("suggest.tapMap")}
+              </p>
+              <Badge variant="secondary">
+                {geometryMode === "polygon"
+                  ? boundary.length >= 3
+                    ? `${boundary.length}`
+                    : "—"
+                  : location
+                    ? formatCoordinatesAddress(location.lat, location.lng)
+                    : "—"}
+              </Badge>
+            </div>
+
+            <div className="space-y-1.5">
+              <button
+                type="button"
+                className="text-sm font-medium"
+                onClick={() => setTranslationsOpen((current) => !current)}
+              >
+                {t("suggest.translations")}
+              </button>
+              {translationsOpen ? (
+                <div className="space-y-2">
+                  <p className="text-xs text-muted-foreground">
+                    {t("suggest.translationsHint")}
+                  </p>
+                  {SUPPORTED_LOCALES.filter((entry) => entry !== locale).map(
+                    (entry) => (
+                      <div key={entry} className="space-y-1">
+                        <span className="text-xs font-medium uppercase">
+                          {entry}
+                        </span>
+                        <Input
+                          value={translations[entry]?.name ?? ""}
+                          placeholder={t("suggest.name")}
+                          onChange={(event) =>
+                            setTranslations((current) => ({
+                              ...current,
+                              [entry]: {
+                                name: event.target.value,
+                                description: current[entry]?.description ?? "",
+                              },
+                            }))
+                          }
+                        />
+                      </div>
+                    )
+                  )}
+                </div>
+              ) : null}
             </div>
 
             <div className="space-y-1.5">
@@ -277,27 +409,17 @@ export function SuggestPlaceDialog({
                 onClick={() => void handleSubmit()}
               >
                 {submitting ? (
-                  <>
-                    <Loader2Icon className="size-4 animate-spin" />
-                    {t("suggest.submit")}
-                  </>
-                ) : isAdmin ? (
-                  t("map.addPlace")
-                ) : (
-                  t("suggest.submit")
-                )}
+                  <Loader2Icon className="size-4 animate-spin" />
+                ) : null}
+                {isAdmin ? t("map.addPlace") : t("suggest.submit")}
               </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => resetAndClose(false)}
-              >
+              <Button type="button" variant="outline" onClick={resetAndClose}>
                 {t("common.cancel")}
               </Button>
             </div>
           </div>
         )}
-      </DialogContent>
-    </Dialog>
+      </div>
+    </>
   )
 }

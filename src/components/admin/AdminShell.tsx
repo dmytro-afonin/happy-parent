@@ -12,7 +12,7 @@ import {
 } from "lucide-react"
 import { useState } from "react"
 
-import { LanguageSwitcher } from "@/components/language-switcher"
+import { ReviewAlerts } from "@/components/admin/ReviewAlerts"
 import { UserMenu } from "@/components/user-menu"
 import { Button } from "@/components/ui/button"
 import {
@@ -85,7 +85,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             {t("admin.brand")}
           </p>
           <div className="ml-auto flex items-center gap-1">
-            <LanguageSwitcher />
+            <ReviewAlerts />
             <UserMenu includeSpaceLinks />
           </div>
         </header>

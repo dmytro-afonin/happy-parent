@@ -12,6 +12,7 @@ import {
 } from "lucide-react"
 import type { ReactNode } from "react"
 
+import { LanguageSwitcher, LOCALE_FLAGS } from "@/components/language-switcher"
 import { ModeToggle } from "@/components/mode-toggle"
 import { Button } from "@/components/ui/button"
 import {
@@ -21,7 +22,7 @@ import {
 } from "@/components/ui/popover"
 import { useAdminStatus } from "@/hooks/use-admin-status"
 import { useTheme } from "@/hooks/use-theme"
-import { useI18n } from "@/lib/i18n"
+import { LOCALE_NAMES, SUPPORTED_LOCALES, useI18n } from "@/lib/i18n"
 
 export type AccountNavLink = {
   label: string
@@ -41,7 +42,7 @@ export function UserMenu({
   includeSpaceLinks = false,
 }: UserMenuProps) {
   const { theme, toggleTheme } = useTheme()
-  const { t } = useI18n()
+  const { locale, setLocale, t } = useI18n()
   const { isAdmin, isLoading: isAdminLoading } = useAdminStatus()
 
   const spaceLinks: AccountNavLink[] = includeSpaceLinks
@@ -81,6 +82,16 @@ export function UserMenu({
                 label={item.label}
                 href={item.href}
                 labelIcon={item.icon}
+              />
+            ))}
+            {SUPPORTED_LOCALES.map((entry) => (
+              <UserButton.Action
+                key={entry}
+                label={`${LOCALE_FLAGS[entry]} ${entry.toUpperCase()} ${LOCALE_NAMES[entry]}${entry === locale ? " ✓" : ""}`}
+                labelIcon={
+                  <span className="text-xs">{entry.toUpperCase()}</span>
+                }
+                onClick={() => setLocale(entry)}
               />
             ))}
             <UserButton.Action
@@ -132,6 +143,12 @@ function SignedOutAccountMenu({ links }: { links: AccountNavLink[] }) {
               {item.label}
             </Link>
           ))}
+          <div className="flex items-center justify-between gap-2 rounded-lg px-2.5 py-1.5">
+            <span className="text-sm text-muted-foreground">
+              {t("nav.language")}
+            </span>
+            <LanguageSwitcher />
+          </div>
           <div className="flex items-center justify-between gap-2 rounded-lg px-2.5 py-1.5">
             <span className="text-sm text-muted-foreground">
               {t("theme.label")}

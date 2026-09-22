@@ -53,6 +53,9 @@ export const search = action({
         "viewbox",
         `${args.minLng},${args.maxLat},${args.maxLng},${args.minLat}`
       )
+      // viewbox alone is only a hint. bounded keeps generic words like
+      // "cafe" inside the map the user is looking at.
+      url.searchParams.set("bounded", "1")
     } else if (centerLat !== undefined && centerLng !== undefined) {
       const radiusKm = args.radiusKm ?? 30
       const latDelta = radiusKm / 111
@@ -63,15 +66,22 @@ export const search = action({
       )
     }
 
-    const response = await fetch(url, {
-      headers: {
-        "User-Agent": "HappyParent/1.0 (family-friendly places map)",
-        Accept: "application/json",
-      },
-    })
+    let response: Response
+    try {
+      response = await fetch(url, {
+        headers: {
+          "User-Agent": "HappyParent/1.0 (family-friendly places map)",
+          Accept: "application/json",
+        },
+      })
+    } catch (error) {
+      console.error("Geocoding request failed", error)
+      return []
+    }
 
     if (!response.ok) {
-      throw new Error("Geocoding request failed")
+      console.error("Geocoding request failed", response.status)
+      return []
     }
 
     const results = (await response.json()) as NominatimResult[]
@@ -107,7 +117,7 @@ export const reverse = action({
     lat: v.number(),
     lng: v.number(),
   },
-  returns: v.string(),
+  returns: v.union(v.string(), v.null()),
   handler: async (_ctx, args) => {
     const url = new URL("https://nominatim.openstreetmap.org/reverse")
     url.searchParams.set("lat", String(args.lat))
@@ -116,19 +126,25 @@ export const reverse = action({
     url.searchParams.set("addressdetails", "1")
     url.searchParams.set("zoom", "18")
 
-    const response = await fetch(url, {
-      headers: {
-        "User-Agent": "HappyParent/1.0 (family-friendly places map)",
-        Accept: "application/json",
-      },
-    })
+    try {
+      const response = await fetch(url, {
+        headers: {
+          "User-Agent": "HappyParent/1.0 (family-friendly places map)",
+          Accept: "application/json",
+        },
+      })
 
-    if (!response.ok) {
-      throw new Error("Reverse geocoding request failed")
+      if (!response.ok) {
+        console.error("Reverse geocoding request failed", response.status)
+        return null
+      }
+
+      const result = (await response.json()) as NominatimResult
+      return formatNominatimAddress(result)
+    } catch (error) {
+      console.error("Reverse geocoding request failed", error)
+      return null
     }
-
-    const result = (await response.json()) as NominatimResult
-    return formatNominatimAddress(result)
   },
 })
 
