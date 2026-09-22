@@ -26,8 +26,11 @@ minimumReleaseAgeExclude:
   - lucide-react
   - maplibre-gl
   - nitro
-  - oxfmt
-  - oxlint
+  # oxlint and oxfmt used to be excluded, but their @oxlint/* and @oxfmt/*
+  # native bindings are not. Excluding only the parent makes `pnpm update`
+  # fail. Leave both on the age gate so resolution stops at the newest
+  # release whose bindings are old enough (oxlint 1.83 and oxfmt 0.68;
+  # 1.85 and 0.70 were published 2026-09-21).
   - oxlint-tsgolint
   - shadcn
   - typescript
