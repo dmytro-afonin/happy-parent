@@ -25,9 +25,8 @@ export function ReviewAlerts() {
       {counts.updates > 0 ? (
         <Button
           type="button"
-          variant="outline"
-          size="sm"
-          className="h-9 gap-1.5 rounded-full px-2.5"
+          variant="ghost"
+          className="h-11! gap-1.5 rounded-full border border-border bg-background px-3 text-foreground shadow-md dark:bg-background dark:text-foreground"
           onClick={() => setMode("updates")}
         >
           <BellIcon className="size-4" />
@@ -38,9 +37,8 @@ export function ReviewAlerts() {
       {counts.untranslated > 0 ? (
         <Button
           type="button"
-          variant="outline"
-          size="sm"
-          className="h-9 gap-1.5 rounded-full px-2.5"
+          variant="ghost"
+          className="h-11! gap-1.5 rounded-full border border-border bg-background px-3 text-foreground shadow-md dark:bg-background dark:text-foreground"
           onClick={() => setMode("translations")}
         >
           <LanguagesIcon className="size-4" />

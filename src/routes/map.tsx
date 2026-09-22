@@ -261,8 +261,15 @@ function MapPage() {
     [clearCategorySearchParam, updatePreferences, urlCategory, urlLabel]
   )
 
+  const preferredStyleId = isAuthenticated
+    ? (savedPreferences?.mapStyleId ?? DEFAULT_MAP_STYLE_ID)
+    : DEFAULT_MAP_STYLE_ID
+  const [chosenStyleId, setChosenStyleId] = useState<MapStyleId | null>(null)
+  const mapStyleId = chosenStyleId ?? preferredStyleId
+
   const handleStyleChange = useCallback(
     (styleId: MapStyleId) => {
+      setChosenStyleId(styleId)
       if (!isAuthenticated) {
         return
       }
@@ -494,9 +501,6 @@ function MapPage() {
     return counts
   }, [mapPlaces])
 
-  const initialStyleId = isAuthenticated
-    ? (savedPreferences?.mapStyleId ?? DEFAULT_MAP_STYLE_ID)
-    : DEFAULT_MAP_STYLE_ID
   const isPreferenceReady =
     !isAuthLoading &&
     (isAuthenticated
@@ -529,8 +533,8 @@ function MapPage() {
         <MapView
           ref={mapRef}
           className="absolute inset-0 h-full w-full"
-          initialStyleId={initialStyleId}
-          onStyleChange={handleStyleChange}
+          initialStyleId={mapStyleId}
+          styleId={mapStyleId}
           onUserLocationChange={setUserLocation}
           onMapClick={
             suggestOpen && composerMode === "point" ? setPickedPoint : undefined
@@ -556,6 +560,8 @@ function MapPage() {
       <MapCompactToolbar
         sidebarOpen={sidebarOpen}
         onToggleSidebar={() => handleSidebarOpenChange(!sidebarOpen)}
+        mapStyleId={mapStyleId}
+        onMapStyleChange={handleStyleChange}
         onOpenSearch={() => setSearchOpen(true)}
         onAddPlace={() => {
           setSidebarOpen(false)

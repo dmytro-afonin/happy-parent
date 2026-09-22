@@ -3,10 +3,8 @@
 import { useState } from "react"
 import { ChevronDownIcon } from "lucide-react"
 
-import { Button } from "@/components/ui/button"
 import { useLocalizedNames } from "@/hooks/use-localized-catalog"
 import type { PlaceLabel } from "@/hooks/use-localized-catalog"
-import { useI18n } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 import { PLACE_CATEGORY_LIST } from "@/lib/place-categories"
 import type { PlaceCategoryId } from "@/lib/place-categories"
@@ -19,7 +17,6 @@ type CategoryLayerControlProps = {
   labelCounts: Record<string, number>
   onToggleCategory: (category: PlaceCategoryId) => void
   onToggleLabel: (labelId: string) => void
-  onShowAll: () => void
   className?: string
 }
 
@@ -31,10 +28,8 @@ export function CategoryLayerControl({
   labelCounts,
   onToggleCategory,
   onToggleLabel,
-  onShowAll,
   className,
 }: CategoryLayerControlProps) {
-  const { t } = useI18n()
   const { categoryName, labelName } = useLocalizedNames()
   const [expanded, setExpanded] = useState<PlaceCategoryId[]>([])
 
@@ -48,12 +43,6 @@ export function CategoryLayerControl({
 
   return (
     <div className={cn("space-y-1 p-1", className)}>
-      <div className="flex justify-start px-1">
-        <Button type="button" size="sm" variant="ghost" onClick={onShowAll}>
-          {t("map.selectAll")}
-        </Button>
-      </div>
-
       {PLACE_CATEGORY_LIST.map((category) => {
         const Icon = category.icon
         const isActive = activeCategories.includes(category.id)
@@ -72,7 +61,9 @@ export function CategoryLayerControl({
                 onClick={() => onToggleCategory(category.id)}
                 className={cn(
                   "flex min-w-0 flex-1 items-center gap-2 rounded-lg px-2 py-2 text-left text-sm",
-                  isActive ? "bg-muted" : "opacity-60 hover:opacity-100"
+                  isActive
+                    ? "bg-foreground text-background shadow-sm"
+                    : "bg-foreground/5 text-foreground hover:bg-foreground/10"
                 )}
               >
                 <span
@@ -84,7 +75,14 @@ export function CategoryLayerControl({
                 <span className="min-w-0 flex-1 truncate font-medium">
                   {categoryName(category.id)}
                 </span>
-                <span className="text-xs text-muted-foreground">{count}</span>
+                <span
+                  className={cn(
+                    "text-xs tabular-nums",
+                    isActive ? "text-background/70" : "text-muted-foreground"
+                  )}
+                >
+                  {count}
+                </span>
               </button>
               <button
                 type="button"
@@ -115,8 +113,8 @@ export function CategoryLayerControl({
                       className={cn(
                         "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm",
                         selected
-                          ? "border-primary bg-primary/10 text-primary"
-                          : "bg-muted/40 hover:bg-muted"
+                          ? "border-foreground bg-foreground text-background"
+                          : "border-foreground/20 bg-transparent text-foreground hover:bg-foreground/10"
                       )}
                     >
                       {labelName(label)}

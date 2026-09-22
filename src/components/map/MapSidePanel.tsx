@@ -13,7 +13,6 @@ import {
   MapPinIcon,
   StarIcon,
   Trash2Icon,
-  XIcon,
 } from "lucide-react"
 
 import { CategoryLayerControl } from "@/components/map/CategoryLayerControl"
@@ -102,18 +101,7 @@ export function MapSidePanel({
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="flex shrink-0 justify-end px-2 pt-2">
-        <Button
-          type="button"
-          size="icon-sm"
-          variant="ghost"
-          aria-label={t("common.close")}
-          onClick={onRequestClose}
-        >
-          <XIcon className="size-4" />
-        </Button>
-      </div>
-      <div className="min-h-0 flex-1 overflow-y-auto">
+      <div className="min-h-0 flex-1 overflow-y-auto pt-2">
         <Accordion
           type="single"
           collapsible
@@ -126,12 +114,23 @@ export function MapSidePanel({
           className="px-2"
         >
           <AccordionItem value="categories">
-            <AccordionTrigger className="px-2 hover:no-underline">
-              <span className="flex items-center gap-2">
-                <LayoutGridIcon className="size-4 text-muted-foreground" />
-                {t("map.categories")}
-              </span>
-            </AccordionTrigger>
+            <div className="flex items-center gap-1 pr-1">
+              <AccordionTrigger className="min-w-0 flex-1 px-2 hover:no-underline">
+                <span className="flex items-center gap-2">
+                  <LayoutGridIcon className="size-4 text-muted-foreground" />
+                  {t("map.viewOptions")}
+                </span>
+              </AccordionTrigger>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="shrink-0 border-foreground/30 bg-background text-foreground dark:bg-background"
+                onClick={onShowAllCategories}
+              >
+                {t("map.selectAll")}
+              </Button>
+            </div>
             <AccordionContent className="px-1">
               <CategoryLayerControl
                 activeCategories={activeCategories}
@@ -141,7 +140,6 @@ export function MapSidePanel({
                 labelCounts={labelCounts}
                 onToggleCategory={onToggleCategory}
                 onToggleLabel={onToggleLabel}
-                onShowAll={onShowAllCategories}
               />
               {activeLabelIds.length > 0 ? (
                 <div className="px-2 pb-2">

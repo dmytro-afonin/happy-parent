@@ -12,13 +12,17 @@ import * as maplibregl from "maplibre-gl"
 import "maplibre-gl/dist/maplibre-gl.css"
 import "@/lib/map/maplibre-worker"
 
-import { MapStyleSwitcherControl } from "./MapStyleSwitcherControl"
 import {
   installMissingImageHandler,
   installOpenFreeMapStylePatches,
 } from "./map-style-patches"
 import { destroyMapOverlayHost } from "@/lib/map/map-overlay-host"
-import { DEFAULT_MAP_STYLE_ID, getMapStyle, getMapStyleUrl } from "./map-styles"
+import {
+  applyMapStyleToMap,
+  DEFAULT_MAP_STYLE_ID,
+  getMapStyle,
+  getMapStyleUrl,
+} from "./map-styles"
 import type { MapStyleId } from "./map-styles"
 
 /** Warsaw city center [longitude, latitude] */
@@ -57,9 +61,9 @@ type MapViewProps = {
   center?: [number, number]
   zoom?: number
   initialStyleId?: MapStyleId
-  onStyleChange?: (styleId: MapStyleId) => void
   onUserLocationChange?: (location: { lat: number; lng: number } | null) => void
   onMapClick?: (location: { lat: number; lng: number }) => void
+  styleId?: MapStyleId
   onMapReady?: (map: maplibregl.Map) => void
   children?: (map: maplibregl.Map) => ReactNode
 }
@@ -70,7 +74,7 @@ export const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
     center = WARSAW_CENTER,
     zoom = 11,
     initialStyleId = DEFAULT_MAP_STYLE_ID,
-    onStyleChange,
+    styleId = initialStyleId,
     onUserLocationChange,
     onMapClick,
     onMapReady,
@@ -82,25 +86,20 @@ export const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
   const [readyMap, setReadyMap] = useState<maplibregl.Map | null>(null)
   const mapRef = useRef<maplibregl.Map | null>(null)
   const userLocationRef = useRef<{ lat: number; lng: number } | null>(null)
-  const onStyleChangeRef = useRef(onStyleChange)
   const onUserLocationChangeRef = useRef(onUserLocationChange)
   const onMapClickRef = useRef(onMapClick)
   const onMapReadyRef = useRef(onMapReady)
   const initialStyleIdRef = useRef(initialStyleId)
+  const styleIdRef = useRef(styleId)
+  const appliedStyleIdRef = useRef(initialStyleId)
 
   useEffect(() => {
-    onStyleChangeRef.current = onStyleChange
     onUserLocationChangeRef.current = onUserLocationChange
     onMapClickRef.current = onMapClick
     onMapReadyRef.current = onMapReady
     initialStyleIdRef.current = initialStyleId
-  }, [
-    initialStyleId,
-    onMapClick,
-    onMapReady,
-    onStyleChange,
-    onUserLocationChange,
-  ])
+    styleIdRef.current = styleId
+  }, [initialStyleId, onMapClick, onMapReady, onUserLocationChange, styleId])
 
   useImperativeHandle(ref, () => ({
     flyTo({ lat, lng, zoom: targetZoom = 15 }) {
@@ -141,14 +140,11 @@ export const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
       return
     }
 
-    const styleId = initialStyleIdRef.current
-    const styleSwitcher = new MapStyleSwitcherControl(styleId, (nextStyleId) =>
-      onStyleChangeRef.current?.(nextStyleId)
-    )
+    const startingStyleId = styleIdRef.current
 
     const map = new maplibregl.Map({
       container: containerRef.current,
-      style: getMapStyleUrl(styleId),
+      style: getMapStyleUrl(startingStyleId),
       center,
       zoom,
     })
@@ -156,7 +152,6 @@ export const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
     const removeMissingImageHandler = installMissingImageHandler(map)
     const removeStylePatches = installOpenFreeMapStylePatches(map)
 
-    map.addControl(styleSwitcher, "top-left")
     map.addControl(new maplibregl.NavigationControl(), "bottom-right")
 
     const geolocate = new maplibregl.GeolocateControl({
@@ -187,7 +182,9 @@ export const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
     mapRef.current = map
 
     const applySavedStyle = () => {
-      styleSwitcher.applyStyle(styleId, { persist: false })
+      const nextStyleId = styleIdRef.current
+      applyMapStyleToMap(map, nextStyleId, appliedStyleIdRef.current)
+      appliedStyleIdRef.current = nextStyleId
     }
 
     const markMapReady = () => {
@@ -196,7 +193,7 @@ export const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
 
       geolocate.once("geolocate", () => {
         map.once("moveend", () => {
-          if (getMapStyle(styleId).view3d) {
+          if (getMapStyle(styleIdRef.current).view3d) {
             applySavedStyle()
           }
         })
@@ -223,6 +220,16 @@ export const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
       mapRef.current = null
     }
   }, [center, zoom])
+
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || !readyMap || styleId === appliedStyleIdRef.current) {
+      return
+    }
+    const previousStyleId = appliedStyleIdRef.current
+    appliedStyleIdRef.current = styleId
+    applyMapStyleToMap(map, styleId, previousStyleId)
+  }, [readyMap, styleId])
 
   useEffect(() => {
     if (!readyMap) {

@@ -125,7 +125,7 @@ function SignedOutAccountMenu({ links }: { links: AccountNavLink[] }) {
           type="button"
           variant="ghost"
           size="icon"
-          className="size-9"
+          className="size-11! rounded-full border border-border bg-background text-foreground shadow-md dark:bg-background dark:text-foreground"
           aria-label={t("auth.account")}
         >
           <CircleUserRoundIcon className="size-5" />

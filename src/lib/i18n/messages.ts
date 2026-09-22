@@ -94,6 +94,8 @@ const en = {
   "admin.menu": "Admin menu",
 
   "map.categories": "Categories",
+  "map.viewOptions": "View options",
+  "map.mapStyle": "Map style",
   "map.labels": "Place types",
   "map.myPlaces": "My places",
   "map.savedPlaces": "Saved places",
@@ -287,6 +289,8 @@ const pl: Record<MessageKey, string> = {
   "admin.menu": "Menu admina",
 
   "map.categories": "Kategorie",
+  "map.viewOptions": "Opcje widoku",
+  "map.mapStyle": "Styl mapy",
   "map.labels": "Typy miejsc",
   "map.myPlaces": "Moje miejsca",
   "map.savedPlaces": "Zapisane miejsca",
@@ -479,6 +483,8 @@ const uk: Record<MessageKey, string> = {
   "admin.menu": "Меню адміна",
 
   "map.categories": "Категорії",
+  "map.viewOptions": "Параметри перегляду",
+  "map.mapStyle": "Стиль мапи",
   "map.labels": "Типи місць",
   "map.myPlaces": "Мої місця",
   "map.savedPlaces": "Збережені місця",
@@ -671,6 +677,8 @@ const ru: Record<MessageKey, string> = {
   "admin.menu": "Меню админа",
 
   "map.categories": "Категории",
+  "map.viewOptions": "Параметры вида",
+  "map.mapStyle": "Стиль карты",
   "map.labels": "Типы мест",
   "map.myPlaces": "Мои места",
   "map.savedPlaces": "Сохранённые места",
@@ -864,6 +872,8 @@ const be: Record<MessageKey, string> = {
   "admin.menu": "Меню адміна",
 
   "map.categories": "Катэгорыі",
+  "map.viewOptions": "Параметры выгляду",
+  "map.mapStyle": "Стыль мапы",
   "map.labels": "Тыпы месцаў",
   "map.myPlaces": "Мае месцы",
   "map.savedPlaces": "Захаваныя месцы",
