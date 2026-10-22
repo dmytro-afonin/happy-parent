@@ -40,11 +40,16 @@ export default function AdminPage() {
       setStatus("Draw a polygon on the map first.");
       return;
     }
+    const trimmedName = name.trim();
+    if (!trimmedName) {
+      setStatus("Name is required");
+      return;
+    }
     setBusy(true);
     setStatus(null);
     try {
       await createPolygon({
-        name,
+        name: trimmedName,
         description: description || undefined,
         address: address || undefined,
         lat: polygon.lat,

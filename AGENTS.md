@@ -43,11 +43,10 @@ Terra Draw is admin-only. Standard commands live in `README.md` and
 - Missing `NEXT_PUBLIC_SENTRY_DSN` or PostHog keys skips those clients; the map
   still runs.
 - OpenFreeMap tiles require outbound internet.
-- Seed demo places: `pnpm dlx convex run seed:run`.
-- Promote a signed-in user to admin (local): `pnpm dlx convex run seed:promoteMeAdmin`
-  while authenticated is not available from CLI — patch `users.role` in the
-  Convex dashboard, or call `seed:promoteMeAdmin` from the browser console via
-  the Convex client after sign-in. Easiest: use the Convex dashboard Data tab.
+- Seed demo places from the CLI: `pnpm dlx convex run seed:run`. `seed:run` and
+  `seed:promoteMeAdmin` are internal mutations, so the public client cannot call them.
+- Promote a signed-in user to admin locally by setting `users.role` to `admin`
+  in the Convex dashboard Data tab.
 
 ### Lint / typecheck
 

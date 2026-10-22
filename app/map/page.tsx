@@ -130,7 +130,7 @@ export default function MapPage() {
         </Authenticated>
       </aside>
 
-      <section className="relative min-h-[50vh] flex-1 lg:min-h-[calc(100vh-3.5rem)]">
+      <section className="relative min-h-[50vh] flex-1 overflow-hidden lg:min-h-[calc(100vh-3.5rem)]">
         <div className="absolute inset-0">
           <MapView
             places={filtered}

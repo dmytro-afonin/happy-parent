@@ -29,11 +29,16 @@ export function CreatePlaceForm() {
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
+    const trimmedName = name.trim();
+    if (!trimmedName) {
+      setStatus("Name is required");
+      return;
+    }
     setBusy(true);
     setStatus(null);
     try {
       await createPoint({
-        name,
+        name: trimmedName,
         description: description || undefined,
         address: address || undefined,
         lat: Number(lat),

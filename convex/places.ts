@@ -60,11 +60,15 @@ export const createPoint = mutation({
   },
   handler: async (ctx, args) => {
     const { userId } = await requireUser(ctx);
+    const name = args.name.trim();
+    if (!name) {
+      throw new Error("Name is required");
+    }
     assertCatalog(args.type, args.attributes);
 
     const now = Date.now();
     return await ctx.db.insert("places", {
-      name: args.name.trim(),
+      name,
       description: args.description?.trim() || undefined,
       address: args.address?.trim() || undefined,
       lat: args.lat,
@@ -106,9 +110,14 @@ export const createPolygon = mutation({
       throw new Error("Polygon needs at least 3 vertices");
     }
 
+    const name = args.name.trim();
+    if (!name) {
+      throw new Error("Name is required");
+    }
+
     const now = Date.now();
     return await ctx.db.insert("places", {
-      name: args.name.trim(),
+      name,
       description: args.description?.trim() || undefined,
       address: args.address?.trim() || undefined,
       lat: args.lat,

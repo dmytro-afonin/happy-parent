@@ -1,4 +1,4 @@
-import { mutation } from "./_generated/server";
+import { internalMutation } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 
 const SEED_TOKEN = "seed|happy-parent";
@@ -103,8 +103,8 @@ const SEED_PLACES = [
   },
 ];
 
-/** Idempotent seed of approved Warsaw demo places. */
-export const run = mutation({
+/** Idempotent seed of approved Warsaw demo places. CLI only. */
+export const run = internalMutation({
   args: {},
   handler: async (ctx) => {
     const seedUser = await ctx.db
@@ -150,8 +150,8 @@ export const run = mutation({
   },
 });
 
-/** Promote the current signed-in user to admin (local bootstrap). */
-export const promoteMeAdmin = mutation({
+/** Promote the current signed-in user to admin. CLI only. */
+export const promoteMeAdmin = internalMutation({
   args: {},
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();

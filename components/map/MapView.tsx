@@ -193,6 +193,9 @@ export function MapView({ places, selectedId, onSelect }: Props) {
     });
 
     const handleClick = (e: MapMouseEvent) => {
+      if (!map.getLayer("places-points") || !map.getLayer("places-fill")) {
+        return;
+      }
       const features = map.queryRenderedFeatures(e.point, {
         layers: ["places-points", "places-fill"],
       });
@@ -228,22 +231,24 @@ export function MapView({ places, selectedId, onSelect }: Props) {
     else map.once("load", update);
   }, [places]);
 
+  const selectedPlace = places.find((p) => p._id === selectedId);
+  const selectedLng = selectedPlace?.lng;
+  const selectedLat = selectedPlace?.lat;
+
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !selectedId) return;
-    const place = places.find((p) => p._id === selectedId);
-    if (!place) return;
+    if (!map || selectedLng === undefined || selectedLat === undefined) return;
     map.easeTo({
-      center: [place.lng, place.lat],
+      center: [selectedLng, selectedLat],
       zoom: Math.max(map.getZoom(), 14),
       duration: 500,
     });
-  }, [selectedId, places]);
+  }, [selectedId, selectedLng, selectedLat]);
 
   return (
     <div
       ref={containerRef}
-      className="h-full min-h-[320px] w-full overflow-hidden rounded-none"
+      className="h-full w-full overflow-hidden rounded-none"
       role="presentation"
     />
   );
