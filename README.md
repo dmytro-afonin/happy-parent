@@ -12,9 +12,8 @@ data, Clerk for sign-in, MapLibre + OpenFreeMap for the map.
 ## Local development
 
 ```bash
-# Node 24
-export PATH="$HOME/.nvm/versions/node/v24.19.0/bin:$PATH"
-
+# Node 24 with Corepack. packageManager pins pnpm@12.15.0.
+corepack enable
 pnpm install
 
 # Terminal 1 — Convex (writes NEXT_PUBLIC_CONVEX_URL into .env.local)

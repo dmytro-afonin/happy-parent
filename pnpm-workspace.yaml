@@ -1,3 +1,10 @@
-ignoredBuiltDependencies:
-  - sharp
-  - unrs-resolver
+allowBuilds:
+  "@sentry/cli": true
+  core-js: true
+  esbuild: true
+  sharp: false
+  unrs-resolver: false
+minimumReleaseAgeExclude:
+  - "@posthog/browser-common@0.9.8"
+  - "@posthog/core@1.60.0"
+  - posthog-js@1.438.18
