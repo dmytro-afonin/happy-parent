@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef } from "react"
+import { useEffect, useId, useLayoutEffect, useRef } from "react"
 import type * as maplibregl from "maplibre-gl"
 
 import { getMapOverlayHost } from "@/lib/map/map-overlay-host"
@@ -20,10 +20,12 @@ export function useMapOverlay<T>(
 ) {
   const overlayId = useId()
   const handlersRef = useRef(handlers)
-  handlersRef.current = handlers
-
   const stateRef = useRef(state)
-  stateRef.current = state
+
+  useLayoutEffect(() => {
+    handlersRef.current = handlers
+    stateRef.current = state
+  }, [handlers, state])
 
   useEffect(() => {
     if (!map) {
@@ -43,6 +45,9 @@ export function useMapOverlay<T>(
       return
     }
 
-    getMapOverlayHost(map).notifyDataChanged()
+    stateRef.current = state
+    if (typeof revision === "string") {
+      getMapOverlayHost(map).notifyDataChanged()
+    }
   }, [map, revision, state])
 }

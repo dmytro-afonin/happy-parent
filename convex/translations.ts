@@ -27,12 +27,17 @@ export const listApproved = query({
     })
   ),
   handler: async (ctx, args) => {
-    const translations = await ctx.db
-      .query("translations")
-      .withIndex("by_locale_and_status", (q) =>
-        q.eq("locale", args.locale).eq("status", "approved")
-      )
-      .collect()
+    const translations = (
+      await ctx.db
+        .query("translations")
+        .withIndex("by_locale_and_status", (q) =>
+          q.eq("locale", args.locale).eq("status", "approved")
+        )
+        .collect()
+    ).filter(
+      (entry): entry is typeof entry & { entityType: "category" | "label" } =>
+        entry.entityType === "category" || entry.entityType === "label"
+    )
 
     // Newest approved row wins when superseded history left duplicates.
     const newestByKey = new Map<string, (typeof translations)[number]>()

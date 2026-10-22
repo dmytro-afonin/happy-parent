@@ -5,11 +5,13 @@ import type { MutationCtx, QueryCtx } from "./_generated/server"
 
 import { localeValidator } from "./lib/locales"
 import { recordModerationOutcome } from "./lib/moderation"
+import { noteApproved } from "./lib/reliability"
 import {
   placeCategoryValidator,
   normalizePlaceCategory,
 } from "./lib/placeCategories"
 import { requireAdminUser } from "./lib/users"
+import { settleSuggestion } from "./placeSuggestions"
 
 const submitterValidator = v.object({
   name: v.optional(v.string()),
@@ -176,17 +178,27 @@ export const listPending = query({
         }))
       ),
       translations: await Promise.all(
-        translations.map(async (translation) => ({
-          _id: translation._id,
-          entityType: translation.entityType,
-          entityKey: translation.entityKey,
-          locale: translation.locale,
-          value: translation.value,
-          createdAt: translation.createdAt,
-          submitter: translation.createdBy
-            ? await loadSubmitter(translation.createdBy)
-            : emptySubmitter,
-        }))
+        translations
+          .filter(
+            (
+              translation
+            ): translation is typeof translation & {
+              entityType: "category" | "label"
+            } =>
+              translation.entityType === "category" ||
+              translation.entityType === "label"
+          )
+          .map(async (translation) => ({
+            _id: translation._id,
+            entityType: translation.entityType,
+            entityKey: translation.entityKey,
+            locale: translation.locale,
+            value: translation.value,
+            createdAt: translation.createdAt,
+            submitter: translation.createdBy
+              ? await loadSubmitter(translation.createdBy)
+              : emptySubmitter,
+          }))
       ),
     }
   },
@@ -242,7 +254,34 @@ export const decidePlace = mutation({
     for (const photo of photos) {
       if (photo.status === "pending" && photo.uploaderId === place.createdBy) {
         await ctx.db.patch("photos", photo._id, decisionPatch(admin._id, args))
+        if (args.approve) {
+          await noteApproved(ctx, photo.uploaderId, "photo")
+        }
       }
+    }
+
+    const suggestions = await ctx.db
+      .query("placeSuggestions")
+      .withIndex("by_place", (q) => q.eq("placeId", args.placeId))
+      .collect()
+
+    for (const suggestion of suggestions) {
+      if (
+        suggestion.status === "pending" &&
+        suggestion.authorId === place.createdBy
+      ) {
+        await settleSuggestion(
+          ctx,
+          suggestion,
+          admin._id,
+          args.approve,
+          args.comment
+        )
+      }
+    }
+
+    if (args.approve) {
+      await noteApproved(ctx, place.createdBy, "place")
     }
 
     await finalizeDecision(ctx, place.createdBy, args.approve)
@@ -266,6 +305,9 @@ export const decidePhoto = mutation({
     }
 
     await ctx.db.patch("photos", args.photoId, decisionPatch(admin._id, args))
+    if (args.approve) {
+      await noteApproved(ctx, photo.uploaderId, "photo")
+    }
     await finalizeDecision(ctx, photo.uploaderId, args.approve)
     return null
   },
@@ -291,6 +333,9 @@ export const decideComment = mutation({
       args.commentId,
       decisionPatch(admin._id, args)
     )
+    if (args.approve) {
+      await noteApproved(ctx, entry.authorId, "comment")
+    }
     await finalizeDecision(ctx, entry.authorId, args.approve)
     return null
   },

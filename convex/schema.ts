@@ -35,6 +35,24 @@ export default defineSchema({
     // Internal trust rating derived from moderation outcomes.
     submissionsApproved: v.optional(v.number()),
     submissionsRejected: v.optional(v.number()),
+    placesRequested: v.optional(v.number()),
+    placesApproved: v.optional(v.number()),
+    changesRequested: v.optional(v.number()),
+    changesApproved: v.optional(v.number()),
+    titleChangesRequested: v.optional(v.number()),
+    titleChangesApproved: v.optional(v.number()),
+    descriptionChangesRequested: v.optional(v.number()),
+    descriptionChangesApproved: v.optional(v.number()),
+    locationChangesRequested: v.optional(v.number()),
+    locationChangesApproved: v.optional(v.number()),
+    photoChangesRequested: v.optional(v.number()),
+    photoChangesApproved: v.optional(v.number()),
+    labelChangesRequested: v.optional(v.number()),
+    labelChangesApproved: v.optional(v.number()),
+    translationChangesRequested: v.optional(v.number()),
+    translationChangesApproved: v.optional(v.number()),
+    commentsRequested: v.optional(v.number()),
+    commentsApproved: v.optional(v.number()),
     /** Cooldown marker for batched moderation notification emails. */
     lastModerationNotifyAt: v.optional(v.number()),
   }).index("by_token", ["tokenIdentifier"]),
@@ -112,6 +130,8 @@ export default defineSchema({
     createdBy: v.id("users"),
     createdAt: v.number(),
     updatedAt: v.number(),
+    /** Locale the author wrote the place in. Other locales count as missing. */
+    sourceLocale: v.optional(localeValidator),
     ...moderationFields,
   })
     .index("by_creator", ["createdBy"])
@@ -155,7 +175,12 @@ export default defineSchema({
     .index("by_status", ["status"]),
 
   translations: defineTable({
-    entityType: v.union(v.literal("category"), v.literal("label")),
+    entityType: v.union(
+      v.literal("category"),
+      v.literal("label"),
+      v.literal("placeName"),
+      v.literal("placeDescription")
+    ),
     /** Category id or label slug. */
     entityKey: v.string(),
     locale: localeValidator,
@@ -170,4 +195,40 @@ export default defineSchema({
     .index("by_locale_and_status", ["locale", "status"])
     .index("by_entity", ["entityType", "entityKey", "locale"])
     .index("by_status", ["status"]),
+
+  placeSuggestions: defineTable({
+    placeId: v.id("places"),
+    authorId: v.id("users"),
+    kind: v.union(
+      v.literal("name"),
+      v.literal("description"),
+      v.literal("location"),
+      v.literal("label"),
+      v.literal("translation")
+    ),
+    text: v.optional(v.string()),
+    locale: v.optional(localeValidator),
+    translationField: v.optional(
+      v.union(v.literal("name"), v.literal("description"))
+    ),
+    lat: v.optional(v.number()),
+    lng: v.optional(v.number()),
+    geometryType: v.optional(v.union(v.literal("point"), v.literal("polygon"))),
+    boundary: v.optional(
+      v.array(
+        v.object({
+          lat: v.number(),
+          lng: v.number(),
+        })
+      )
+    ),
+    status: moderationStatusValidator,
+    rejectionComment: v.optional(v.string()),
+    moderatedBy: v.optional(v.id("users")),
+    moderatedAt: v.optional(v.number()),
+    createdAt: v.number(),
+  })
+    .index("by_place", ["placeId"])
+    .index("by_status", ["status"])
+    .index("by_author", ["authorId"]),
 })

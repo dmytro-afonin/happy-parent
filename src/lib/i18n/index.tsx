@@ -4,9 +4,8 @@ import {
   createContext,
   useCallback,
   useContext,
-  useEffect,
   useMemo,
-  useState,
+  useSyncExternalStore,
 } from "react"
 import type { ReactNode } from "react"
 
@@ -31,20 +30,43 @@ type I18nContextValue = {
 
 const I18nContext = createContext<I18nContextValue | null>(null)
 
-export function I18nProvider({ children }: { children: ReactNode }) {
-  const [locale, setLocaleState] = useState<Locale>(DEFAULT_LOCALE)
+const localeListeners = new Set<() => void>()
 
-  // Hydrate from localStorage after mount (SSR renders the default locale).
-  useEffect(() => {
-    const stored = window.localStorage.getItem(STORAGE_KEY)
-    if (stored && isLocale(stored)) {
-      setLocaleState(stored)
+function readLocale(): Locale {
+  const stored = window.localStorage.getItem(STORAGE_KEY)
+  return stored && isLocale(stored) ? stored : DEFAULT_LOCALE
+}
+
+function subscribeLocale(listener: () => void) {
+  localeListeners.add(listener)
+  const onStorage = (event: StorageEvent) => {
+    if (event.key === STORAGE_KEY) {
+      listener()
     }
-  }, [])
+  }
+  window.addEventListener("storage", onStorage)
+  return () => {
+    localeListeners.delete(listener)
+    window.removeEventListener("storage", onStorage)
+  }
+}
+
+function emitLocale() {
+  for (const listener of localeListeners) {
+    listener()
+  }
+}
+
+export function I18nProvider({ children }: { children: ReactNode }) {
+  const locale = useSyncExternalStore(
+    subscribeLocale,
+    readLocale,
+    () => DEFAULT_LOCALE
+  )
 
   const setLocale = useCallback((next: Locale) => {
-    setLocaleState(next)
     window.localStorage.setItem(STORAGE_KEY, next)
+    emitLocale()
   }, [])
 
   const t = useCallback((key: MessageKey) => MESSAGES[locale][key], [locale])

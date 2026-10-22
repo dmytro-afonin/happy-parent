@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -29,12 +29,15 @@ export function SaveFavouriteDialog({
 }: SaveFavouriteDialogProps) {
   const [name, setName] = useState("")
   const [isSaving, setIsSaving] = useState(false)
+  const placeKey = place?.id ?? ""
+  const [draftKey, setDraftKey] = useState<string | null>(null)
 
-  useEffect(() => {
-    if (open && place) {
-      setName(place.label)
-    }
-  }, [open, place])
+  if (open && place && draftKey !== `${placeKey}:${open}`) {
+    setDraftKey(`${placeKey}:${open}`)
+    setName(place.label)
+  } else if (!open && draftKey !== null) {
+    setDraftKey(null)
+  }
 
   const handleSave = async () => {
     if (!place || name.trim().length === 0) {

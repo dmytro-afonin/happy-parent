@@ -48,6 +48,7 @@ type MapDrawControlProps = {
   enabled: boolean
   vertices: LatLng[]
   onVerticesChange: (vertices: LatLng[]) => void
+  position?: "top-left" | "bottom-left"
 }
 
 /** MapboxDraw custom events are not part of MapLibre's MapEventType (v6). */
@@ -84,6 +85,7 @@ export function MapDrawControl({
   enabled,
   vertices,
   onVerticesChange,
+  position = "top-left",
 }: MapDrawControlProps) {
   const drawRef = useRef<MapboxDraw | null>(null)
   const onVerticesChangeRef = useRef(onVerticesChange)
@@ -110,7 +112,7 @@ export function MapDrawControl({
     })
 
     drawRef.current = draw
-    map.addControl(draw as unknown as maplibregl.IControl, "top-left")
+    map.addControl(draw as unknown as maplibregl.IControl, position)
 
     const syncFromDraw = () => {
       onVerticesChangeRef.current(readPolygonVertices(draw))
@@ -155,7 +157,7 @@ export function MapDrawControl({
         drawRef.current = null
       }
     }
-  }, [enabled, map])
+  }, [enabled, map, position])
 
   useEffect(() => {
     const draw = drawRef.current

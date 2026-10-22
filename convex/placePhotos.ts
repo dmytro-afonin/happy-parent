@@ -3,6 +3,7 @@ import { v } from "convex/values"
 
 import { internal } from "./_generated/api"
 import { effectiveStatus, moderationStatusValidator } from "./lib/moderation"
+import { noteRequested } from "./lib/reliability"
 import { isAdminRole } from "./lib/roles"
 import { ensureAuthUser, getAuthUser, requireAdminUser } from "./lib/users"
 
@@ -118,6 +119,9 @@ export const attachMany = mutation({
       })
       photoIds.push(photoId)
       sortOrder += 1
+      if (!isAdmin) {
+        await noteRequested(ctx, userId, "photo")
+      }
     }
 
     if (status === "pending" && args.photos.length > 0) {
