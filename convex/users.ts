@@ -1,64 +1,78 @@
-import { mutation, query } from "./_generated/server"
-import { v } from "convex/values"
+import { mutation, query } from "./_generated/server";
+import type { MutationCtx } from "./_generated/server";
+import type { Doc, Id } from "./_generated/dataModel";
 
-import { isAdminRole, userRoleValidator } from "./lib/roles"
-import { ensureAuthUser, getAuthUser } from "./lib/users"
+async function upsertFromIdentity(
+  ctx: MutationCtx,
+): Promise<Doc<"users"> | null> {
+  const identity = await ctx.auth.getUserIdentity();
+  if (!identity) {
+    return null;
+  }
 
-const currentUserValidator = v.union(
-  v.null(),
-  v.object({
-    _id: v.id("users"),
-    name: v.optional(v.string()),
-    email: v.optional(v.string()),
-    role: userRoleValidator,
-    isAdmin: v.boolean(),
-  })
-)
+  const existing = await ctx.db
+    .query("users")
+    .withIndex("by_token", (q) =>
+      q.eq("tokenIdentifier", identity.tokenIdentifier),
+    )
+    .unique();
 
-export const getCurrent = query({
+  const name = identity.name ?? undefined;
+  const email = identity.email ?? undefined;
+
+  if (existing) {
+    await ctx.db.patch(existing._id, { name, email });
+    return { ...existing, name, email };
+  }
+
+  const id = await ctx.db.insert("users", {
+    tokenIdentifier: identity.tokenIdentifier,
+    name,
+    email,
+    role: "user",
+  });
+  const created = await ctx.db.get(id);
+  return created;
+}
+
+/** First authenticated call upserts the users row. */
+export const ensure = mutation({
   args: {},
-  returns: currentUserValidator,
   handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity()
+    return await upsertFromIdentity(ctx);
+  },
+});
+
+export const me = query({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
-      return null
+      return null;
     }
-
-    const user = await getAuthUser(ctx)
-    if (!user) {
-      return null
-    }
-
-    const role = user.role ?? "user"
-
-    return {
-      _id: user._id,
-      name: user.name ?? identity.name,
-      email: user.email ?? identity.email,
-      role,
-      isAdmin: isAdminRole(role),
-    }
+    return await ctx.db
+      .query("users")
+      .withIndex("by_token", (q) =>
+        q.eq("tokenIdentifier", identity.tokenIdentifier),
+      )
+      .unique();
   },
-})
+});
 
-export const getAdminStatus = query({
-  args: {},
-  returns: v.object({
-    isAdmin: v.boolean(),
-  }),
-  handler: async (ctx) => {
-    const user = await getAuthUser(ctx)
+export async function requireUser(
+  ctx: MutationCtx,
+): Promise<{ user: Doc<"users">; userId: Id<"users"> }> {
+  const user = await upsertFromIdentity(ctx);
+  if (!user) {
+    throw new Error("Sign in required");
+  }
+  return { user, userId: user._id };
+}
 
-    return {
-      isAdmin: isAdminRole(user?.role),
-    }
-  },
-})
-
-export const ensureCurrentUser = mutation({
-  args: {},
-  returns: v.id("users"),
-  handler: async (ctx) => {
-    return await ensureAuthUser(ctx)
-  },
-})
+export async function requireAdmin(ctx: MutationCtx): Promise<Doc<"users">> {
+  const { user } = await requireUser(ctx);
+  if (user.role !== "admin") {
+    throw new Error("Admin required");
+  }
+  return user;
+}

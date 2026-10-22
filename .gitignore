@@ -1,24 +1,51 @@
-node_modules
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
 .DS_Store
-dist
-dist-ssr
+*.pem
 *.local
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# env files
 .env*
 !.env.example
-.tanstack
-.vite
-.wrangler
-.output
-.vinxi
-.convex
-__unconfig*
-todos.json
+
+# vercel
+.vercel
 
 # typescript
 *.tsbuildinfo
+next-env.d.ts
 
-# clerk configuration (can include secrets)
+# clerk
 /.clerk/
-.vercel
-.env*.local
+
+# convex
+.convex
+
+# pnpm
 .pnpm-store
+.clerk/

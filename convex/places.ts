@@ -1,475 +1,137 @@
-import { mutation, query } from "./_generated/server"
-import { v } from "convex/values"
-import type { Doc, Id } from "./_generated/dataModel"
-import type { QueryCtx } from "./_generated/server"
-
-import { internal } from "./_generated/api"
+import { mutation, query } from "./_generated/server";
+import { v } from "convex/values";
 import {
-  geometryTypeValidator,
-  latLngValidator,
-  validateGeometry,
-} from "./lib/geometry"
-import { localeValidator } from "./lib/locales"
-import { effectiveStatus, moderationStatusValidator } from "./lib/moderation"
-import { noteRequested } from "./lib/reliability"
-import type { PlaceCategoryId } from "./lib/placeCategories"
-import {
-  normalizePlaceCategory,
-  placeCategoryValidator,
-} from "./lib/placeCategories"
-import { isAdminRole } from "./lib/roles"
-import { ensureAuthUser, getAuthUser, requireAdminUser } from "./lib/users"
-import { insertSuggestion } from "./placeSuggestions"
+  isPlaceAttribute,
+  isPlaceType,
+  PLACE_ATTRIBUTES,
+  PLACE_TYPES,
+} from "./lib/catalog";
+import { requireAdmin, requireUser } from "./users";
 
-const placeListItemValidator = v.object({
-  _id: v.id("places"),
-  _creationTime: v.number(),
-  name: v.string(),
-  description: v.optional(v.string()),
-  address: v.optional(v.string()),
-  lat: v.number(),
-  lng: v.number(),
-  geometryType: v.optional(geometryTypeValidator),
-  boundary: v.optional(v.array(latLngValidator)),
-  category: placeCategoryValidator,
-  labelIds: v.array(v.id("labels")),
-  tags: v.array(v.string()),
-  createdBy: v.id("users"),
-  createdAt: v.number(),
-  updatedAt: v.number(),
-  status: moderationStatusValidator,
-  rejectionComment: v.optional(v.string()),
-  isOwn: v.boolean(),
-  coverPhotoUrl: v.optional(v.string()),
-  coverPhotoThumbnailUrl: v.optional(v.string()),
-})
-
-const photoInputValidator = v.object({
-  imageKitFileId: v.string(),
-  url: v.string(),
-  thumbnailUrl: v.optional(v.string()),
-  fileName: v.optional(v.string()),
-})
-
-function toListItem(place: Doc<"places">, viewerId: Id<"users"> | null) {
-  return {
-    _id: place._id,
-    _creationTime: place._creationTime,
-    name: place.name,
-    description: place.description,
-    address: place.address,
-    lat: place.lat,
-    lng: place.lng,
-    geometryType: place.geometryType,
-    boundary: place.boundary,
-    category: normalizePlaceCategory(place.category),
-    labelIds: place.labelIds ?? [],
-    tags: place.tags,
-    createdBy: place.createdBy,
-    createdAt: place.createdAt,
-    updatedAt: place.updatedAt,
-    status: effectiveStatus(place.status),
-    rejectionComment: place.rejectionComment,
-    isOwn: viewerId !== null && place.createdBy === viewerId,
-  }
-}
-
-async function enrichPlacesWithCoverPhotos<T extends { _id: Id<"places"> }>(
-  ctx: QueryCtx,
-  places: T[]
-) {
-  if (places.length === 0) {
-    return []
-  }
-
-  const photos = await ctx.db.query("photos").collect()
-  const coverByPlace = new Map<
-    Id<"places">,
-    { url: string; thumbnailUrl?: string; sortOrder: number }
-  >()
-
-  for (const photo of photos) {
-    if (effectiveStatus(photo.status) !== "approved") {
-      continue
-    }
-
-    const current = coverByPlace.get(photo.placeId)
-    if (!current || photo.sortOrder < current.sortOrder) {
-      coverByPlace.set(photo.placeId, {
-        url: photo.url,
-        thumbnailUrl: photo.thumbnailUrl,
-        sortOrder: photo.sortOrder,
-      })
-    }
-  }
-
-  return places.map((place) => {
-    const cover = coverByPlace.get(place._id)
-    return {
-      ...place,
-      coverPhotoUrl: cover?.url,
-      coverPhotoThumbnailUrl: cover?.thumbnailUrl,
-    }
-  })
-}
-
-/**
- * Approved places are public. Pending/rejected submissions are only visible
- * to the submitter and to admins.
- */
-export const list = query({
+/** Public map payload: place fields only (no photos, no comments). */
+export const listApproved = query({
   args: {},
-  returns: v.array(placeListItemValidator),
   handler: async (ctx) => {
-    const viewer = await getAuthUser(ctx)
-    const isAdmin = isAdminRole(viewer?.role)
+    const places = await ctx.db
+      .query("places")
+      .withIndex("by_status", (q) => q.eq("status", "approved"))
+      .collect();
 
-    const places = await ctx.db.query("places").order("desc").collect()
-
-    const visible = places.filter((place) => {
-      const status = effectiveStatus(place.status)
-      if (status === "approved") {
-        return true
-      }
-      if (isAdmin) {
-        return true
-      }
-      return viewer !== null && place.createdBy === viewer._id
-    })
-
-    return enrichPlacesWithCoverPhotos(
-      ctx,
-      visible.map((place) => toListItem(place, viewer?._id ?? null))
-    )
+    return places.map((place) => ({
+      _id: place._id,
+      name: place.name,
+      description: place.description,
+      address: place.address,
+      lat: place.lat,
+      lng: place.lng,
+      geometryType: place.geometryType,
+      boundary: place.boundary,
+      type: place.type,
+      attributes: place.attributes,
+      status: place.status,
+    }));
   },
-})
+});
 
-export const listAllAdmin = query({
-  args: {},
-  returns: v.array(placeListItemValidator),
-  handler: async (ctx) => {
-    const admin = await requireAdminUser(ctx)
-    const places = await ctx.db.query("places").order("desc").collect()
-    return enrichPlacesWithCoverPhotos(
-      ctx,
-      places.map((place) => toListItem(place, admin._id))
-    )
-  },
-})
-
-async function validateLabelIds(
-  ctx: QueryCtx,
-  labelIds: Id<"labels">[] | undefined,
-  category: PlaceCategoryId
-) {
-  if (!labelIds) {
-    return []
+function assertCatalog(
+  type: string,
+  attributes: string[],
+): void {
+  if (!isPlaceType(type)) {
+    throw new Error(`Unknown place type: ${type}`);
   }
-
-  const unique = [...new Set(labelIds)]
-  for (const labelId of unique) {
-    const label = await ctx.db.get("labels", labelId)
-    if (!label) {
-      throw new Error("Unknown label")
-    }
-    if (label.category !== category) {
-      throw new Error(
-        `Label "${label.slug}" belongs to ${label.category}, not ${category}`
-      )
+  for (const attr of attributes) {
+    if (!isPlaceAttribute(attr)) {
+      throw new Error(`Unknown attribute: ${attr}`);
     }
   }
-
-  return unique
 }
 
-/** Keep labels that still match the place category; drop the rest. */
-async function labelsForCategory(
-  ctx: QueryCtx,
-  labelIds: Id<"labels">[] | undefined,
-  category: PlaceCategoryId
-) {
-  if (!labelIds || labelIds.length === 0) {
-    return []
-  }
-
-  const kept: Id<"labels">[] = []
-  for (const labelId of labelIds) {
-    const label = await ctx.db.get("labels", labelId)
-    if (label && label.category === category) {
-      kept.push(labelId)
-    }
-  }
-  return kept
-}
-
-/**
- * Any signed-in user can add a place. Admin submissions are approved
- * immediately; regular users' submissions go through moderation and admins
- * are notified by email.
- */
-export const create = mutation({
+/** Signed-in user creates a point place as approved. */
+export const createPoint = mutation({
   args: {
     name: v.string(),
     description: v.optional(v.string()),
     address: v.optional(v.string()),
-    geometryType: geometryTypeValidator,
-    lat: v.optional(v.number()),
-    lng: v.optional(v.number()),
-    boundary: v.optional(v.array(latLngValidator)),
-    category: placeCategoryValidator,
-    labelIds: v.optional(v.array(v.id("labels"))),
-    tags: v.optional(v.array(v.string())),
-    photos: v.optional(v.array(photoInputValidator)),
-    sourceLocale: v.optional(localeValidator),
-    suggestedLabel: v.optional(v.string()),
-    translations: v.optional(
-      v.array(
-        v.object({
-          locale: localeValidator,
-          name: v.optional(v.string()),
-          description: v.optional(v.string()),
-        })
-      )
-    ),
+    lat: v.number(),
+    lng: v.number(),
+    type: v.string(),
+    attributes: v.array(v.string()),
   },
-  returns: v.id("places"),
   handler: async (ctx, args) => {
-    const userId = await ensureAuthUser(ctx)
-    const user = await ctx.db.get("users", userId)
-    const isAdmin = isAdminRole(user?.role)
+    const { userId } = await requireUser(ctx);
+    assertCatalog(args.type, args.attributes);
 
-    const name = args.name.trim()
-    if (name.length === 0) {
-      throw new Error("Name is required")
-    }
-
-    const labelIds = await validateLabelIds(ctx, args.labelIds, args.category)
-
-    const point =
-      args.lat !== undefined && args.lng !== undefined
-        ? { lat: args.lat, lng: args.lng }
-        : undefined
-
-    const geometry = validateGeometry(args.geometryType, point, args.boundary)
-    const now = Date.now()
-    const status = isAdmin ? ("approved" as const) : ("pending" as const)
-
-    const placeId = await ctx.db.insert("places", {
-      name,
+    const now = Date.now();
+    return await ctx.db.insert("places", {
+      name: args.name.trim(),
       description: args.description?.trim() || undefined,
       address: args.address?.trim() || undefined,
-      lat: geometry.lat,
-      lng: geometry.lng,
-      geometryType: args.geometryType,
-      boundary: geometry.boundary,
-      category: args.category,
-      labelIds,
-      tags: args.tags ?? [],
+      lat: args.lat,
+      lng: args.lng,
+      geometryType: "point",
+      type: args.type,
+      attributes: args.attributes,
+      status: "approved",
       createdBy: userId,
       createdAt: now,
       updatedAt: now,
-      sourceLocale: args.sourceLocale,
-      status,
-    })
-
-    if (args.photos && args.photos.length > 0) {
-      let sortOrder = 0
-      for (const photo of args.photos) {
-        await ctx.db.insert("photos", {
-          placeId,
-          uploaderId: userId,
-          imageKitFileId: photo.imageKitFileId,
-          url: photo.url,
-          thumbnailUrl: photo.thumbnailUrl,
-          fileName: photo.fileName,
-          sortOrder,
-          createdAt: now,
-          status,
-        })
-        sortOrder += 1
-        if (!isAdmin) {
-          await noteRequested(ctx, userId, "photo")
-        }
-      }
-    }
-
-    const suggestedLabel = args.suggestedLabel?.trim()
-    if (suggestedLabel) {
-      await insertSuggestion(ctx, {
-        placeId,
-        authorId: userId,
-        kind: "label",
-        text: suggestedLabel,
-        autoApprove: isAdmin,
-      })
-    }
-
-    for (const translation of args.translations ?? []) {
-      const translatedName = translation.name?.trim()
-      const translatedDescription = translation.description?.trim()
-      if (translatedName) {
-        await insertSuggestion(ctx, {
-          placeId,
-          authorId: userId,
-          kind: "translation",
-          text: translatedName,
-          locale: translation.locale,
-          translationField: "name",
-          autoApprove: isAdmin,
-        })
-      }
-      if (translatedDescription) {
-        await insertSuggestion(ctx, {
-          placeId,
-          authorId: userId,
-          kind: "translation",
-          text: translatedDescription,
-          locale: translation.locale,
-          translationField: "description",
-          autoApprove: isAdmin,
-        })
-      }
-    }
-
-    if (!isAdmin) {
-      await noteRequested(ctx, userId, "place")
-    }
-
-    if (status === "pending") {
-      await ctx.scheduler.runAfter(0, internal.emails.notifyModerationRequest, {
-        kind: "place",
-        summary: name,
-        submitterName: user?.name ?? user?.email,
-      })
-    }
-
-    return placeId
+    });
   },
-})
+});
 
-export const update = mutation({
+/** Admin saves a polygon place (boundary + centroid). */
+export const createPolygon = mutation({
   args: {
-    placeId: v.id("places"),
-    name: v.optional(v.string()),
+    name: v.string(),
     description: v.optional(v.string()),
     address: v.optional(v.string()),
-    geometryType: v.optional(geometryTypeValidator),
-    lat: v.optional(v.number()),
-    lng: v.optional(v.number()),
-    boundary: v.optional(v.array(latLngValidator)),
-    category: v.optional(placeCategoryValidator),
-    labelIds: v.optional(v.array(v.id("labels"))),
-    tags: v.optional(v.array(v.string())),
+    lat: v.number(),
+    lng: v.number(),
+    boundary: v.array(
+      v.object({
+        lat: v.number(),
+        lng: v.number(),
+      }),
+    ),
+    type: v.string(),
+    attributes: v.array(v.string()),
   },
-  returns: v.null(),
   handler: async (ctx, args) => {
-    await requireAdminUser(ctx)
+    await requireAdmin(ctx);
+    const { userId } = await requireUser(ctx);
+    assertCatalog(args.type, args.attributes);
 
-    const place = await ctx.db.get("places", args.placeId)
-    if (!place) {
-      throw new Error("Place not found")
+    if (args.boundary.length < 3) {
+      throw new Error("Polygon needs at least 3 vertices");
     }
 
-    const name = args.name?.trim()
-    if (name !== undefined && name.length === 0) {
-      throw new Error("Name is required")
-    }
-
-    const nextCategory = normalizePlaceCategory(args.category ?? place.category)
-
-    let labelIds: Id<"labels">[] | undefined
-    if (args.labelIds !== undefined) {
-      labelIds = await validateLabelIds(ctx, args.labelIds, nextCategory)
-    } else if (args.category !== undefined) {
-      // Category-only update: drop labels that no longer match.
-      labelIds = await labelsForCategory(ctx, place.labelIds, nextCategory)
-    }
-
-    const geometryType = args.geometryType ?? place.geometryType ?? "point"
-    let lat = args.lat ?? place.lat
-    let lng = args.lng ?? place.lng
-    let boundary = args.boundary ?? place.boundary
-
-    if (
-      args.geometryType !== undefined ||
-      args.lat !== undefined ||
-      args.lng !== undefined ||
-      args.boundary !== undefined
-    ) {
-      const geometry = validateGeometry(geometryType, { lat, lng }, boundary)
-      lat = geometry.lat
-      lng = geometry.lng
-      boundary = geometry.boundary
-    }
-
-    await ctx.db.patch("places", args.placeId, {
-      ...(name !== undefined ? { name } : {}),
-      ...(args.description !== undefined
-        ? { description: args.description.trim() || undefined }
-        : {}),
-      ...(args.address !== undefined
-        ? { address: args.address.trim() || undefined }
-        : {}),
-      ...(args.geometryType !== undefined ||
-      args.lat !== undefined ||
-      args.lng !== undefined ||
-      args.boundary !== undefined
-        ? {
-            geometryType,
-            lat,
-            lng,
-            boundary,
-          }
-        : {}),
-      ...(args.category !== undefined ? { category: args.category } : {}),
-      ...(labelIds !== undefined ? { labelIds } : {}),
-      ...(args.tags !== undefined ? { tags: args.tags } : {}),
-      updatedAt: Date.now(),
-    })
-
-    return null
+    const now = Date.now();
+    return await ctx.db.insert("places", {
+      name: args.name.trim(),
+      description: args.description?.trim() || undefined,
+      address: args.address?.trim() || undefined,
+      lat: args.lat,
+      lng: args.lng,
+      geometryType: "polygon",
+      boundary: args.boundary,
+      type: args.type,
+      attributes: args.attributes,
+      status: "approved",
+      createdBy: userId,
+      createdAt: now,
+      updatedAt: now,
+    });
   },
-})
+});
 
-export const remove = mutation({
-  args: {
-    placeId: v.id("places"),
+/** Dev helper: catalog constants for clients that import via Convex. */
+export const catalog = query({
+  args: {},
+  handler: async () => {
+    return {
+      types: PLACE_TYPES,
+      attributes: PLACE_ATTRIBUTES,
+    };
   },
-  returns: v.null(),
-  handler: async (ctx, args) => {
-    await requireAdminUser(ctx)
-
-    const place = await ctx.db.get("places", args.placeId)
-    if (!place) {
-      throw new Error("Place not found")
-    }
-
-    const photos = await ctx.db
-      .query("photos")
-      .withIndex("by_place", (q) => q.eq("placeId", args.placeId))
-      .collect()
-
-    for (const photo of photos) {
-      await ctx.db.delete("photos", photo._id)
-    }
-
-    const comments = await ctx.db
-      .query("placeComments")
-      .withIndex("by_place", (q) => q.eq("placeId", args.placeId))
-      .collect()
-
-    for (const comment of comments) {
-      await ctx.db.delete("placeComments", comment._id)
-    }
-
-    const saved = await ctx.db.query("savedPlaces").collect()
-    for (const entry of saved) {
-      if (entry.placeId === args.placeId) {
-        await ctx.db.delete("savedPlaces", entry._id)
-      }
-    }
-
-    await ctx.db.delete("places", args.placeId)
-    return null
-  },
-})
+});
