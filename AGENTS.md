@@ -1,44 +1,53 @@
+<!-- BEGIN:nextjs-agent-rules -->
+
+## This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->
+
 # AGENTS.md
 
 ## Cursor Cloud specific instructions
 
-Happy Parent is a single TanStack Start (React 19 + Vite) web app backed by Convex
-(database/server functions) and Clerk (auth). Standard commands live in `README.md`
-and `package.json` scripts; this section only covers non-obvious caveats.
+Happy Parent is a Next.js App Router (React 19) web app on Vercel, backed by
+Convex (data) and Clerk (auth). MapLibre + OpenFreeMap power the public map;
+Terra Draw is admin-only. Standard commands live in `README.md` and
+`package.json` scripts.
 
-### Node version
+### Node and pnpm
 
-- `package.json` requires Node `>=24.15` (matches current Vercel Node 24.x images).
-  The VM's default `node` (`/exec-daemon/node`) is often older and ahead of nvm on
-  `PATH`, so plain `node`/`pnpm dev` may not match the engine. Prefer Node 24 via nvm
-  and prepend it for dev/build/test:
-  `export PATH="$HOME/.nvm/versions/node/v24.19.0/bin:$PATH"` (or `nvm use 24`).
+- Runtime pin is `devEngines.runtime` in `package.json` (Node `^24.15.0`, downloaded when the shell Node does not match). There is no `.nvmrc`.
+- `packageManager` is `pnpm@12.15.0`. On Node 24, `corepack enable` makes `pnpm` use that version. Build-script approval lives in `pnpm-workspace.yaml` `allowBuilds`.
+- A login shell on this VM can still print Node 22: nvm's default alias is `22.*`, and that bin is ahead of Node 24. `nvm alias default 24` then a new shell selects the installed Node 24. Project scripts follow `devEngines.runtime` either way.
 
-### Two long-running processes (run in separate terminals/tmux sessions)
+### Two long-running processes (separate terminals/tmux sessions)
 
-- Backend: `CONVEX_AGENT_MODE=anonymous pnpm dlx convex dev` — starts a **local**
-  anonymous Convex deployment (no login/account needed) on `http://127.0.0.1:3210` and
-  writes `CONVEX_DEPLOYMENT`, `VITE_CONVEX_URL`, `VITE_CONVEX_SITE_URL` into `.env.local`.
-  `CONVEX_AGENT_MODE=anonymous` is already provided as an env var in this environment.
-- Frontend: `pnpm dev` → http://localhost:3000 (must start after Convex has written
-  `VITE_CONVEX_URL`, otherwise the client falls back to a placeholder URL and data won't load).
+1. Backend: `CONVEX_AGENT_MODE=anonymous pnpm dlx convex dev` — local anonymous
+   Convex on `http://127.0.0.1:3210`. Writes `CONVEX_DEPLOYMENT`,
+   `NEXT_PUBLIC_CONVEX_URL` into `.env.local`. Answer `n` if asked to set up
+   Convex AI files.
+2. After Convex is up, set Clerk on the deployment:
+   `pnpm dlx convex env set CLERK_FRONTEND_API_URL "$CLERK_FRONTEND_API_URL"`
+   (`convex/auth.config.ts` reads that env var).
+3. Frontend: `pnpm dev` → http://localhost:3000 (start only after
+   `NEXT_PUBLIC_CONVEX_URL` exists).
 
 ### Gotchas
 
-- `pnpm dlx convex dev` is interactive on first run: it asks "Set up Convex AI files?"
-  — answer `n` (do not commit AI files). It also halts function push until
-  `CLERK_FRONTEND_API_URL` is set **on the Convex deployment**:
-  `pnpm dlx convex env set CLERK_FRONTEND_API_URL "$CLERK_FRONTEND_API_URL"` (the value
-  is available as an env var here). `convex/auth.config.ts` reads `CLERK_FRONTEND_API_URL`.
-- `.env.local` is gitignored. Clerk keys (`VITE_CLERK_PUBLISHABLE_KEY` or Marketplace
-  `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, plus `CLERK_SECRET_KEY`, `CLERK_FRONTEND_API_URL`)
-  are injected as env vars; copy them into `.env.local` for the Vite/SSR server. The app
-  aliases `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` → `VITE_`/`CLERK_PUBLISHABLE_KEY`.
-- Map tiles (`tiles.openfreemap.org`) and place search (`nominatim.openstreetmap.org`)
-  require outbound internet; both work from this VM. ImageKit (admin photo upload) is
-  optional and unconfigured by default — its config gracefully returns null.
+- `.env.local` is gitignored. Copy Clerk keys (`NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`,
+  `CLERK_SECRET_KEY`) and optional Sentry/PostHog keys from the environment.
+  `LOCATIONIQ_API_KEY` is reserved and unused in this slice.
+- Missing `NEXT_PUBLIC_SENTRY_DSN` or PostHog keys skips those clients; the map
+  still runs.
+- OpenFreeMap tiles require outbound internet.
+- Seed demo places from the CLI: `pnpm dlx convex run seed:run`. `seed:run` and
+  `seed:promoteMeAdmin` are internal mutations, so the public client cannot call them.
+- Promote a signed-in user to admin locally by setting `users.role` to `admin`
+  in the Convex dashboard Data tab.
 
-### Lint / test status
+### Lint / typecheck
 
-- Lint/format use Oxlint + Oxfmt (`pnpm lint` / `pnpm format` / `pnpm check`).
-- `pnpm typecheck` should pass. `pnpm test` (vitest) currently finds no test files.
+- `pnpm lint` (eslint) and `pnpm typecheck` (`tsc --noEmit`) should pass.

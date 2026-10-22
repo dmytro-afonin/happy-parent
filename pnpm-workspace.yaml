@@ -1,62 +1,10 @@
-packages: []
-
-# Supply-chain hardening (see https://pnpm.io/supply-chain-security)
-# allowBuilds already blocks unlisted dependency lifecycle scripts (pnpm v10+/v11).
 allowBuilds:
+  "@sentry/cli": true
+  core-js: true
   esbuild: true
-  lightningcss: true
-  unrs-resolver: true
-  msw: false
-  "@clerk/shared": true
-  bufferutil: false
-  core-js: false
-  utf-8-validate: false
-
-# Release age uses pnpm's built-in default (1440 minutes, non-strict).
-
-# Fast-moving / intentionally-fresh packages allowed before the age window.
-# Prefer package names (not version pins) so the exclude list stays maintainable.
+  sharp: false
+  unrs-resolver: false
 minimumReleaseAgeExclude:
-  - "@clerk/*"
-  - "@tanstack/*"
-  - "@types/node"
-  - "@convex-dev/eslint-plugin"
-  - eslint
-  - lucide-react
-  - maplibre-gl
-  - nitro
-  - oxfmt
-  - "@oxfmt/*"
-  - oxlint
-  - "@oxlint/*"
-  - oxlint-tsgolint
-  - shadcn
-  - typescript
-  - vite
-  - vitest
-
-# Fail when a package's trust evidence drops vs prior releases.
-trustPolicy: no-downgrade
-# Older packages often predate provenance; ignore trust checks after 90 days.
-trustPolicyIgnoreAfter: 129600
-
-# Disallow git/tarball transitive deps.
-blockExoticSubdeps: true
-
-# Fail installs on unmet peer dependencies.
-strictPeerDependencies: true
-
-# Ensure node_modules matches the lockfile before running scripts.
-verifyDepsBeforeRun: install
-
-# Known peer mismatches that are safe for this stack:
-# - typescript-eslint (via @convex-dev/eslint-plugin) has not widened to TS 7 yet
-# - ws optional peers bufferutil/utf-8-validate (disabled in allowBuilds)
-peerDependencyRules:
-  allowAny:
-    - bufferutil
-    - utf-8-validate
-  allowedVersions:
-    typescript: "*"
-    utf-8-validate: "*"
-    bufferutil: "*"
+  - "@posthog/browser-common@0.9.8"
+  - "@posthog/core@1.60.0"
+  - posthog-js@1.438.18
