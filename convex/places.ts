@@ -33,6 +33,44 @@ export const listApproved = query({
   },
 });
 
+const MAX_NAME_LENGTH = 120;
+const MAX_DESCRIPTION_LENGTH = 2_000;
+const MAX_ADDRESS_LENGTH = 300;
+
+function assertPlaceFields(input: {
+  name: string;
+  description?: string;
+  address?: string;
+  lat: number;
+  lng: number;
+  attributes: string[];
+}): void {
+  if (!input.name) {
+    throw new Error("Name is required");
+  }
+  if (input.name.length > MAX_NAME_LENGTH) {
+    throw new Error("Name is too long");
+  }
+  if (
+    input.description &&
+    input.description.length > MAX_DESCRIPTION_LENGTH
+  ) {
+    throw new Error("Description is too long");
+  }
+  if (input.address && input.address.length > MAX_ADDRESS_LENGTH) {
+    throw new Error("Address is too long");
+  }
+  if (!Number.isFinite(input.lat) || input.lat < -90 || input.lat > 90) {
+    throw new Error("Latitude is out of range");
+  }
+  if (!Number.isFinite(input.lng) || input.lng < -180 || input.lng > 180) {
+    throw new Error("Longitude is out of range");
+  }
+  if (input.attributes.length > PLACE_ATTRIBUTES.length) {
+    throw new Error("Too many attributes");
+  }
+}
+
 function assertCatalog(
   type: string,
   attributes: string[],
@@ -61,16 +99,23 @@ export const createPoint = mutation({
   handler: async (ctx, args) => {
     const { userId } = await requireUser(ctx);
     const name = args.name.trim();
-    if (!name) {
-      throw new Error("Name is required");
-    }
+    const description = args.description?.trim() || undefined;
+    const address = args.address?.trim() || undefined;
+    assertPlaceFields({
+      name,
+      description,
+      address,
+      lat: args.lat,
+      lng: args.lng,
+      attributes: args.attributes,
+    });
     assertCatalog(args.type, args.attributes);
 
     const now = Date.now();
     return await ctx.db.insert("places", {
       name,
-      description: args.description?.trim() || undefined,
-      address: args.address?.trim() || undefined,
+      description,
+      address,
       lat: args.lat,
       lng: args.lng,
       geometryType: "point",
@@ -111,15 +156,22 @@ export const createPolygon = mutation({
     }
 
     const name = args.name.trim();
-    if (!name) {
-      throw new Error("Name is required");
-    }
+    const description = args.description?.trim() || undefined;
+    const address = args.address?.trim() || undefined;
+    assertPlaceFields({
+      name,
+      description,
+      address,
+      lat: args.lat,
+      lng: args.lng,
+      attributes: args.attributes,
+    });
 
     const now = Date.now();
     return await ctx.db.insert("places", {
       name,
-      description: args.description?.trim() || undefined,
-      address: args.address?.trim() || undefined,
+      description,
+      address,
       lat: args.lat,
       lng: args.lng,
       geometryType: "polygon",
