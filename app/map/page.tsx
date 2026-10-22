@@ -130,15 +130,17 @@ export default function MapPage() {
         </Authenticated>
       </aside>
 
-      <section className="relative min-h-[50vh] flex-1 lg:min-h-0">
-        <MapView
-          places={filtered}
-          selectedId={selectedId}
-          onSelect={setSelectedId}
-        />
+      <section className="relative min-h-[50vh] flex-1 lg:min-h-[calc(100vh-3.5rem)]">
+        <div className="absolute inset-0">
+          <MapView
+            places={filtered}
+            selectedId={selectedId}
+            onSelect={setSelectedId}
+          />
+        </div>
         <Link
           href="/admin"
-          className="absolute bottom-4 left-4 rounded-md bg-white/95 px-3 py-1.5 text-xs font-medium text-[var(--ink)] shadow ring-1 ring-[var(--line)]"
+          className="absolute bottom-4 left-4 z-10 rounded-md bg-white/95 px-3 py-1.5 text-xs font-medium text-[var(--ink)] shadow ring-1 ring-[var(--line)]"
         >
           Admin draw
         </Link>

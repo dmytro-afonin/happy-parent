@@ -177,7 +177,13 @@ export function MapView({ places, selectedId, onSelect }: Props) {
     map.addControl(new NavigationControl(), "top-right");
     mapRef.current = map;
 
+    const resize = () => map.resize();
+    resize();
+    const ro = new ResizeObserver(resize);
+    ro.observe(containerRef.current);
+
     map.on("load", () => {
+      resize();
       addPinImage(map);
       ensureLayers(map);
       const source = map.getSource("places") as GeoJSONSource;
@@ -201,6 +207,7 @@ export function MapView({ places, selectedId, onSelect }: Props) {
     });
 
     return () => {
+      ro.disconnect();
       map.off("click", handleClick);
       map.remove();
       mapRef.current = null;
