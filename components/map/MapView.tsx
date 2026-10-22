@@ -8,6 +8,7 @@ import {
 } from "maplibre-gl";
 import { useEffect, useRef } from "react";
 import type { ApprovedPlace } from "@/lib/filter-places";
+import { ensureMapLibreWorker } from "@/lib/maplibre";
 import "maplibre-gl/dist/maplibre-gl.css";
 
 const WARSAW: [number, number] = [21.0122, 52.2297];
@@ -168,6 +169,7 @@ export function MapView({ places, selectedId, onSelect }: Props) {
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
 
+    ensureMapLibreWorker();
     const map = new MapLibreMap({
       container: containerRef.current,
       style: STYLE_URL,

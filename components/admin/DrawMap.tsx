@@ -5,6 +5,7 @@ import { useEffect, useRef } from "react";
 import { TerraDraw, TerraDrawPolygonMode } from "terra-draw";
 import { TerraDrawMapLibreGLAdapter } from "terra-draw-maplibre-gl-adapter";
 import { ringCentroid } from "@/lib/geo";
+import { ensureMapLibreWorker } from "@/lib/maplibre";
 import "maplibre-gl/dist/maplibre-gl.css";
 
 const WARSAW: [number, number] = [21.0122, 52.2297];
@@ -31,6 +32,7 @@ export function DrawMap({ onPolygon }: Props) {
   useEffect(() => {
     if (!containerRef.current) return;
 
+    ensureMapLibreWorker();
     const map = new MapLibreMap({
       container: containerRef.current,
       style: STYLE_URL,
