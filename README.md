@@ -55,13 +55,14 @@ pnpm dlx convex run --component migrations lib:getStatus --prod
 
 Migrations run from [`scripts/vercel-build.sh`](scripts/vercel-build.sh):
 
-- **Preview** — recreate branch preview (`--preview-create`) then
-  `--preview-run migrations:runAll` (Convex skips `--preview-run` on reused
-  previews; recreate makes every push a new deployment)
-- **Production** — after deploy, `convex run migrations:runAll`
+- **Preview** — `--preview-run migrations:runAll` on newly created previews
+  only (reused branch previews skip it; do not `--preview-create` every
+  build — that wipes Clerk env on the Convex deployment)
+- **Production** — after deploy, `convex run migrations:runAll` (always)
 
 Production `CONVEX_DEPLOY_KEY` must include run/write permissions
 (`deployment:functions:runInternalMutations`, `deployment:data:write`).
+Set Convex project **preview** env defaults for `CLERK_FRONTEND_API_URL`.
 
 Register migrations in `POST_DEPLOY_MIGRATIONS` inside `convex/migrations.ts`.
 Manual: `pnpm migrate:prod` (includes `--prod`).

@@ -63,12 +63,15 @@ Schema validation stays on. Breaking field renames / required fields must use
 
 Build uses [`scripts/vercel-build.sh`](scripts/vercel-build.sh):
 
-- **Preview** — `convex deploy --preview-create <branch> --preview-run
-  migrations:runAll`. Convex only runs `--preview-run` on *new* preview
-  deployments, so we recreate the branch preview each build (preview data
-  is wiped). Do not bare-`convex run` on preview (`ServiceTokenNotAllowed`).
+- **Preview** — `convex deploy --preview-run migrations:runAll`. Convex only
+  runs `--preview-run` when the preview is newly created (reuse skips it).
+  Do **not** `--preview-create` on every build: that drops deployment env
+  (`CLERK_FRONTEND_API_URL`) and wipes preview data. Set project-level
+  **preview** env defaults in the Convex dashboard for Clerk. Do not
+  bare-`convex run` on preview (`ServiceTokenNotAllowed`).
 - **Production** — `convex deploy` then `convex run migrations:runAll`.
   Production deploy keys (`prod:…`) act as admin keys and can run functions.
+  This is the path that must always migrate existing data.
 
 Production `CONVEX_DEPLOY_KEY` in Vercel must allow at least
 `deployment:deploy`, `deployment:functions:runInternalMutations`, and
