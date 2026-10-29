@@ -11,7 +11,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "migrate:prod": "convex run migrations:runAll"
   },
   "dependencies": {
     "@clerk/nextjs": "^7.9.19",

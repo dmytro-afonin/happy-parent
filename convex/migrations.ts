@@ -6,11 +6,12 @@
  * - Never turn off schema validation to force a deploy. Use expand → migrate → contract.
  * - Always dry-run on prod first:
  *     `pnpm dlx convex run migrations:<name> '{"dryRun":true}' --prod`
- * - Append finished migrations to `POST_DEPLOY_MIGRATIONS` so preview deploys
- *   (via `--preview-run`) and manual prod runs replay safely (already-done skip).
- * - Do not chain `convex run` after `convex deploy` in Vercel CI: deploy keys
- *   get ServiceTokenNotAllowed on `provision_and_authorize`. Use `--preview-run`
- *   for previews; run prod migrations with a logged-in member CLI.
+ * - Append finished migrations to `POST_DEPLOY_MIGRATIONS` so deploys replay
+ *   safely (already-done migrations are skipped).
+ * - Preview CI: `--preview-run migrations:runAll` (preview keys cannot
+ *   `convex run` — that hits ServiceTokenNotAllowed).
+ * - Production CI: after deploy, `convex run migrations:runAll` when
+ *   VERCEL_ENV=production (prod deploy key must allow runInternalMutations).
  *
  * Expand → migrate → contract:
  * 1. Widen schema (optional/union) + dual-read/write in app code; deploy.

@@ -61,18 +61,25 @@ Schema validation stays on. Breaking field renames / required fields must use
 3. **Contract** — narrow schema + code to the new shape; deploy. Convex blocks the
    push if docs still mismatch (that is the safety net).
 
-`vercel.json` uses `convex deploy ... --preview-run 'migrations:runAll'`.
-That runs migrations on **preview** deployments only (supported with a
-preview deploy key). Do **not** chain `&& convex run ...` in the Vercel
-build — `CONVEX_DEPLOY_KEY` can deploy but `convex run` hits
-`provision_and_authorize` and fails with `ServiceTokenNotAllowed`.
+`vercel.json` build command:
 
-For **production**, after deploy (or when you add a migration), run as a
-logged-in team member:
-`pnpm dlx convex run migrations:runAll --prod`
+1. `convex deploy ... --preview-run 'migrations:runAll'` — always; the
+   `--preview-run` only executes on **preview** backends.
+2. If `VERCEL_ENV=production`, also `convex run migrations:runAll`.
+
+Production deploy keys (`prod:…`) act as the deployment admin key and can
+run functions. Preview deploy keys cannot — never run a bare `convex run`
+on preview CI (that caused `ServiceTokenNotAllowed`).
+
+Production `CONVEX_DEPLOY_KEY` in Vercel must allow at least
+`deployment:deploy`, `deployment:functions:runInternalMutations`, and
+`deployment:data:write`. Regenerate the key in Convex dashboard if the
+marketplace key is deploy-only.
+
 Append idempotent, non-destructive migrations to `POST_DEPLOY_MIGRATIONS`
 in `convex/migrations.ts` (empty list is a safe no-op). Status:
 `pnpm dlx convex run --component migrations lib:getStatus --prod`.
+Manual fallback: `pnpm migrate:prod` with a prod deploy key in the env.
 
 Dashboard **Clear table** / bulk deletes are emergency-only, not a migration path.
 `seed:run` is idempotent insert-only — it must never delete places.

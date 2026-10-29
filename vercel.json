@@ -1,5 +1,5 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "nextjs",
-  "buildCommand": "pnpm exec convex deploy --cmd 'pnpm run build' --preview-run 'migrations:runAll'"
+  "buildCommand": "pnpm exec convex deploy --cmd 'pnpm run build' --preview-run 'migrations:runAll' && if [ \"$VERCEL_ENV\" = production ]; then pnpm exec convex run migrations:runAll; fi"
 }
