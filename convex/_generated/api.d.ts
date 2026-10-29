@@ -9,6 +9,7 @@
  */
 
 import type * as lib_catalog from "../lib/catalog.js";
+import type * as migrations from "../migrations.js";
 import type * as places from "../places.js";
 import type * as seed from "../seed.js";
 import type * as users from "../users.js";
@@ -21,6 +22,7 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   "lib/catalog": typeof lib_catalog;
+  migrations: typeof migrations;
   places: typeof places;
   seed: typeof seed;
   users: typeof users;
@@ -52,4 +54,6 @@ export declare const internal: FilterApi<
   FunctionReference<any, "internal">
 >;
 
-export declare const components: {};
+export declare const components: {
+  migrations: import("@convex-dev/migrations/_generated/component.js").ComponentApi<"migrations">;
+};

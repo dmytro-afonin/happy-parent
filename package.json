@@ -11,10 +11,12 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "migrate:prod": "convex run migrations:runAll --prod"
   },
   "dependencies": {
     "@clerk/nextjs": "^7.9.19",
+    "@convex-dev/migrations": "^0.3.7",
     "@sentry/nextjs": "^11.8.0",
     "convex": "^1.47.0",
     "maplibre-gl": "^6.15.0",

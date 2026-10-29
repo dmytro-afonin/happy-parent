@@ -48,6 +48,44 @@ Terra Draw is admin-only. Standard commands live in `README.md` and
 - Promote a signed-in user to admin locally by setting `users.role` to `admin`
   in the Convex dashboard Data tab.
 
+### Convex migrations (do not wipe prod)
+
+Use `@convex-dev/migrations` in [`convex/migrations.ts`](convex/migrations.ts).
+Schema validation stays on. Breaking field renames / required fields must use
+**expand → migrate → contract** — never clear tables to unblock deploy.
+
+1. **Expand** — widen schema (optional/union) and dual-read/write in app code; deploy.
+2. **Migrate** — add `migrations.define` in `convex/migrations.ts`, deploy, then:
+   - dry-run: `pnpm dlx convex run migrations:<name> '{"dryRun":true}' --prod`
+   - run: `pnpm dlx convex run migrations:<name> --prod` (or rely on `migrations:runAll`)
+3. **Contract** — narrow schema + code to the new shape; deploy. Convex blocks the
+   push if docs still mismatch (that is the safety net).
+
+Build uses [`scripts/vercel-build.sh`](scripts/vercel-build.sh):
+
+- **Preview** — `convex deploy --preview-run migrations:runAll`. Convex only
+  runs `--preview-run` when the preview is newly created (reuse skips it).
+  Do **not** `--preview-create` on every build: that drops deployment env
+  (`CLERK_FRONTEND_API_URL`) and wipes preview data. Set project-level
+  **preview** env defaults in the Convex dashboard for Clerk. Do not
+  bare-`convex run` on preview (`ServiceTokenNotAllowed`).
+- **Production** — `convex deploy` then `convex run migrations:runAll`.
+  Production deploy keys (`prod:…`) act as admin keys and can run functions.
+  This is the path that must always migrate existing data.
+
+Production `CONVEX_DEPLOY_KEY` in Vercel must allow at least
+`deployment:deploy`, `deployment:functions:runInternalMutations`, and
+`deployment:data:write`.
+
+Append idempotent, non-destructive migrations to `POST_DEPLOY_MIGRATIONS`
+in `convex/migrations.ts` (empty list is a safe no-op). Status:
+`pnpm dlx convex run --component migrations lib:getStatus --prod`.
+Manual fallback: `pnpm migrate:prod` (passes `--prod`; needs member login
+or a prod deploy key).
+
+Dashboard **Clear table** / bulk deletes are emergency-only, not a migration path.
+`seed:run` is idempotent insert-only — it must never delete places.
+
 ### Lint / typecheck
 
 - `pnpm lint` (eslint) and `pnpm typecheck` (`tsc --noEmit`) should pass.
