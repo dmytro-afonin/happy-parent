@@ -5,14 +5,14 @@ data, Clerk for sign-in, MapLibre + OpenFreeMap for the map.
 
 ## Stack
 
-- Next.js (App Router), Node 24, pnpm
+- Next.js (App Router), Node 26, pnpm
 - Convex, Clerk, Sentry (optional), PostHog (optional)
 - MapLibre + OpenFreeMap; Terra Draw on `/admin` only
 
 ## Local development
 
 ```bash
-# Node 24 with Corepack. packageManager pins pnpm@12.15.0.
+# Node 26 with Corepack. packageManager pins pnpm@12.16.1.
 corepack enable
 pnpm install
 
