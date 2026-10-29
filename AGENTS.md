@@ -21,6 +21,7 @@ Terra Draw is admin-only. Standard commands live in `README.md` and
 
 - Runtime pin is `devEngines.runtime` in `package.json` (Node `^26.13.0`, downloaded when the shell Node does not match). `engines.node` is `26.x` so Vercel stays on the Node 26 major and does not float forward when the next major is released. There is no `.nvmrc`.
 - `packageManager` is `pnpm@12.16.1`. `corepack enable` makes pnpm use that version. Build-script approval lives in `pnpm-workspace.yaml` `allowBuilds`.
+- Install with `pnpm install --frozen-lockfile` so a stale `pnpm-lock.yaml` fails instead of being rewritten.
 - This VM's nvm default is Node 26.13.0 LTS. Login shells prepend that binary ahead of `/exec-daemon/node`. Project scripts follow `devEngines.runtime` either way.
 - `pnpm typecheck` runs TypeScript 7 (`@typescript/native`, binary `tsc`). The `typescript` package stays on `@typescript/typescript6` so `typescript-eslint` can import the compiler API. ESLint stays on 9.x: `eslint-plugin-import`, `eslint-plugin-jsx-a11y`, and `eslint-plugin-react` do not accept ESLint 10 yet.
 

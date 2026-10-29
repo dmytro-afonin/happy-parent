@@ -14,7 +14,7 @@ data, Clerk for sign-in, MapLibre + OpenFreeMap for the map.
 ```bash
 # Node 26 with Corepack. packageManager pins pnpm@12.16.1.
 corepack enable
-pnpm install
+pnpm install --frozen-lockfile
 
 # Terminal 1 — Convex (writes NEXT_PUBLIC_CONVEX_URL into .env.local)
 CONVEX_AGENT_MODE=anonymous pnpm dlx convex dev
