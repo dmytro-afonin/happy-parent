@@ -61,9 +61,17 @@ Schema validation stays on. Breaking field renames / required fields must use
 3. **Contract** — narrow schema + code to the new shape; deploy. Convex blocks the
    push if docs still mismatch (that is the safety net).
 
-`vercel.json` runs `migrations:runAll` after `convex deploy`. Append
-idempotent, non-destructive migrations to `POST_DEPLOY_MIGRATIONS` in
-`convex/migrations.ts` (empty list is a safe no-op). Status:
+`vercel.json` uses `convex deploy ... --preview-run 'migrations:runAll'`.
+That runs migrations on **preview** deployments only (supported with a
+preview deploy key). Do **not** chain `&& convex run ...` in the Vercel
+build — `CONVEX_DEPLOY_KEY` can deploy but `convex run` hits
+`provision_and_authorize` and fails with `ServiceTokenNotAllowed`.
+
+For **production**, after deploy (or when you add a migration), run as a
+logged-in team member:
+`pnpm dlx convex run migrations:runAll --prod`
+Append idempotent, non-destructive migrations to `POST_DEPLOY_MIGRATIONS`
+in `convex/migrations.ts` (empty list is a safe no-op). Status:
 `pnpm dlx convex run --component migrations lib:getStatus --prod`.
 
 Dashboard **Clear table** / bulk deletes are emergency-only, not a migration path.
