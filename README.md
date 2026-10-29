@@ -40,6 +40,22 @@ pnpm dlx convex run seed:run
 | `pnpm lint` | ESLint |
 | `pnpm build` | Production build |
 
+## Convex migrations
+
+Schema changes that rename or require fields must go through
+**expand → migrate → contract** (see `convex/migrations.ts` and `AGENTS.md`).
+Do not clear production tables to unblock a deploy.
+
+```bash
+# After defining migrations.define(...) and deploying:
+pnpm dlx convex run migrations:myMigration '{"dryRun":true}' --prod
+pnpm dlx convex run migrations:myMigration --prod
+pnpm dlx convex run --component migrations lib:getStatus --prod
+```
+
+Production builds run `migrations:runAll` after `convex deploy` (see `vercel.json`).
+Register migrations in `POST_DEPLOY_MIGRATIONS` inside `convex/migrations.ts`.
+
 ## Env
 
 See `.env.example`. Required for a working map + auth:

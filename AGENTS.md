@@ -48,6 +48,27 @@ Terra Draw is admin-only. Standard commands live in `README.md` and
 - Promote a signed-in user to admin locally by setting `users.role` to `admin`
   in the Convex dashboard Data tab.
 
+### Convex migrations (do not wipe prod)
+
+Use `@convex-dev/migrations` in [`convex/migrations.ts`](convex/migrations.ts).
+Schema validation stays on. Breaking field renames / required fields must use
+**expand → migrate → contract** — never clear tables to unblock deploy.
+
+1. **Expand** — widen schema (optional/union) and dual-read/write in app code; deploy.
+2. **Migrate** — add `migrations.define` in `convex/migrations.ts`, deploy, then:
+   - dry-run: `pnpm dlx convex run migrations:<name> '{"dryRun":true}' --prod`
+   - run: `pnpm dlx convex run migrations:<name> --prod` (or rely on `migrations:runAll`)
+3. **Contract** — narrow schema + code to the new shape; deploy. Convex blocks the
+   push if docs still mismatch (that is the safety net).
+
+`vercel.json` runs `migrations:runAll` after `convex deploy`. Append
+idempotent, non-destructive migrations to `POST_DEPLOY_MIGRATIONS` in
+`convex/migrations.ts` (empty list is a safe no-op). Status:
+`pnpm dlx convex run --component migrations lib:getStatus --prod`.
+
+Dashboard **Clear table** / bulk deletes are emergency-only, not a migration path.
+`seed:run` is idempotent insert-only — it must never delete places.
+
 ### Lint / typecheck
 
 - `pnpm lint` (eslint) and `pnpm typecheck` (`tsc --noEmit`) should pass.
