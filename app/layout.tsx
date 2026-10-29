@@ -1,8 +1,14 @@
 import type { Metadata } from "next";
-import { Fraunces, Source_Sans_3 } from "next/font/google";
+import { Fraunces, Source_Sans_3, Lora } from "next/font/google";
 import { AppProviders } from "@/components/providers/AppProviders";
 import { SiteHeader } from "@/components/SiteHeader";
 import "./globals.css";
+import { cn } from "@/lib/utils";
+
+const loraHeading = Lora({
+  subsets: ["latin", "latin-ext", "cyrillic", "cyrillic-ext"],
+  variable: "--font-heading",
+});
 
 const display = Fraunces({
   variable: "--font-display",
@@ -10,9 +16,9 @@ const display = Fraunces({
   axes: ["SOFT", "WONK", "opsz"],
 });
 
-const sans = Source_Sans_3({
+const sourceSans3 = Source_Sans_3({
+  subsets: ["latin", "latin-ext", "cyrillic", "cyrillic-ext"],
   variable: "--font-sans",
-  subsets: ["latin"],
 });
 
 export const metadata: Metadata = {
@@ -26,7 +32,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${display.variable} ${sans.variable} h-full`}>
+    <html lang="en" className={cn("h-full", display.variable, "font-sans", sourceSans3.variable, loraHeading.variable)}>
       <body className="min-h-full flex flex-col font-[family-name:var(--font-sans)] antialiased">
         <AppProviders>
           <SiteHeader />

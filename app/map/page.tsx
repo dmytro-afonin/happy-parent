@@ -59,7 +59,7 @@ export default function MapPage() {
           <button
             type="button"
             onClick={requestLocation}
-            className="text-xs text-[var(--accent)] underline-offset-2 hover:underline"
+            className="text-xs text-primary underline-offset-2 hover:underline"
           >
             {location ? "Sorted by distance" : "Use my location"}
           </button>
@@ -117,7 +117,7 @@ export default function MapPage() {
             <SignInButton mode="modal">
               <button
                 type="button"
-                className="text-[var(--accent)] underline-offset-2 hover:underline"
+                className="text-primary underline-offset-2 hover:underline"
               >
                 Sign in
               </button>

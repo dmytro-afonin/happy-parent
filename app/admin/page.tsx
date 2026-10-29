@@ -81,7 +81,7 @@ export default function AdminPage() {
     return (
       <main className="mx-auto max-w-3xl px-4 py-10">
         <p className="text-[var(--ink)]">Sign in required for admin.</p>
-        <Link href="/sign-in" className="text-[var(--accent)] underline">
+        <Link href="/sign-in" className="text-primary underline">
           Sign in
         </Link>
       </main>
@@ -98,7 +98,7 @@ export default function AdminPage() {
           Your Convex role is <code className="text-[var(--ink)]">{me?.role ?? "unknown"}</code>.
           An admin must promote your user before you can draw areas.
         </p>
-        <Link href="/map" className="mt-4 inline-block text-[var(--accent)] underline">
+        <Link href="/map" className="mt-4 inline-block text-primary underline">
           Back to map
         </Link>
       </main>
@@ -117,7 +117,7 @@ export default function AdminPage() {
             it without loading Terra Draw.
           </p>
         </div>
-        <Link href="/map" className="text-sm text-[var(--accent)] underline">
+        <Link href="/map" className="text-sm text-primary underline">
           Public map
         </Link>
       </div>
@@ -188,7 +188,7 @@ export default function AdminPage() {
         <button
           type="submit"
           disabled={busy}
-          className="rounded-md bg-[var(--accent)] px-4 py-2 text-sm font-medium text-white disabled:opacity-60 md:col-span-2 md:w-fit"
+          className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-60 md:col-span-2 md:w-fit"
         >
           {busy ? "Saving…" : "Save area"}
         </button>
