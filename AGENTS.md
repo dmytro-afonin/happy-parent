@@ -19,9 +19,10 @@ Terra Draw is admin-only. Standard commands live in `README.md` and
 
 ### Node and pnpm
 
-- Runtime pin is `devEngines.runtime` in `package.json` (Node `^24.15.0`, downloaded when the shell Node does not match). There is no `.nvmrc`.
-- `packageManager` is `pnpm@12.15.0`. On Node 24, `corepack enable` makes `pnpm` use that version. Build-script approval lives in `pnpm-workspace.yaml` `allowBuilds`.
-- A login shell on this VM can still print Node 22: nvm's default alias is `22.*`, and that bin is ahead of Node 24. `nvm alias default 24` then a new shell selects the installed Node 24. Project scripts follow `devEngines.runtime` either way.
+- Runtime pin is `devEngines.runtime` in `package.json` (Node `^26.13.0`, downloaded when the shell Node does not match). `engines.node` is `26.x` so Vercel stays on the Node 26 major and does not float forward when the next major is released. There is no `.nvmrc`.
+- `packageManager` is `pnpm@12.16.1`. `corepack enable` makes pnpm use that version. Build-script approval lives in `pnpm-workspace.yaml` `allowBuilds`.
+- This VM's nvm default is Node 26.13.0 LTS. Login shells prepend that binary ahead of `/exec-daemon/node`. Project scripts follow `devEngines.runtime` either way.
+- `pnpm typecheck` runs TypeScript 7 (`@typescript/native`, binary `tsc`). The `typescript` package stays on `@typescript/typescript6` so `typescript-eslint` can import the compiler API. ESLint stays on 9.x: `eslint-plugin-import`, `eslint-plugin-jsx-a11y`, and `eslint-plugin-react` do not accept ESLint 10 yet.
 
 ### Two long-running processes (separate terminals/tmux sessions)
 
