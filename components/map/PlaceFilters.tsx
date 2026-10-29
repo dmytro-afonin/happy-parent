@@ -48,7 +48,7 @@ export function PlaceFiltersBar({
           value={text}
           onChange={(e) => onText(e.target.value)}
           placeholder="Name, address…"
-          className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-[var(--ink)] outline-none focus:border-[var(--accent)]"
+          className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-[var(--ink)] outline-none focus:border-primary"
         />
       </label>
 
@@ -64,7 +64,7 @@ export function PlaceFiltersBar({
                 onClick={() => onGroups(toggle(groups, group))}
                 className={`rounded-md px-3 py-1.5 text-sm transition ${
                   active
-                    ? "bg-[var(--accent)] text-white"
+                    ? "bg-primary text-primary-foreground"
                     : "bg-white text-[var(--ink)] ring-1 ring-[var(--line)]"
                 }`}
               >
@@ -110,7 +110,7 @@ export function PlaceFiltersBar({
                 key={attr}
                 className={`flex cursor-pointer items-center gap-2 rounded-md px-3 py-1.5 text-sm ring-1 ${
                   active
-                    ? "bg-[var(--accent-soft)] ring-[var(--accent)]"
+                    ? "bg-[var(--accent-soft)] ring-primary"
                     : "bg-white ring-[var(--line)]"
                 }`}
               >
@@ -118,7 +118,7 @@ export function PlaceFiltersBar({
                   type="checkbox"
                   checked={active}
                   onChange={() => onAttributes(toggle(attributes, attr))}
-                  className="accent-[var(--accent)]"
+                  className="accent-primary"
                 />
                 {PLACE_ATTRIBUTE_LABELS[attr]}
               </label>

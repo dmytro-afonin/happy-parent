@@ -26,7 +26,7 @@ export default function HomePage() {
         <div className="mt-10 flex animate-[fade-up_0.85s_ease_0.24s_both] flex-wrap gap-3">
           <Link
             href="/map"
-            className="rounded-md bg-[var(--accent)] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:brightness-110"
+            className="rounded-md bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground shadow-sm transition hover:brightness-110"
           >
             Open the map
           </Link>
