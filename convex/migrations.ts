@@ -8,10 +8,11 @@
  *     `pnpm dlx convex run migrations:<name> '{"dryRun":true}' --prod`
  * - Append finished migrations to `POST_DEPLOY_MIGRATIONS` so deploys replay
  *   safely (already-done migrations are skipped).
- * - Preview CI: `--preview-run migrations:runAll` (preview keys cannot
- *   `convex run` — that hits ServiceTokenNotAllowed).
- * - Production CI: after deploy, `convex run migrations:runAll` when
- *   VERCEL_ENV=production (prod deploy key must allow runInternalMutations).
+ * - Preview CI (`scripts/vercel-build.sh`): `--preview-create` + `--preview-run`
+ *   so migrations run on every preview push (Convex only runs `--preview-run`
+ *   for newly created previews). Preview keys cannot bare-`convex run`.
+ * - Production CI: after deploy, `convex run migrations:runAll` (prod deploy
+ *   key must allow runInternalMutations). Manual: `pnpm migrate:prod`.
  *
  * Expand → migrate → contract:
  * 1. Widen schema (optional/union) + dual-read/write in app code; deploy.

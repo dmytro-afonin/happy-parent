@@ -53,18 +53,18 @@ pnpm dlx convex run migrations:myMigration --prod
 pnpm dlx convex run --component migrations lib:getStatus --prod
 ```
 
-Migrations run automatically from the Vercel build (see `vercel.json`):
+Migrations run from [`scripts/vercel-build.sh`](scripts/vercel-build.sh):
 
-- **Preview** — `--preview-run migrations:runAll`
-- **Production** — after deploy, `convex run migrations:runAll` when
-  `VERCEL_ENV=production`
+- **Preview** — recreate branch preview (`--preview-create`) then
+  `--preview-run migrations:runAll` (Convex skips `--preview-run` on reused
+  previews; recreate makes every push a new deployment)
+- **Production** — after deploy, `convex run migrations:runAll`
 
 Production `CONVEX_DEPLOY_KEY` must include run/write permissions
-(`deployment:functions:runInternalMutations`, `deployment:data:write`), not
-deploy-only. Preview keys must not be used for bare `convex run`.
+(`deployment:functions:runInternalMutations`, `deployment:data:write`).
 
 Register migrations in `POST_DEPLOY_MIGRATIONS` inside `convex/migrations.ts`.
-Manual: `pnpm migrate:prod` with a prod deploy key set.
+Manual: `pnpm migrate:prod` (includes `--prod`).
 
 ## Env
 

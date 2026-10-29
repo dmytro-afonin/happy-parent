@@ -12,7 +12,7 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "migrate:prod": "convex run migrations:runAll"
+    "migrate:prod": "convex run migrations:runAll --prod"
   },
   "dependencies": {
     "@clerk/nextjs": "^7.9.19",

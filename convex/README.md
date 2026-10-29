@@ -14,6 +14,6 @@ See [`migrations.ts`](./migrations.ts). Component is registered in
 [`convex.config.ts`](./convex.config.ts).
 
 Never wipe tables to fix schema mismatches. Widen the schema, migrate documents
-in batches, then narrow. Vercel runs preview migrations via `--preview-run`
-and production migrations via `convex run` when `VERCEL_ENV=production`
-(requires a production deploy key with run/write permissions).
+in batches, then narrow. See `scripts/vercel-build.sh`: preview recreates the
+branch deployment so `--preview-run` always runs; production uses
+`convex run` with a prod deploy key that has run/write permissions.
