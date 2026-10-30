@@ -14,12 +14,12 @@ data, Clerk for sign-in, MapLibre + OpenFreeMap for the map.
 ```bash
 # Node 26 with Corepack. packageManager pins pnpm@12.16.1.
 corepack enable
-pnpm install
+pnpm install --frozen-lockfile
 
 # Terminal 1 — Convex (writes NEXT_PUBLIC_CONVEX_URL into .env.local)
-CONVEX_AGENT_MODE=anonymous pnpm dlx convex dev
+CONVEX_AGENT_MODE=anonymous pnpm exec convex dev
 # When prompted about AI files: answer n
-pnpm dlx convex env set CLERK_FRONTEND_API_URL "$CLERK_FRONTEND_API_URL"
+pnpm exec convex env set CLERK_FRONTEND_API_URL "$CLERK_FRONTEND_API_URL"
 
 # Terminal 2 — Next.js
 pnpm dev
@@ -28,8 +28,11 @@ pnpm dev
 Open http://localhost:3000. Seed demo places:
 
 ```bash
-pnpm dlx convex run seed:run
+pnpm exec convex run seed:run
 ```
+
+Cloud Agents use `scripts/cloud-agent-install.sh` and `scripts/cloud-agent-start.sh`
+(anonymous Convex + Next on ports 3210 / 3000).
 
 ## Scripts
 

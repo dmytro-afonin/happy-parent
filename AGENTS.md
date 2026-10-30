@@ -26,15 +26,23 @@ Terra Draw is admin-only. Standard commands live in `README.md` and
 
 ### Two long-running processes (separate terminals/tmux sessions)
 
-1. Backend: `CONVEX_AGENT_MODE=anonymous pnpm dlx convex dev` — local anonymous
+1. Backend: `CONVEX_AGENT_MODE=anonymous pnpm exec convex dev` — local anonymous
    Convex on `http://127.0.0.1:3210`. Writes `CONVEX_DEPLOYMENT`,
    `NEXT_PUBLIC_CONVEX_URL` into `.env.local`. Answer `n` if asked to set up
-   Convex AI files.
+   Convex AI files. Prefer `pnpm exec` (project dep) over `pnpm dlx` so pnpm
+   does not prompt to approve build scripts.
 2. After Convex is up, set Clerk on the deployment:
-   `pnpm dlx convex env set CLERK_FRONTEND_API_URL "$CLERK_FRONTEND_API_URL"`
+   `pnpm exec convex env set CLERK_FRONTEND_API_URL "$CLERK_FRONTEND_API_URL"`
    (`convex/auth.config.ts` reads that env var).
 3. Frontend: `pnpm dev` → http://localhost:3000 (start only after
    `NEXT_PUBLIC_CONVEX_URL` exists).
+
+Cloud Agent environment `install` / `start` run
+`scripts/cloud-agent-install.sh` (`pnpm install --frozen-lockfile`) and
+`scripts/cloud-agent-start.sh` (writes Clerk into `.env.local`, anonymous
+Convex on `:3210`, seeds places, Next on `:3000`). Do not inject
+`CONVEX_DEPLOYMENT` / `NEXT_PUBLIC_CONVEX_URL` as secrets — local Convex owns
+those. Keep Clerk secrets + `CONVEX_AGENT_MODE=anonymous`.
 
 ### Gotchas
 
@@ -44,7 +52,7 @@ Terra Draw is admin-only. Standard commands live in `README.md` and
 - Missing `NEXT_PUBLIC_SENTRY_DSN` or PostHog keys skips those clients; the map
   still runs.
 - OpenFreeMap tiles require outbound internet.
-- Seed demo places from the CLI: `pnpm dlx convex run seed:run`. `seed:run` and
+- Seed demo places from the CLI: `pnpm exec convex run seed:run`. `seed:run` and
   `seed:promoteMeAdmin` are internal mutations, so the public client cannot call them.
 - Promote a signed-in user to admin locally by setting `users.role` to `admin`
   in the Convex dashboard Data tab.
