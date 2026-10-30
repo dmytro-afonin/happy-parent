@@ -108,6 +108,47 @@ body {
   font: inherit;
 }
 
+/* Shared interactive affordances (admin + marketing) */
+.ui-interactive {
+  transition:
+    background-color 140ms ease,
+    color 140ms ease,
+    box-shadow 140ms ease,
+    border-color 140ms ease,
+    transform 120ms ease,
+    filter 140ms ease;
+}
+
+.ui-interactive:hover {
+  filter: brightness(1.03);
+}
+
+.ui-interactive:active {
+  transform: scale(0.985);
+}
+
+.ui-interactive:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.ui-row {
+  transition: background-color 120ms ease;
+}
+
+.ui-row:hover {
+  background: var(--accent-soft);
+}
+
+.ui-row:active {
+  background: color-mix(in oklab, var(--accent-soft) 70%, var(--primary) 8%);
+}
+
+.ui-row:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
+}
+
 .dark {
   --background: oklch(0.147 0.004 49.25);
   --foreground: oklch(0.985 0.001 106.423);

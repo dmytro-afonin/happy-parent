@@ -1,6 +1,7 @@
 "use client";
 
-import { Clock, Heart, MapPin, Search, Tag } from "lucide-react";
+import { SignInButton, UserButton, useAuth } from "@clerk/nextjs";
+import { Clock, Heart, MapPin, Menu, Search, Tag, X } from "lucide-react";
 import type { CatalogItem } from "@/lib/catalog";
 import type { PublicPlace } from "@/lib/filter-places";
 import type { Recent } from "@/lib/recents";
@@ -13,6 +14,7 @@ type Props = {
   onQuery: (value: string) => void;
   panel: Panel;
   onPanel: (panel: Panel) => void;
+  onOpenMenu: () => void;
   categories: CatalogItem[];
   attributes: CatalogItem[];
   categoryIds: string[];
@@ -38,6 +40,7 @@ export function SearchPanel({
   onQuery,
   panel,
   onPanel,
+  onOpenMenu,
   categories,
   attributes,
   categoryIds,
@@ -57,12 +60,27 @@ export function SearchPanel({
   selectedPlace,
   placeSheet,
 }: Props) {
+  const { isSignedIn } = useAuth();
   const needle = query.trim();
+  const showResults =
+    panel === "favourites" ||
+    (panel === "search" && (!!needle || recents.length > 0 || favouritePlaces.length > 0));
 
   return (
-    <div className="absolute top-3 left-3 z-10 flex max-h-[calc(100%-1.5rem)] w-[min(400px,calc(100%-1.5rem))] flex-col overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--paper)]/95 shadow-sm backdrop-blur">
-      <div className="flex flex-col gap-2.5 overflow-y-auto p-3">
-        <div className="flex items-center gap-2">
+    <div className="pointer-events-none absolute inset-x-0 top-0 z-20 p-3 sm:p-4">
+      <div className="pointer-events-auto mx-auto flex w-full max-w-3xl items-center gap-2.5">
+        <button
+          type="button"
+          title="Menu"
+          aria-label="Open menu"
+          className="map-fab h-11 w-11 shrink-0 rounded-full"
+          onClick={onOpenMenu}
+        >
+          <Menu className="h-5 w-5" />
+        </button>
+
+        <div className="map-search min-w-0 flex-1">
+          <Search className="h-4 w-4 shrink-0 text-[var(--ink-muted)]" />
           <input
             type="search"
             value={query}
@@ -70,72 +88,87 @@ export function SearchPanel({
               onQuery(e.target.value);
               onPanel("search");
             }}
+            onFocus={() => onPanel("search")}
             onKeyDown={(e) => {
               if (e.key === "Enter") onCommitSearch();
             }}
             placeholder="Search places, areas, addresses"
-            className="min-w-0 flex-1 rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm outline-none focus:border-primary"
+            aria-label="Search places, areas, addresses"
           />
-          <IconBtn title="Search" onClick={onCommitSearch}>
-            <Search className="h-4 w-4" />
-          </IconBtn>
-          <IconBtn
-            title="Favourites"
-            active={panel === "favourites"}
-            onClick={() => onPanel("favourites")}
+          {query || panel !== "closed" ? (
+            <button
+              type="button"
+              className="rounded-full p-1 text-[var(--ink-muted)] transition hover:bg-[#f3f7f3] hover:text-[var(--ink)] focus-visible:outline-2 focus-visible:outline-primary"
+              aria-label="Clear search"
+              onClick={() => {
+                onQuery("");
+                onPanel("closed");
+              }}
+            >
+              <X className="h-4 w-4" />
+            </button>
+          ) : null}
+        </div>
+
+        <div className="shrink-0">
+          {isSignedIn ? (
+            <div className="map-fab h-11 w-11 overflow-hidden rounded-full p-0.5 [&_.cl-userButtonTrigger]:h-full [&_.cl-userButtonTrigger]:w-full">
+              <UserButton
+                appearance={{
+                  elements: {
+                    userButtonAvatarBox: "h-9 w-9",
+                  },
+                }}
+              />
+            </div>
+          ) : (
+            <SignInButton mode="modal">
+              <button
+                type="button"
+                className="map-fab h-11 rounded-full px-4 text-sm font-medium"
+              >
+                Sign in
+              </button>
+            </SignInButton>
+          )}
+        </div>
+      </div>
+
+      <div className="pointer-events-auto mx-auto mt-2.5 flex w-full max-w-3xl gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {categories.map((item) => (
+          <button
+            key={item._id}
+            type="button"
+            className="map-chip shrink-0"
+            data-active={categoryIds.includes(item._id)}
+            onClick={() => onToggleCategory(item._id)}
           >
-            <Heart
-              className={`h-4 w-4 ${panel === "favourites" ? "fill-current" : ""}`}
-            />
-          </IconBtn>
-        </div>
+            {item.label}
+          </button>
+        ))}
+        {attributes.map((item) => (
+          <button
+            key={item._id}
+            type="button"
+            className="map-chip shrink-0"
+            data-active={attributeIds.includes(item._id)}
+            onClick={() => onToggleAttribute(item._id)}
+          >
+            {item.label}
+          </button>
+        ))}
+      </div>
 
-        <div className="flex flex-wrap gap-1.5">
-          {categories.map((item) => (
-            <Pill
-              key={item._id}
-              active={categoryIds.includes(item._id)}
-              onClick={() => onToggleCategory(item._id)}
-            >
-              {item.label}
-            </Pill>
-          ))}
-          {attributes.map((item) => (
-            <Pill
-              key={item._id}
-              active={attributeIds.includes(item._id)}
-              onClick={() => onToggleAttribute(item._id)}
-            >
-              {item.label}
-            </Pill>
-          ))}
-        </div>
-
-        {panel === "favourites" ? (
-          <Section title="Favourites">
-            {favouritePlaces.length === 0 ? (
-              <p className="px-1 text-sm text-[var(--ink-muted)]">
-                No favourites yet.
-              </p>
-            ) : (
-              favouritePlaces.map((place) => (
-                <ResultRow
-                  key={place._id}
-                  icon={<Heart className="h-4 w-4 fill-current" />}
-                  title={place.name}
-                  subtitle={place.address}
-                  onClick={() => onOpenPlace(place._id)}
-                />
-              ))
-            )}
-          </Section>
-        ) : null}
-
-        {panel === "search" && !needle ? (
-          <>
-            {favouritePlaces.length > 0 ? (
-              <Section title="Favourites">
-                {favouritePlaces.map((place) => (
+      {showResults ? (
+        <div className="pointer-events-auto map-sheet mx-auto mt-2 max-h-[min(52vh,28rem)] w-full max-w-3xl overflow-y-auto p-2">
+          {panel === "favourites" ? (
+            <Section title="Favourites">
+              {favouritePlaces.length === 0 ? (
+                <p className="px-2 py-3 text-sm text-[var(--ink-muted)]">
+                  No favourites yet.
+                </p>
+              ) : (
+                favouritePlaces.map((place) => (
                   <ResultRow
                     key={place._id}
                     icon={<Heart className="h-4 w-4 fill-current" />}
@@ -143,89 +176,118 @@ export function SearchPanel({
                     subtitle={place.address}
                     onClick={() => onOpenPlace(place._id)}
                   />
-                ))}
-              </Section>
-            ) : null}
-            {recents.length > 0 ? (
-              <Section title="Recent">
-                {recents.map((item) =>
-                  item.kind === "search" ? (
+                ))
+              )}
+            </Section>
+          ) : null}
+
+          {panel === "search" && !needle ? (
+            <>
+              {favouritePlaces.length > 0 ? (
+                <Section title="Favourites">
+                  {favouritePlaces.slice(0, 4).map((place) => (
                     <ResultRow
-                      key={`s:${item.query}`}
-                      icon={<Clock className="h-4 w-4" />}
-                      title={item.query}
-                      subtitle="Recent search"
-                      onClick={() => onQuery(item.query)}
+                      key={place._id}
+                      icon={<Heart className="h-4 w-4 fill-current" />}
+                      title={place.name}
+                      subtitle={place.address}
+                      onClick={() => onOpenPlace(place._id)}
                     />
-                  ) : (
-                    (() => {
-                      const place = placesById.get(item.placeId);
-                      if (!place) return null;
-                      return (
-                        <ResultRow
-                          key={`p:${item.placeId}`}
-                          icon={<MapPin className="h-4 w-4" />}
-                          title={place.name}
-                          subtitle="Opened recently"
-                          onClick={() => onOpenPlace(place._id)}
-                        />
-                      );
-                    })()
-                  ),
-                )}
-              </Section>
-            ) : null}
-          </>
-        ) : null}
+                  ))}
+                </Section>
+              ) : null}
+              {recents.length > 0 ? (
+                <Section title="Recent">
+                  {recents.map((item) =>
+                    item.kind === "search" ? (
+                      <ResultRow
+                        key={`s:${item.query}`}
+                        icon={<Clock className="h-4 w-4" />}
+                        title={item.query}
+                        subtitle="Recent search"
+                        onClick={() => onQuery(item.query)}
+                      />
+                    ) : (
+                      (() => {
+                        const place = placesById.get(item.placeId);
+                        if (!place) return null;
+                        return (
+                          <ResultRow
+                            key={`p:${item.placeId}`}
+                            icon={<MapPin className="h-4 w-4" />}
+                            title={place.name}
+                            subtitle="Opened recently"
+                            onClick={() => onOpenPlace(place._id)}
+                          />
+                        );
+                      })()
+                    ),
+                  )}
+                </Section>
+              ) : null}
+            </>
+          ) : null}
 
-        {panel === "search" && needle ? (
-          <>
-            {filterHits.length > 0 ? (
-              <Section title="Categories and attributes">
-                {filterHits.map((item) => (
-                  <ResultRow
-                    key={item._id}
-                    icon={<Tag className="h-4 w-4" />}
-                    title={item.label}
-                    subtitle={
-                      item.kind === "category" ? "Category" : "Attribute"
-                    }
-                    onClick={() => onApplyFilter(item)}
-                  />
-                ))}
-              </Section>
-            ) : null}
-            {placeHits.length > 0 ? (
-              <Section title="Places">
-                {placeHits.map((place) => (
-                  <ResultRow
-                    key={place._id}
-                    icon={<MapPin className="h-4 w-4" />}
-                    title={place.name}
-                    subtitle={`${place.categories.join(", ")} · ${place.address}`}
-                    onClick={() => onOpenPlace(place._id)}
-                  />
-                ))}
-              </Section>
-            ) : null}
-            {addressHits.length > 0 ? (
-              <Section title="Addresses">
-                {addressHits.map((hit) => (
-                  <ResultRow
-                    key={hit.id}
-                    icon={<Search className="h-4 w-4" />}
-                    title={hit.label}
-                    subtitle={hit.subtitle}
-                    onClick={() => onOpenAddress(hit)}
-                  />
-                ))}
-              </Section>
-            ) : null}
-          </>
-        ) : null}
+          {panel === "search" && needle ? (
+            <>
+              {filterHits.length > 0 ? (
+                <Section title="Categories and attributes">
+                  {filterHits.map((item) => (
+                    <ResultRow
+                      key={item._id}
+                      icon={<Tag className="h-4 w-4" />}
+                      title={item.label}
+                      subtitle={
+                        item.kind === "category" ? "Category" : "Attribute"
+                      }
+                      onClick={() => onApplyFilter(item)}
+                    />
+                  ))}
+                </Section>
+              ) : null}
+              {placeHits.length > 0 ? (
+                <Section title="Places">
+                  {placeHits.map((place) => (
+                    <ResultRow
+                      key={place._id}
+                      icon={<MapPin className="h-4 w-4" />}
+                      title={place.name}
+                      subtitle={`${place.categories.join(", ")} · ${place.address}`}
+                      onClick={() => onOpenPlace(place._id)}
+                    />
+                  ))}
+                </Section>
+              ) : null}
+              {addressHits.length > 0 ? (
+                <Section title="Addresses">
+                  {addressHits.map((hit) => (
+                    <ResultRow
+                      key={hit.id}
+                      icon={<Search className="h-4 w-4" />}
+                      title={hit.label}
+                      subtitle={hit.subtitle}
+                      onClick={() => onOpenAddress(hit)}
+                    />
+                  ))}
+                </Section>
+              ) : null}
+              {filterHits.length === 0 &&
+              placeHits.length === 0 &&
+              addressHits.length === 0 ? (
+                <p className="px-2 py-3 text-sm text-[var(--ink-muted)]">
+                  No matches.
+                </p>
+              ) : null}
+            </>
+          ) : null}
+        </div>
+      ) : null}
 
-        {selectedPlace && panel === "closed" ? placeSheet : null}
-      </div>
+      {selectedPlace && panel === "closed" ? (
+        <div className="pointer-events-auto map-sheet mx-auto mt-2 w-full max-w-3xl p-3">
+          {placeSheet}
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -238,8 +300,10 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-col gap-1">
-      <p className="px-1 text-xs text-[var(--ink-muted)]">{title}</p>
+    <div className="flex flex-col gap-0.5 py-1">
+      <p className="px-2 pb-1 text-xs font-medium text-[var(--ink-muted)]">
+        {title}
+      </p>
       {children}
     </div>
   );
@@ -257,11 +321,7 @@ function ResultRow({
   onClick: () => void;
 }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="flex w-full items-center gap-2 rounded-lg px-1 py-1.5 text-left hover:bg-[var(--accent-soft)]"
-    >
+    <button type="button" onClick={onClick} className="map-row">
       <span className="text-[var(--ink-muted)]">{icon}</span>
       <span className="min-w-0 flex-1">
         <span className="block truncate text-sm font-semibold text-[var(--ink)]">
@@ -271,56 +331,6 @@ function ResultRow({
           {subtitle}
         </span>
       </span>
-    </button>
-  );
-}
-
-function Pill({
-  active,
-  onClick,
-  children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`rounded-md px-2.5 py-1 text-xs transition ${
-        active
-          ? "bg-primary text-primary-foreground"
-          : "bg-white text-[var(--ink)] ring-1 ring-[var(--line)]"
-      }`}
-    >
-      {children}
-    </button>
-  );
-}
-
-function IconBtn({
-  title,
-  onClick,
-  active,
-  children,
-}: {
-  title: string;
-  onClick: () => void;
-  active?: boolean;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      title={title}
-      aria-label={title}
-      onClick={onClick}
-      className={`inline-flex h-9 w-9 items-center justify-center rounded-md border border-[var(--line)] ${
-        active ? "bg-primary text-primary-foreground" : "bg-white text-[var(--ink)]"
-      }`}
-    >
-      {children}
     </button>
   );
 }

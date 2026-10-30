@@ -124,7 +124,7 @@ export function PlaceSheet({ place, saved, onClose, onToggleSave }: Props) {
   }
 
   return (
-    <div className="flex flex-col gap-3 border-t border-[var(--line)] pt-3">
+    <div className="flex flex-col gap-3">
       {sheet === "preview" ? (
         <>
           <div className="flex items-start gap-2">
@@ -138,7 +138,7 @@ export function PlaceSheet({ place, saved, onClose, onToggleSave }: Props) {
             <button
               type="button"
               onClick={onClose}
-              className="rounded-md p-1.5 text-[var(--ink-muted)] hover:bg-[var(--accent-soft)]"
+              className="map-fab h-8 w-8 rounded-full"
               aria-label="Close place"
             >
               <X className="h-4 w-4" />
@@ -233,7 +233,7 @@ export function PlaceSheet({ place, saved, onClose, onToggleSave }: Props) {
               type="button"
               disabled={busy}
               onClick={postComment}
-              className="rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground disabled:opacity-60"
+              className="rounded-full bg-primary px-3 py-2 text-sm font-medium text-primary-foreground transition hover:brightness-110 active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-60"
             >
               Post comment
             </button>
@@ -272,7 +272,7 @@ export function PlaceSheet({ place, saved, onClose, onToggleSave }: Props) {
                 type="button"
                 disabled={busy}
                 onClick={sendEdit}
-                className="rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground disabled:opacity-60"
+                className="rounded-full bg-primary px-3 py-2 text-sm font-medium text-primary-foreground transition hover:brightness-110 active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-60"
               >
                 Send suggestion
               </button>
@@ -348,9 +348,9 @@ function RoundAction({
     <button
       type="button"
       onClick={onClick}
-      className="flex flex-col items-center gap-1 text-[11px] text-[var(--ink)]"
+      className="flex flex-col items-center gap-1 text-[11px] text-[var(--ink)] transition hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
     >
-      <span className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[var(--line)] bg-white">
+      <span className="map-fab inline-flex h-9 w-9 items-center justify-center rounded-full">
         {icon}
       </span>
       {label}

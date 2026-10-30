@@ -3,17 +3,36 @@
 import {
   Map as MapLibreMap,
   Marker,
-  NavigationControl,
   type GeoJSONSource,
   type MapMouseEvent,
 } from "maplibre-gl";
-import { useEffect, useRef } from "react";
+import {
+  forwardRef,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+} from "react";
 import type { PublicPlace } from "@/lib/filter-places";
 import { ensureMapLibreWorker } from "@/lib/maplibre";
 import "maplibre-gl/dist/maplibre-gl.css";
 
 const WARSAW: [number, number] = [21.0122, 52.2297];
-const STYLE_URL = "https://tiles.openfreemap.org/styles/liberty";
+
+export const MAP_STYLES = {
+  streets: "https://tiles.openfreemap.org/styles/liberty",
+  light: "https://tiles.openfreemap.org/styles/bright",
+  outdoors: "https://tiles.openfreemap.org/styles/positron",
+} as const;
+
+export type MapStyleId = keyof typeof MAP_STYLES;
+
+export type MapHandle = {
+  zoomIn: () => void;
+  zoomOut: () => void;
+  setPitch3d: (enabled: boolean) => void;
+  setStyle: (style: MapStyleId) => void;
+  easeTo: (opts: { lat: number; lng: number; zoom?: number }) => void;
+};
 
 type AddressMarker = {
   id: string;
@@ -29,6 +48,7 @@ type Props = {
   userLocation?: { lat: number; lng: number } | null;
   addressMarker?: AddressMarker | null;
   flyTo?: { lat: number; lng: number; zoom?: number } | null;
+  styleId?: MapStyleId;
 };
 
 function placesToGeoJSON(places: PublicPlace[]): GeoJSON.FeatureCollection {
@@ -66,7 +86,6 @@ function placesToGeoJSON(places: PublicPlace[]): GeoJSON.FeatureCollection {
         id: place._id,
         name: place.name,
         kind: "point",
-        selected: false,
       },
       geometry: {
         type: "Point",
@@ -162,18 +181,30 @@ function addPinImage(map: MapLibreMap) {
   map.addImage("place-pin", data, { pixelRatio: 2 });
 }
 
-export function MapView({
-  places,
-  selectedId,
-  onSelect,
-  userLocation,
-  addressMarker,
-  flyTo,
-}: Props) {
+function wireMapData(map: MapLibreMap, places: PublicPlace[]) {
+  addPinImage(map);
+  ensureLayers(map);
+  const source = map.getSource("places") as GeoJSONSource | undefined;
+  source?.setData(placesToGeoJSON(places));
+}
+
+export const MapView = forwardRef<MapHandle, Props>(function MapView(
+  {
+    places,
+    selectedId,
+    onSelect,
+    userLocation,
+    addressMarker,
+    flyTo,
+    styleId = "streets",
+  },
+  ref,
+) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const onSelectRef = useRef(onSelect);
   const placesRef = useRef(places);
+  const styleIdRef = useRef(styleId);
   const userMarkerRef = useRef<Marker | null>(null);
   const addressMarkerRef = useRef<Marker | null>(null);
 
@@ -185,17 +216,49 @@ export function MapView({
     placesRef.current = places;
   }, [places]);
 
+  useImperativeHandle(ref, () => ({
+    zoomIn: () => mapRef.current?.zoomIn({ duration: 200 }),
+    zoomOut: () => mapRef.current?.zoomOut({ duration: 200 }),
+    setPitch3d: (enabled) => {
+      const map = mapRef.current;
+      if (!map) return;
+      map.easeTo({
+        pitch: enabled ? 55 : 0,
+        bearing: enabled ? map.getBearing() || -12 : 0,
+        duration: 500,
+      });
+    },
+    setStyle: (next) => {
+      const map = mapRef.current;
+      if (!map) return;
+      styleIdRef.current = next;
+      map.setStyle(MAP_STYLES[next]);
+      map.once("style.load", () => {
+        wireMapData(map, placesRef.current);
+      });
+    },
+    easeTo: ({ lat, lng, zoom }) => {
+      mapRef.current?.easeTo({
+        center: [lng, lat],
+        zoom: zoom ?? Math.max(mapRef.current.getZoom(), 14),
+        duration: 500,
+      });
+    },
+  }));
+
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
 
     ensureMapLibreWorker();
     const map = new MapLibreMap({
       container: containerRef.current,
-      style: STYLE_URL,
+      style: MAP_STYLES[styleIdRef.current],
       center: WARSAW,
       zoom: 12,
+      attributionControl: {
+        compact: true,
+      },
     });
-    map.addControl(new NavigationControl(), "top-right");
     mapRef.current = map;
 
     const resize = () => map.resize();
@@ -205,10 +268,7 @@ export function MapView({
 
     map.on("load", () => {
       resize();
-      addPinImage(map);
-      ensureLayers(map);
-      const source = map.getSource("places") as GeoJSONSource;
-      source.setData(placesToGeoJSON(placesRef.current));
+      wireMapData(map, placesRef.current);
     });
 
     const handleClick = (e: MapMouseEvent) => {
@@ -243,14 +303,18 @@ export function MapView({
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
-    const update = () => {
-      ensureLayers(map);
-      const source = map.getSource("places") as GeoJSONSource | undefined;
-      source?.setData(placesToGeoJSON(places));
-    };
+    const update = () => wireMapData(map, places);
     if (map.isStyleLoaded()) update();
     else map.once("load", update);
   }, [places]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || styleIdRef.current === styleId) return;
+    styleIdRef.current = styleId;
+    map.setStyle(MAP_STYLES[styleId]);
+    map.once("style.load", () => wireMapData(map, placesRef.current));
+  }, [styleId]);
 
   const selectedPlace = places.find((p) => p._id === selectedId);
   const selectedLng = selectedPlace?.lng;
@@ -298,7 +362,7 @@ export function MapView({
     if (!addressMarker) return;
     const el = document.createElement("div");
     el.className =
-      "rounded-md border border-[var(--line)] bg-white px-2 py-0.5 text-xs text-[var(--ink)] shadow";
+      "rounded-full bg-white px-2.5 py-1 text-xs text-[var(--ink)] shadow-[0_2px_10px_rgb(20_53_40/14%)]";
     el.textContent = addressMarker.label;
     addressMarkerRef.current = new Marker({ element: el, anchor: "bottom" })
       .setLngLat([addressMarker.lng, addressMarker.lat])
@@ -308,8 +372,8 @@ export function MapView({
   return (
     <div
       ref={containerRef}
-      className="h-full w-full overflow-hidden rounded-none"
+      className="h-full w-full overflow-hidden"
       role="presentation"
     />
   );
-}
+});

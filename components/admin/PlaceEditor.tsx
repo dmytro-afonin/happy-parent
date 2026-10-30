@@ -185,10 +185,10 @@ export function PlaceEditor({
               key={lang}
               type="button"
               onClick={() => setLocale(lang)}
-              className={`rounded-md px-2.5 py-1 text-xs ${
+              className={`ui-interactive rounded-md px-2.5 py-1 text-xs ${
                 locale === lang
                   ? "bg-primary text-primary-foreground"
-                  : "bg-white ring-1 ring-[var(--line)]"
+                  : "bg-white ring-1 ring-[var(--line)] hover:bg-[var(--accent-soft)]"
               }`}
             >
               {LANG_LABELS[lang]}
@@ -369,14 +369,14 @@ export function PlaceEditor({
           type="button"
           disabled={busy}
           onClick={() => void onSave()}
-          className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-60"
+          className="ui-interactive rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:brightness-110 disabled:opacity-60"
         >
           {busy ? "Saving…" : "Save"}
         </button>
         <button
           type="button"
           onClick={onBack}
-          className="rounded-md px-3 py-2 text-sm text-[var(--ink-muted)] hover:bg-[var(--accent-soft)]"
+          className="ui-interactive rounded-md px-3 py-2 text-sm text-[var(--ink-muted)] hover:bg-[var(--accent-soft)] hover:text-[var(--ink)]"
         >
           Back
         </button>
@@ -402,14 +402,14 @@ function DecisionRow({
         <button
           type="button"
           onClick={onApprove}
-          className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground"
+          className="ui-interactive rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:brightness-110"
         >
           Approve
         </button>
         <button
           type="button"
           onClick={onReject}
-          className="rounded-md bg-white px-3 py-1.5 text-xs ring-1 ring-[var(--line)]"
+          className="ui-interactive rounded-md bg-white px-3 py-1.5 text-xs ring-1 ring-[var(--line)] hover:bg-[var(--accent-soft)]"
         >
           Reject
         </button>

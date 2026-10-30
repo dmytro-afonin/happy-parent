@@ -1,19 +1,18 @@
 "use client";
 
+import { useMutation, useQuery } from "convex/react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { MapControls } from "@/components/map/MapControls";
+import { MapMenu } from "@/components/map/MapMenu";
 import {
-  Authenticated,
-  AuthLoading,
-  Unauthenticated,
-  useMutation,
-  useQuery,
-} from "convex/react";
-import { SignInButton } from "@clerk/nextjs";
-import { LocateFixed } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
-import { MapView } from "@/components/map/MapView";
+  MapView,
+  type MapHandle,
+  type MapStyleId,
+} from "@/components/map/MapView";
 import { PlaceSheet } from "@/components/map/PlaceSheet";
 import { SearchPanel } from "@/components/map/SearchPanel";
 import { SubmitPlaceForm } from "@/components/map/SubmitPlaceForm";
+import "@/components/map/map-chrome.css";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import type { CatalogItem } from "@/lib/catalog";
@@ -35,11 +34,19 @@ function toggle(list: string[], value: string): string[] {
     : [...list, value];
 }
 
+function clearRecentsStorage() {
+  if (typeof window !== "undefined") {
+    window.localStorage.removeItem("hp-map-recents-v1");
+  }
+}
+
 export default function MapPage() {
   const places = useQuery(api.places.listPublic) as PublicPlace[] | undefined;
   const catalog = useQuery(api.catalog.list) as CatalogItem[] | undefined;
   const favouriteIds = useQuery(api.favorites.listMine);
+  const me = useQuery(api.users.me);
   const toggleFavourite = useMutation(api.favorites.toggle);
+  const mapRef = useRef<MapHandle>(null);
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [categoryIds, setCategoryIds] = useState<string[]>([]);
@@ -48,6 +55,7 @@ export default function MapPage() {
   const [panel, setPanel] = useState<"closed" | "search" | "favourites">(
     "closed",
   );
+  const [menuOpen, setMenuOpen] = useState(false);
   const [recents, setRecents] = useState<Recent[]>(() => loadRecents());
   const [location, setLocation] = useState<{
     lat: number;
@@ -58,6 +66,8 @@ export default function MapPage() {
   );
   const [liqHits, setLiqHits] = useState<WarsawAddress[]>([]);
   const [showSubmit, setShowSubmit] = useState(false);
+  const [pitch3d, setPitch3d] = useState(false);
+  const [styleId, setStyleId] = useState<MapStyleId>("streets");
 
   useEffect(() => {
     const needle = query.trim();
@@ -201,10 +211,12 @@ export default function MapPage() {
     if (!navigator.geolocation) return;
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        setLocation({
+        const next = {
           lat: pos.coords.latitude,
           lng: pos.coords.longitude,
-        });
+        };
+        setLocation(next);
+        mapRef.current?.easeTo({ ...next, zoom: 14 });
       },
       () => setLocation(null),
       { enableHighAccuracy: true, timeout: 8000 },
@@ -217,11 +229,13 @@ export default function MapPage() {
   }
 
   return (
-    <div className="relative min-h-[calc(100vh-3.5rem)] w-full">
+    <div className="map-root relative h-dvh w-full overflow-hidden">
       <div className="absolute inset-0">
         <MapView
+          ref={mapRef}
           places={visiblePins}
           selectedId={selectedId}
+          styleId={styleId}
           onSelect={(id) => {
             if (id) openPlace(id);
             else {
@@ -238,9 +252,7 @@ export default function MapPage() {
                   lng: addressMarker.lng,
                   zoom: 14,
                 }
-              : location && !selectedId
-                ? { lat: location.lat, lng: location.lng, zoom: 13 }
-                : null
+              : null
           }
         />
       </div>
@@ -253,6 +265,7 @@ export default function MapPage() {
           setPanel(next);
           if (next === "favourites") setSelectedId(null);
         }}
+        onOpenMenu={() => setMenuOpen(true)}
         categories={categories}
         attributes={attributes}
         categoryIds={categoryIds}
@@ -285,53 +298,69 @@ export default function MapPage() {
         }
       />
 
-      <button
-        type="button"
-        title="Your location"
-        aria-label="Your location"
-        onClick={requestLocation}
-        className="absolute right-4 bottom-4 z-20 inline-flex h-9 w-9 items-center justify-center rounded-full border border-[var(--line)] bg-white text-[var(--ink)] shadow"
-      >
-        <LocateFixed className="h-4 w-4" />
-      </button>
+      <MapControls
+        pitch3d={pitch3d}
+        styleId={styleId}
+        onZoomIn={() => mapRef.current?.zoomIn()}
+        onZoomOut={() => mapRef.current?.zoomOut()}
+        onLocate={requestLocation}
+        onToggle3d={() => {
+          const next = !pitch3d;
+          setPitch3d(next);
+          mapRef.current?.setPitch3d(next);
+        }}
+        onStyle={setStyleId}
+      />
 
-      <div className="absolute right-4 bottom-16 z-20 flex flex-col items-end gap-2">
-        <AuthLoading>
-          <span className="rounded-md bg-white/95 px-3 py-1.5 text-xs text-[var(--ink-muted)] shadow ring-1 ring-[var(--line)]">
-            Checking session…
-          </span>
-        </AuthLoading>
-        <Unauthenticated>
-          <SignInButton mode="modal">
-            <button
-              type="button"
-              className="rounded-md bg-white/95 px-3 py-1.5 text-xs font-medium text-[var(--ink)] shadow ring-1 ring-[var(--line)]"
-            >
-              Sign in to add a place
-            </button>
-          </SignInButton>
-        </Unauthenticated>
-        <Authenticated>
+      <MapMenu
+        open={menuOpen}
+        onClose={() => setMenuOpen(false)}
+        isAdmin={me?.role === "admin"}
+        favouritePlaces={favouritePlaces}
+        recents={recents}
+        placesById={placesById}
+        onOpenFavourites={() => {
+          setSelectedId(null);
+          setPanel("favourites");
+        }}
+        onSuggestPlace={() => setShowSubmit(true)}
+        onOpenPlace={openPlace}
+        onSearchRecent={(value) => {
+          setQuery(value);
+          setPanel("search");
+        }}
+        onClearRecents={() => {
+          clearRecentsStorage();
+          setRecents([]);
+        }}
+      />
+
+      {showSubmit ? (
+        <>
           <button
             type="button"
-            onClick={() => setShowSubmit((v) => !v)}
-            className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground shadow"
-          >
-            {showSubmit ? "Close form" : "Suggest a place"}
-          </button>
-          {showSubmit ? (
-            <div className="w-[min(360px,calc(100vw-2rem))] rounded-xl border border-[var(--line)] bg-[var(--paper)] p-3 shadow">
-              <SubmitPlaceForm
-                categories={categories}
-                attributes={attributes}
-                defaultLat={location?.lat ?? addressMarker?.lat}
-                defaultLng={location?.lng ?? addressMarker?.lng}
-                onSubmitted={() => setShowSubmit(false)}
-              />
-            </div>
-          ) : null}
-        </Authenticated>
-      </div>
+            aria-label="Close suggest place"
+            className="absolute inset-0 z-40 bg-[rgb(20_53_40/18%)]"
+            onClick={() => setShowSubmit(false)}
+          />
+          <div className="map-sheet absolute top-1/2 left-1/2 z-50 w-[min(24rem,calc(100%-1.5rem))] -translate-x-1/2 -translate-y-1/2 p-4">
+            <SubmitPlaceForm
+              categories={categories}
+              attributes={attributes}
+              defaultLat={location?.lat ?? addressMarker?.lat}
+              defaultLng={location?.lng ?? addressMarker?.lng}
+              onSubmitted={() => setShowSubmit(false)}
+            />
+            <button
+              type="button"
+              className="mt-2 w-full rounded-full px-3 py-2 text-sm text-[var(--ink-muted)] transition hover:bg-[#f3f7f3] hover:text-[var(--ink)] focus-visible:outline-2 focus-visible:outline-primary"
+              onClick={() => setShowSubmit(false)}
+            >
+              Cancel
+            </button>
+          </div>
+        </>
+      ) : null}
     </div>
   );
 }

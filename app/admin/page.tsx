@@ -252,10 +252,10 @@ export default function AdminPage() {
               setTab(id);
               setScreen("list");
             }}
-            className={`-mb-px border-b-2 px-4 py-2.5 text-sm ${
+            className={`ui-interactive -mb-px border-b-2 px-4 py-2.5 text-sm ${
               tab === id
                 ? "border-primary font-semibold text-[var(--ink)]"
-                : "border-transparent text-[var(--ink-muted)]"
+                : "border-transparent text-[var(--ink-muted)] hover:text-[var(--ink)]"
             }`}
           >
             {id === "places" ? "Places" : "Catalog"}
@@ -346,7 +346,7 @@ export default function AdminPage() {
             <button
               type="button"
               onClick={startPlace}
-              className="rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground"
+              className="ui-interactive rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:brightness-110"
             >
               New place
             </button>
@@ -359,7 +359,7 @@ export default function AdminPage() {
                   key={place._id}
                   type="button"
                   onClick={() => openPlace(place, "all")}
-                  className="flex w-full items-start gap-3 border-t border-[var(--line)] px-3 py-2.5 text-left first:border-t-0 hover:bg-[var(--accent-soft)]"
+                  className="ui-row flex w-full items-start gap-3 border-t border-[var(--line)] px-3 py-2.5 text-left first:border-t-0"
                 >
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
@@ -429,7 +429,7 @@ export default function AdminPage() {
                   key={item._id}
                   type="button"
                   onClick={() => openPlace(place, item.kind)}
-                  className="flex w-full items-center gap-2 border-t border-[var(--line)] px-3 py-2 text-left text-sm first:border-t-0 hover:bg-[var(--accent-soft)]"
+                  className="ui-row flex w-full items-center gap-2 border-t border-[var(--line)] px-3 py-2 text-left text-sm first:border-t-0"
                 >
                   <span className="font-semibold">{place.name}</span>
                   <span className="text-[var(--ink-muted)]">{item.detail}</span>
@@ -545,7 +545,7 @@ export default function AdminPage() {
                     setCatalogDraft(row);
                     setScreen("catalogItem");
                   }}
-                  className="flex w-full items-center gap-3 border-t border-[var(--line)] px-3 py-2 text-left first:border-t-0 hover:bg-[var(--accent-soft)]"
+                  className="ui-row flex w-full items-center gap-3 border-t border-[var(--line)] px-3 py-2 text-left first:border-t-0"
                 >
                   <div className="min-w-0 flex-1">
                     <p className="font-semibold text-[var(--ink)]">
@@ -648,7 +648,7 @@ function MultiFilter({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="rounded-md border border-[var(--line)] bg-white px-2.5 py-1.5 text-sm"
+        className="ui-interactive rounded-md border border-[var(--line)] bg-white px-2.5 py-1.5 text-sm hover:bg-[var(--accent-soft)]"
       >
         {label}: {valueText}
       </button>
