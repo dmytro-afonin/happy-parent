@@ -88,9 +88,18 @@ env_path.write_text("\n".join(lines) + "\n")
 print("env.local", sum(1 for L in lines if L and not L.startswith("#") and "=" in L))
 PY
 
-port_up() {
-  local port="$1"
-  curl -sf -o /dev/null "http://127.0.0.1:${port}" 2>/dev/null
+# Convex API health is /version (GET / often 404s; curl -f would treat that as down).
+convex_up() {
+  curl -sf -o /dev/null "http://127.0.0.1:3210/version" 2>/dev/null
+}
+
+next_up() {
+  curl -sf -o /dev/null "http://127.0.0.1:3000/" 2>/dev/null
+}
+
+convex_cli() {
+  env -u CONVEX_DEPLOYMENT -u NEXT_PUBLIC_CONVEX_URL -u NEXT_PUBLIC_CONVEX_SITE_URL \
+    CONVEX_AGENT_MODE=anonymous pnpm exec convex "$@"
 }
 
 # Clear injected cloud Convex deployment so anonymous mode can win.
@@ -121,31 +130,42 @@ ensure_tmux_session() {
   tmux_cmd send-keys -t "${name}:0.0" "$cmd" C-m
 }
 
-if ! port_up 3210; then
+if ! convex_up; then
   echo "[cloud-agent-start] starting Convex on :3210…"
   ensure_tmux_session "convex-dev" \
     "env -u CONVEX_DEPLOYMENT -u NEXT_PUBLIC_CONVEX_URL -u NEXT_PUBLIC_CONVEX_SITE_URL CONVEX_AGENT_MODE=anonymous pnpm exec convex dev"
   for _ in $(seq 1 90); do
-    port_up 3210 && break
+    convex_up && break
     sleep 1
   done
-  if ! port_up 3210; then
-    echo "[cloud-agent-start] Convex did not become ready on :3210" >&2
+  if ! convex_up; then
+    echo "[cloud-agent-start] Convex did not become ready on :3210/version" >&2
     exit 1
   fi
 fi
 
 if [[ -n "${CLERK_FRONTEND_API_URL:-}" ]]; then
   echo "[cloud-agent-start] ensuring CLERK_FRONTEND_API_URL on Convex…"
-  env -u CONVEX_DEPLOYMENT -u NEXT_PUBLIC_CONVEX_URL CONVEX_AGENT_MODE=anonymous \
-    pnpm exec convex env set CLERK_FRONTEND_API_URL "$CLERK_FRONTEND_API_URL" >/dev/null || true
+  convex_cli env set CLERK_FRONTEND_API_URL "$CLERK_FRONTEND_API_URL" >/dev/null || true
 fi
 
-# Idempotent seed (insert-only).
-env -u CONVEX_DEPLOYMENT -u NEXT_PUBLIC_CONVEX_URL CONVEX_AGENT_MODE=anonymous \
-  pnpm exec convex run seed:run >/dev/null 2>&1 || true
+# Port up != functions pushed. Retry until seed:run exists (idempotent insert-only).
+echo "[cloud-agent-start] waiting for Convex functions, then seeding…"
+seeded=0
+for _ in $(seq 1 90); do
+  if convex_cli run seed:run >/tmp/cloud-agent-seed.log 2>&1; then
+    seeded=1
+    break
+  fi
+  sleep 1
+done
+if [[ "$seeded" -ne 1 ]]; then
+  echo "[cloud-agent-start] seed:run failed after waiting for deploy:" >&2
+  tail -n 40 /tmp/cloud-agent-seed.log >&2 || true
+  exit 1
+fi
 
-if port_up 3000; then
+if next_up; then
   echo "[cloud-agent-start] Next.js already on :3000 — idle."
   exec sleep infinity
 fi
