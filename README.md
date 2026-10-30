@@ -3,11 +3,16 @@
 Public map of family places in Warsaw. Next.js App Router on Vercel, Convex for
 data, Clerk for sign-in, MapLibre + OpenFreeMap for the map.
 
+Places, catalog (categories/attributes), comments, photos, and favourites live
+in Convex. Copy is multilingual (pl/en/uk/ru/be). User contributions go through
+an admin moderation queue before they become public.
+
 ## Stack
 
 - Next.js (App Router), Node 26, pnpm
-- Convex, Clerk, Sentry (optional), PostHog (optional)
-- MapLibre + OpenFreeMap; Terra Draw on `/admin` only
+- Convex (data + file storage for photos), Clerk, Sentry (optional), PostHog (optional)
+- MapLibre + OpenFreeMap; Terra Draw on `/admin` for area geometry
+- Optional `LOCATIONIQ_API_KEY` for Warsaw address search (`/api/geocode`)
 
 ## Local development
 

@@ -2,25 +2,36 @@
 
 import {
   Map as MapLibreMap,
+  Marker,
   NavigationControl,
   type GeoJSONSource,
   type MapMouseEvent,
 } from "maplibre-gl";
 import { useEffect, useRef } from "react";
-import type { ApprovedPlace } from "@/lib/filter-places";
+import type { PublicPlace } from "@/lib/filter-places";
 import { ensureMapLibreWorker } from "@/lib/maplibre";
 import "maplibre-gl/dist/maplibre-gl.css";
 
 const WARSAW: [number, number] = [21.0122, 52.2297];
 const STYLE_URL = "https://tiles.openfreemap.org/styles/liberty";
 
-type Props = {
-  places: ApprovedPlace[];
-  selectedId: string | null;
-  onSelect: (id: string | null) => void;
+type AddressMarker = {
+  id: string;
+  label: string;
+  lat: number;
+  lng: number;
 };
 
-function placesToGeoJSON(places: ApprovedPlace[]): GeoJSON.FeatureCollection {
+type Props = {
+  places: PublicPlace[];
+  selectedId: string | null;
+  onSelect: (id: string | null) => void;
+  userLocation?: { lat: number; lng: number } | null;
+  addressMarker?: AddressMarker | null;
+  flyTo?: { lat: number; lng: number; zoom?: number } | null;
+};
+
+function placesToGeoJSON(places: PublicPlace[]): GeoJSON.FeatureCollection {
   const features: GeoJSON.Feature[] = [];
 
   for (const place of places) {
@@ -39,7 +50,6 @@ function placesToGeoJSON(places: ApprovedPlace[]): GeoJSON.FeatureCollection {
         properties: {
           id: place._id,
           name: place.name,
-          type: place.type,
           kind: "polygon",
         },
         geometry: {
@@ -55,8 +65,8 @@ function placesToGeoJSON(places: ApprovedPlace[]): GeoJSON.FeatureCollection {
       properties: {
         id: place._id,
         name: place.name,
-        type: place.type,
         kind: "point",
+        selected: false,
       },
       geometry: {
         type: "Point",
@@ -152,11 +162,20 @@ function addPinImage(map: MapLibreMap) {
   map.addImage("place-pin", data, { pixelRatio: 2 });
 }
 
-export function MapView({ places, selectedId, onSelect }: Props) {
+export function MapView({
+  places,
+  selectedId,
+  onSelect,
+  userLocation,
+  addressMarker,
+  flyTo,
+}: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const onSelectRef = useRef(onSelect);
   const placesRef = useRef(places);
+  const userMarkerRef = useRef<Marker | null>(null);
+  const addressMarkerRef = useRef<Marker | null>(null);
 
   useEffect(() => {
     onSelectRef.current = onSelect;
@@ -213,6 +232,8 @@ export function MapView({ places, selectedId, onSelect }: Props) {
 
     return () => {
       ro.disconnect();
+      userMarkerRef.current?.remove();
+      addressMarkerRef.current?.remove();
       map.off("click", handleClick);
       map.remove();
       mapRef.current = null;
@@ -244,6 +265,45 @@ export function MapView({ places, selectedId, onSelect }: Props) {
       duration: 500,
     });
   }, [selectedId, selectedLng, selectedLat]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !flyTo) return;
+    map.easeTo({
+      center: [flyTo.lng, flyTo.lat],
+      zoom: flyTo.zoom ?? Math.max(map.getZoom(), 14),
+      duration: 500,
+    });
+  }, [flyTo]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    userMarkerRef.current?.remove();
+    userMarkerRef.current = null;
+    if (!userLocation) return;
+    const el = document.createElement("div");
+    el.className = "h-3.5 w-3.5 rounded-full border-2 border-white bg-primary";
+    el.title = "You are here";
+    userMarkerRef.current = new Marker({ element: el })
+      .setLngLat([userLocation.lng, userLocation.lat])
+      .addTo(map);
+  }, [userLocation]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    addressMarkerRef.current?.remove();
+    addressMarkerRef.current = null;
+    if (!addressMarker) return;
+    const el = document.createElement("div");
+    el.className =
+      "rounded-md border border-[var(--line)] bg-white px-2 py-0.5 text-xs text-[var(--ink)] shadow";
+    el.textContent = addressMarker.label;
+    addressMarkerRef.current = new Marker({ element: el, anchor: "bottom" })
+      .setLngLat([addressMarker.lng, addressMarker.lat])
+      .addTo(map);
+  }, [addressMarker]);
 
   return (
     <div

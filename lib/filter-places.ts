@@ -1,34 +1,29 @@
-import {
-  groupForType,
-  type PlaceAttribute,
-  type PlaceGroup,
-  type PlaceType,
-} from "@/convex/lib/catalog";
-
-export type ApprovedPlace = {
+export type PublicPlace = {
   _id: string;
   name: string;
-  description?: string;
-  address?: string;
+  description: string;
+  address: string;
+  categories: string[];
+  attributes: string[];
+  categoryIds: string[];
+  attributeIds: string[];
   lat: number;
   lng: number;
   geometryType: "point" | "polygon";
   boundary?: Array<{ lat: number; lng: number }>;
-  type: string;
-  attributes: string[];
-  status: "approved" | "pending";
+  photos: number;
+  updatedAt: number;
 };
 
 export type PlaceFilters = {
-  groups: PlaceGroup[];
-  types: PlaceType[];
-  attributes: PlaceAttribute[];
+  categoryIds: string[];
+  attributeIds: string[];
   text: string;
   /** Browser geolocation; when set, results sort by distance. */
   location?: { lat: number; lng: number } | null;
 };
 
-function haversineMeters(
+export function haversineMeters(
   a: { lat: number; lng: number },
   b: { lat: number; lng: number },
 ): number {
@@ -44,29 +39,28 @@ function haversineMeters(
   return 2 * R * Math.asin(Math.sqrt(h));
 }
 
-/** Pure client filter: group, type, attributes, text; optional distance sort. */
+/** Pure client filter: categories, attributes, text; optional distance sort. */
 export function filterPlaces(
-  places: ApprovedPlace[],
+  places: PublicPlace[],
   filters: PlaceFilters,
-): ApprovedPlace[] {
+): PublicPlace[] {
   const text = filters.text.trim().toLowerCase();
 
   let result = places.filter((place) => {
-    const group = groupForType(place.type);
-    if (filters.groups.length > 0) {
-      if (!group || !filters.groups.includes(group)) return false;
+    if (filters.categoryIds.length > 0) {
+      if (!place.categoryIds.some((id) => filters.categoryIds.includes(id))) {
+        return false;
+      }
     }
-    if (filters.types.length > 0) {
-      if (!filters.types.includes(place.type as PlaceType)) return false;
-    }
-    if (filters.attributes.length > 0) {
-      const hasAll = filters.attributes.every((attr) =>
-        place.attributes.includes(attr),
+    if (filters.attributeIds.length > 0) {
+      const hasAll = filters.attributeIds.every((id) =>
+        place.attributeIds.includes(id),
       );
       if (!hasAll) return false;
     }
     if (text) {
-      const hay = `${place.name} ${place.description ?? ""} ${place.address ?? ""}`.toLowerCase();
+      const hay =
+        `${place.name} ${place.description} ${place.address} ${place.categories.join(" ")} ${place.attributes.join(" ")}`.toLowerCase();
       if (!hay.includes(text)) return false;
     }
     return true;
@@ -80,7 +74,7 @@ export function filterPlaces(
         haversineMeters(origin, { lat: b.lat, lng: b.lng }),
     );
   } else {
-    result = [...result].sort((a, b) => a.name.localeCompare(b.name));
+    result = [...result].sort((a, b) => a.name.localeCompare(b.name, "pl"));
   }
 
   return result;

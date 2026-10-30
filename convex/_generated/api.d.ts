@@ -8,8 +8,16 @@
  * @module
  */
 
+import type * as catalog from "../catalog.js";
+import type * as comments from "../comments.js";
+import type * as favorites from "../favorites.js";
 import type * as lib_catalog from "../lib/catalog.js";
+import type * as lib_copy from "../lib/copy.js";
+import type * as lib_langs from "../lib/langs.js";
+import type * as lib_placeDoc from "../lib/placeDoc.js";
 import type * as migrations from "../migrations.js";
+import type * as moderation from "../moderation.js";
+import type * as photos from "../photos.js";
 import type * as places from "../places.js";
 import type * as seed from "../seed.js";
 import type * as users from "../users.js";
@@ -21,8 +29,16 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  catalog: typeof catalog;
+  comments: typeof comments;
+  favorites: typeof favorites;
   "lib/catalog": typeof lib_catalog;
+  "lib/copy": typeof lib_copy;
+  "lib/langs": typeof lib_langs;
+  "lib/placeDoc": typeof lib_placeDoc;
   migrations: typeof migrations;
+  moderation: typeof moderation;
+  photos: typeof photos;
   places: typeof places;
   seed: typeof seed;
   users: typeof users;

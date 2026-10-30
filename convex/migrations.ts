@@ -20,20 +20,12 @@
  * 2. Add `migrations.define({...})` below; deploy; dry-run; then run for real.
  * 3. Narrow schema + code to the new shape only; deploy
  *    (Convex refuses the push if existing docs still mismatch).
- *
- * Define a migration:
- *   export const backfillThing = migrations.define({
- *     table: "places",
- *     migrateOne: async (ctx, doc) => {
- *       if (doc.newField === undefined) return { newField: "default" };
- *     },
- *   });
- * Then append `internal.migrations.backfillThing` to `POST_DEPLOY_MIGRATIONS`.
  */
 import { Migrations } from "@convex-dev/migrations";
 import type { MigrationFunctionReference } from "@convex-dev/migrations";
-import { components } from "./_generated/api";
+import { components, internal } from "./_generated/api";
 import { internalMutation } from "./_generated/server";
+import { withPlaceCopy } from "./lib/copy";
 import schema from "./schema";
 
 export const migrations = new Migrations(components.migrations, {
@@ -45,11 +37,64 @@ export const migrations = new Migrations(components.migrations, {
 export const run = migrations.runner();
 
 /**
+ * Copy legacy single-language fields into `copy` / `publishStatus`.
+ * Catalog IDs are filled when matching slugs already exist (seed catalog first).
+ */
+export const backfillPlacesV2 = migrations.define({
+  table: "places",
+  migrateOne: async (ctx, doc) => {
+    const patch: Record<string, unknown> = {};
+
+    if (!doc.copy) {
+      patch.copy = withPlaceCopy({
+        en: {
+          name: doc.name ?? "",
+          description: doc.description ?? "",
+          address: doc.address ?? "",
+        },
+      });
+    }
+
+    if (!doc.publishStatus) {
+      patch.publishStatus =
+        doc.status === "approved" ? ("public" as const) : ("draft" as const);
+    }
+
+    if (doc.categoryIds === undefined) {
+      const categoryIds = [];
+      if (doc.type) {
+        const cat = await ctx.db
+          .query("catalogItems")
+          .withIndex("by_slug", (q) => q.eq("slug", doc.type as string))
+          .unique();
+        if (cat) categoryIds.push(cat._id);
+      }
+      patch.categoryIds = categoryIds;
+    }
+
+    if (doc.attributeIds === undefined) {
+      const attributeIds = [];
+      for (const slug of doc.attributes ?? []) {
+        const attr = await ctx.db
+          .query("catalogItems")
+          .withIndex("by_slug", (q) => q.eq("slug", slug))
+          .unique();
+        if (attr) attributeIds.push(attr._id);
+      }
+      patch.attributeIds = attributeIds;
+    }
+
+    if (Object.keys(patch).length === 0) return;
+    return patch;
+  },
+});
+
+/**
  * Ordered migrations applied after each production Convex deploy.
  * Only idempotent transforms. Never wipe/clear helpers.
  */
 const POST_DEPLOY_MIGRATIONS: MigrationFunctionReference[] = [
-  // internal.migrations.backfillThing,
+  internal.migrations.backfillPlacesV2,
 ];
 
 /** Post-deploy entrypoint. No-ops when the list is empty. */
