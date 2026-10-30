@@ -149,6 +149,13 @@ if [[ -n "${CLERK_FRONTEND_API_URL:-}" ]]; then
   convex_cli env set CLERK_FRONTEND_API_URL "$CLERK_FRONTEND_API_URL" >/dev/null || true
 fi
 
+# Optional: comma-separated Clerk emails auto-promoted to admin on users.ensure.
+ADMIN_EMAILS_VALUE="${ADMIN_EMAILS:-${ADMIN_EMAIL:-}}"
+if [[ -n "$ADMIN_EMAILS_VALUE" ]]; then
+  echo "[cloud-agent-start] ensuring ADMIN_EMAILS on Convex…"
+  convex_cli env set ADMIN_EMAILS "$ADMIN_EMAILS_VALUE" >/dev/null || true
+fi
+
 # Port up != functions pushed. Retry until seed:run exists (idempotent insert-only).
 echo "[cloud-agent-start] waiting for Convex functions, then seeding…"
 seeded=0
