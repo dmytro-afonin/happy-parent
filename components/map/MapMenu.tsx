@@ -1,16 +1,16 @@
 "use client";
 
-import { SignInButton, UserButton, useAuth } from "@clerk/nextjs";
 import {
+  ChevronDown,
   Clock,
   Heart,
   MapPin,
   Plus,
-  Settings,
   Shield,
   X,
 } from "lucide-react";
 import Link from "next/link";
+import { useState } from "react";
 import type { PublicPlace } from "@/lib/filter-places";
 import type { Recent } from "@/lib/recents";
 
@@ -21,11 +21,10 @@ type Props = {
   favouritePlaces: PublicPlace[];
   recents: Recent[];
   placesById: Map<string, PublicPlace>;
-  onOpenFavourites: () => void;
-  onSuggestPlace: () => void;
   onOpenPlace: (id: string) => void;
   onSearchRecent: (query: string) => void;
   onClearRecents: () => void;
+  onSuggestPlace: () => void;
 };
 
 export function MapMenu({
@@ -35,13 +34,14 @@ export function MapMenu({
   favouritePlaces,
   recents,
   placesById,
-  onOpenFavourites,
-  onSuggestPlace,
   onOpenPlace,
   onSearchRecent,
   onClearRecents,
+  onSuggestPlace,
 }: Props) {
-  const { isSignedIn } = useAuth();
+  const [favOpen, setFavOpen] = useState(false);
+  const [recentsOpen, setRecentsOpen] = useState(false);
+
   if (!open) return null;
 
   return (
@@ -70,34 +70,129 @@ export function MapMenu({
           </button>
         </div>
 
-        <nav className="flex flex-col gap-0.5 px-2 pb-2">
+        <nav className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto px-2 pb-2">
           <button
             type="button"
             className="map-menu-item"
-            onClick={() => {
-              onOpenFavourites();
-              onClose();
-            }}
+            aria-expanded={favOpen}
+            onClick={() => setFavOpen((v) => !v)}
           >
             <Heart className="h-4 w-4 text-[var(--ink-muted)]" />
             Favourites
             {favouritePlaces.length > 0 ? (
-              <span className="ml-auto text-xs text-[var(--ink-muted)]">
+              <span className="ml-auto mr-1 text-xs text-[var(--ink-muted)]">
                 {favouritePlaces.length}
               </span>
-            ) : null}
+            ) : (
+              <span className="ml-auto" />
+            )}
+            <ChevronDown
+              className={`h-4 w-4 text-[var(--ink-muted)] transition ${
+                favOpen ? "rotate-180" : ""
+              }`}
+            />
           </button>
+          {favOpen ? (
+            <div className="mb-1 ml-2 border-l border-[var(--line)]/70 pl-2">
+              {favouritePlaces.length === 0 ? (
+                <p className="px-2 py-2 text-sm text-[var(--ink-muted)]">
+                  Saved places appear here.
+                </p>
+              ) : (
+                favouritePlaces.map((place) => (
+                  <button
+                    key={place._id}
+                    type="button"
+                    className="map-menu-item"
+                    onClick={() => {
+                      onOpenPlace(place._id);
+                      onClose();
+                    }}
+                  >
+                    <MapPin className="h-4 w-4 text-[var(--ink-muted)]" />
+                    <span className="truncate">{place.name}</span>
+                  </button>
+                ))
+              )}
+            </div>
+          ) : null}
+
           <button
             type="button"
             className="map-menu-item"
-            onClick={() => {
-              onSuggestPlace();
-              onClose();
-            }}
+            aria-expanded={recentsOpen}
+            onClick={() => setRecentsOpen((v) => !v)}
           >
-            <Plus className="h-4 w-4 text-[var(--ink-muted)]" />
-            Suggest a place
+            <Clock className="h-4 w-4 text-[var(--ink-muted)]" />
+            Recents
+            {recents.length > 0 ? (
+              <span className="ml-auto mr-1 text-xs text-[var(--ink-muted)]">
+                {recents.length}
+              </span>
+            ) : (
+              <span className="ml-auto" />
+            )}
+            <ChevronDown
+              className={`h-4 w-4 text-[var(--ink-muted)] transition ${
+                recentsOpen ? "rotate-180" : ""
+              }`}
+            />
           </button>
+          {recentsOpen ? (
+            <div className="mb-1 ml-2 border-l border-[var(--line)]/70 pl-2">
+              {recents.length > 0 ? (
+                <button
+                  type="button"
+                  className="mb-0.5 px-2 py-1 text-xs text-[var(--ink-muted)] transition hover:text-[var(--ink)]"
+                  onClick={onClearRecents}
+                >
+                  Clear all
+                </button>
+              ) : null}
+              {recents.length === 0 ? (
+                <p className="px-2 py-2 text-sm text-[var(--ink-muted)]">
+                  Recent searches and places show up here.
+                </p>
+              ) : (
+                recents.map((item) =>
+                  item.kind === "search" ? (
+                    <button
+                      key={`s:${item.query}`}
+                      type="button"
+                      className="map-menu-item"
+                      onClick={() => {
+                        onSearchRecent(item.query);
+                        onClose();
+                      }}
+                    >
+                      <Clock className="h-4 w-4 text-[var(--ink-muted)]" />
+                      <span className="truncate">{item.query}</span>
+                    </button>
+                  ) : (
+                    (() => {
+                      const place = placesById.get(item.placeId);
+                      if (!place) return null;
+                      return (
+                        <button
+                          key={`p:${item.placeId}`}
+                          type="button"
+                          className="map-menu-item"
+                          onClick={() => {
+                            onOpenPlace(place._id);
+                            onClose();
+                          }}
+                        >
+                          <MapPin className="h-4 w-4 text-[var(--ink-muted)]" />
+                          <span className="truncate">{place.name}</span>
+                        </button>
+                      );
+                    })()
+                  ),
+                )
+              )}
+            </div>
+          ) : null}
+
           {isAdmin ? (
             <Link href="/admin" className="map-menu-item" onClick={onClose}>
               <Shield className="h-4 w-4 text-[var(--ink-muted)]" />
@@ -106,87 +201,18 @@ export function MapMenu({
           ) : null}
         </nav>
 
-        <div className="mx-3 h-px bg-[var(--line)]/70" />
-
-        <div className="flex items-center gap-2 px-4 pt-3 pb-1 text-xs font-semibold tracking-wide text-[var(--ink-muted)] uppercase">
-          <Settings className="h-3.5 w-3.5" />
-          Settings
-        </div>
-
-        <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-3">
-          <div className="flex items-center justify-between px-2 pt-1 pb-1">
-            <p className="text-xs font-medium text-[var(--ink-muted)]">
-              Recents
-            </p>
-            {recents.length > 0 ? (
-              <button
-                type="button"
-                className="rounded-md px-2 py-1 text-xs text-[var(--ink-muted)] transition hover:bg-[#f3f7f3] hover:text-[var(--ink)] focus-visible:outline-2 focus-visible:outline-primary"
-                onClick={onClearRecents}
-              >
-                Clear
-              </button>
-            ) : null}
-          </div>
-          {recents.length === 0 ? (
-            <p className="px-3 py-2 text-sm text-[var(--ink-muted)]">
-              Searches and places you open show up here.
-            </p>
-          ) : (
-            recents.map((item) =>
-              item.kind === "search" ? (
-                <button
-                  key={`s:${item.query}`}
-                  type="button"
-                  className="map-menu-item"
-                  onClick={() => {
-                    onSearchRecent(item.query);
-                    onClose();
-                  }}
-                >
-                  <Clock className="h-4 w-4 text-[var(--ink-muted)]" />
-                  <span className="truncate">{item.query}</span>
-                </button>
-              ) : (
-                (() => {
-                  const place = placesById.get(item.placeId);
-                  if (!place) return null;
-                  return (
-                    <button
-                      key={`p:${item.placeId}`}
-                      type="button"
-                      className="map-menu-item"
-                      onClick={() => {
-                        onOpenPlace(place._id);
-                        onClose();
-                      }}
-                    >
-                      <MapPin className="h-4 w-4 text-[var(--ink-muted)]" />
-                      <span className="truncate">{place.name}</span>
-                    </button>
-                  );
-                })()
-              ),
-            )
-          )}
-        </div>
-
-        <div className="flex items-center justify-between border-t border-[var(--line)]/70 px-4 py-3">
-          {isSignedIn ? (
-            <div className="flex items-center gap-2">
-              <UserButton />
-              <span className="text-sm text-[var(--ink-muted)]">Account</span>
-            </div>
-          ) : (
-            <SignInButton mode="modal">
-              <button
-                type="button"
-                className="rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition hover:brightness-110 active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-              >
-                Sign in
-              </button>
-            </SignInButton>
-          )}
+        <div className="border-t border-[var(--line)]/60 px-2 py-2">
+          <button
+            type="button"
+            className="flex w-full items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-xs text-[var(--ink-muted)] transition hover:bg-[#f3f7f3] hover:text-[var(--ink)] focus-visible:outline-2 focus-visible:outline-primary"
+            onClick={() => {
+              onSuggestPlace();
+              onClose();
+            }}
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Suggest a place
+          </button>
         </div>
       </aside>
     </>

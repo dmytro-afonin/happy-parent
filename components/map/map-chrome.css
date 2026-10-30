@@ -78,6 +78,21 @@
   outline: none;
 }
 
+/* Kill native search clear so we only show one X */
+.map-search input::-webkit-search-decoration,
+.map-search input::-webkit-search-cancel-button,
+.map-search input::-webkit-search-results-button,
+.map-search input::-webkit-search-results-decoration {
+  display: none;
+  -webkit-appearance: none;
+}
+
+/* Clerk UserButton sizing goes through appearance.elements — do not target .cl-*. */
+.map-user-btn {
+  padding: 0 !important;
+  border: 1.5px solid rgb(20 53 40 / 10%);
+}
+
 .map-chip {
   border: none;
   border-radius: 999px;

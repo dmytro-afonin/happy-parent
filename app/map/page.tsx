@@ -66,6 +66,12 @@ export default function MapPage() {
   );
   const [liqHits, setLiqHits] = useState<WarsawAddress[]>([]);
   const [showSubmit, setShowSubmit] = useState(false);
+  const [pickMode, setPickMode] = useState(false);
+  const [submitPin, setSubmitPin] = useState<{
+    lat: number;
+    lng: number;
+    label?: string;
+  } | null>(null);
   const [pitch3d, setPitch3d] = useState(false);
   const [styleId, setStyleId] = useState<MapStyleId>("streets");
 
@@ -236,17 +242,35 @@ export default function MapPage() {
           places={visiblePins}
           selectedId={selectedId}
           styleId={styleId}
+          pickMode={pickMode}
           onSelect={(id) => {
+            if (pickMode) return;
             if (id) openPlace(id);
             else {
               setSelectedId(null);
               setPanel("closed");
             }
           }}
+          onMapClick={(coords) => {
+            if (!pickMode) return;
+            setSubmitPin(coords);
+            setPickMode(false);
+            setShowSubmit(true);
+            mapRef.current?.easeTo({ ...coords, zoom: 15 });
+          }}
           userLocation={location}
-          addressMarker={addressMarker}
+          addressMarker={
+            submitPin
+              ? {
+                  id: "submit-pin",
+                  label: submitPin.label ?? "New place",
+                  lat: submitPin.lat,
+                  lng: submitPin.lng,
+                }
+              : addressMarker
+          }
           flyTo={
-            addressMarker
+            addressMarker && !submitPin
               ? {
                   lat: addressMarker.lat,
                   lng: addressMarker.lng,
@@ -256,6 +280,14 @@ export default function MapPage() {
           }
         />
       </div>
+
+      {pickMode ? (
+        <div className="pointer-events-none absolute inset-x-0 top-[4.75rem] z-30 flex justify-center px-3">
+          <p className="map-sheet pointer-events-none rounded-full px-4 py-2 text-sm text-[var(--ink)]">
+            Tap the map to drop a pin
+          </p>
+        </div>
+      ) : null}
 
       <SearchPanel
         query={query}
@@ -319,11 +351,10 @@ export default function MapPage() {
         favouritePlaces={favouritePlaces}
         recents={recents}
         placesById={placesById}
-        onOpenFavourites={() => {
-          setSelectedId(null);
-          setPanel("favourites");
+        onSuggestPlace={() => {
+          setShowSubmit(true);
+          setPickMode(false);
         }}
-        onSuggestPlace={() => setShowSubmit(true)}
         onOpenPlace={openPlace}
         onSearchRecent={(value) => {
           setQuery(value);
@@ -335,31 +366,72 @@ export default function MapPage() {
         }}
       />
 
-      {showSubmit ? (
+      {showSubmit && !pickMode ? (
         <>
           <button
             type="button"
             aria-label="Close suggest place"
             className="absolute inset-0 z-40 bg-[rgb(20_53_40/18%)]"
-            onClick={() => setShowSubmit(false)}
+            onClick={() => {
+              setShowSubmit(false);
+              setSubmitPin(null);
+            }}
           />
-          <div className="map-sheet absolute top-1/2 left-1/2 z-50 w-[min(24rem,calc(100%-1.5rem))] -translate-x-1/2 -translate-y-1/2 p-4">
+          <div className="map-sheet absolute top-[max(0.75rem,env(safe-area-inset-top))] left-1/2 z-50 w-[min(26rem,calc(100%-1.5rem))] -translate-x-1/2 p-4 sm:top-1/2 sm:-translate-y-1/2">
             <SubmitPlaceForm
               categories={categories}
               attributes={attributes}
-              defaultLat={location?.lat ?? addressMarker?.lat}
-              defaultLng={location?.lng ?? addressMarker?.lng}
-              onSubmitted={() => setShowSubmit(false)}
+              defaultLat={
+                submitPin?.lat ?? location?.lat ?? addressMarker?.lat
+              }
+              defaultLng={
+                submitPin?.lng ?? location?.lng ?? addressMarker?.lng
+              }
+              pinned={submitPin}
+              picking={pickMode}
+              onStartPick={() => {
+                setPickMode(true);
+                setShowSubmit(false);
+              }}
+              onCancelPick={() => setPickMode(false)}
+              onPinnedFromSearch={(hit) => {
+                setSubmitPin({
+                  lat: hit.lat,
+                  lng: hit.lng,
+                  label: hit.label,
+                });
+                mapRef.current?.easeTo({
+                  lat: hit.lat,
+                  lng: hit.lng,
+                  zoom: 15,
+                });
+              }}
+              onSubmitted={() => {
+                setShowSubmit(false);
+                setSubmitPin(null);
+                setPickMode(false);
+              }}
+              onCancel={() => {
+                setShowSubmit(false);
+                setSubmitPin(null);
+                setPickMode(false);
+              }}
             />
-            <button
-              type="button"
-              className="mt-2 w-full rounded-full px-3 py-2 text-sm text-[var(--ink-muted)] transition hover:bg-[#f3f7f3] hover:text-[var(--ink)] focus-visible:outline-2 focus-visible:outline-primary"
-              onClick={() => setShowSubmit(false)}
-            >
-              Cancel
-            </button>
           </div>
         </>
+      ) : null}
+
+      {pickMode ? (
+        <button
+          type="button"
+          className="map-fab absolute bottom-24 left-1/2 z-40 -translate-x-1/2 rounded-full px-4 py-2 text-sm"
+          onClick={() => {
+            setPickMode(false);
+            setShowSubmit(true);
+          }}
+        >
+          Cancel pin
+        </button>
       ) : null}
     </div>
   );

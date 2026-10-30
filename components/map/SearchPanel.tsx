@@ -82,7 +82,10 @@ export function SearchPanel({
         <div className="map-search min-w-0 flex-1">
           <Search className="h-4 w-4 shrink-0 text-[var(--ink-muted)]" />
           <input
-            type="search"
+            type="text"
+            inputMode="search"
+            autoComplete="off"
+            spellCheck={false}
             value={query}
             onChange={(e) => {
               onQuery(e.target.value);
@@ -112,11 +115,16 @@ export function SearchPanel({
 
         <div className="shrink-0">
           {isSignedIn ? (
-            <div className="map-fab h-11 w-11 overflow-hidden rounded-full p-0.5 [&_.cl-userButtonTrigger]:h-full [&_.cl-userButtonTrigger]:w-full">
+            <div className="map-user-btn map-fab h-11 w-11 overflow-hidden rounded-full p-0">
               <UserButton
                 appearance={{
                   elements: {
-                    userButtonAvatarBox: "h-9 w-9",
+                    rootBox: "h-11 w-11",
+                    userButtonBox: "h-11 w-11",
+                    userButtonTrigger:
+                      "h-11 w-11 rounded-full p-0 focus:shadow-none focus:ring-2 focus:ring-[var(--primary)]",
+                    userButtonAvatarBox: "h-11 w-11",
+                    userButtonAvatarImage: "h-11 w-11",
                   },
                 }}
               />

@@ -7,6 +7,10 @@ type LocationIqHit = {
   lon: string;
 };
 
+/**
+ * Warsaw-bounded forward geocode. Avoid caching empty/error responses —
+ * Next `revalidate` was returning stale `[]` after early key misses.
+ */
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const q = searchParams.get("q")?.trim() ?? "";
@@ -16,29 +20,44 @@ export async function GET(request: Request) {
 
   const key = process.env.LOCATIONIQ_API_KEY;
   if (!key) {
-    return NextResponse.json([]);
+    return NextResponse.json([], { status: 200 });
   }
 
   const params = new URLSearchParams({
     key,
-    q: `${q}, Warsaw`,
+    q: q.toLowerCase().includes("warsaw") || q.toLowerCase().includes("warszawa")
+      ? q
+      : `${q}, Warszawa`,
     format: "json",
-    limit: "5",
+    limit: "6",
     countrycodes: "pl",
-    "accept-language": "en",
-    viewbox: "20.85,52.37,21.28,52.09",
-    bounded: "1",
+    "accept-language": "pl,en",
+    // left,top,right,bottom — Warsaw metro box
+    viewbox: "20.80,52.40,21.30,52.05",
+    // Don't force bounded=1 — many street hits sit just outside a tight box
+    // and LocationIQ then returns []. Prefer Warsaw bias without hard clip.
+    addressdetails: "0",
   });
 
   try {
     const res = await fetch(
-      `https://us1.locationiq.com/v1/search?${params.toString()}`,
-      { next: { revalidate: 3600 } },
+      `https://eu1.locationiq.com/v1/search?${params.toString()}`,
+      {
+        cache: "no-store",
+        headers: { Accept: "application/json" },
+      },
     );
     if (!res.ok) {
-      return NextResponse.json([]);
+      return NextResponse.json([], {
+        headers: { "Cache-Control": "no-store" },
+      });
     }
     const data = (await res.json()) as LocationIqHit[];
+    if (!Array.isArray(data)) {
+      return NextResponse.json([], {
+        headers: { "Cache-Control": "no-store" },
+      });
+    }
     return NextResponse.json(
       data.map((hit) => ({
         id: `liq-${hit.place_id}`,
@@ -47,8 +66,11 @@ export async function GET(request: Request) {
         lat: Number(hit.lat),
         lng: Number(hit.lon),
       })),
+      { headers: { "Cache-Control": "no-store" } },
     );
   } catch {
-    return NextResponse.json([]);
+    return NextResponse.json([], {
+      headers: { "Cache-Control": "no-store" },
+    });
   }
 }

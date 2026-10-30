@@ -11,6 +11,7 @@ import {
   Camera,
   Heart,
   MessageCircle,
+  Navigation,
   Pencil,
   X,
 } from "lucide-react";
@@ -172,7 +173,15 @@ export function PlaceSheet({ place, saved, onClose, onToggleSave }: Props) {
               )}
             </div>
           ) : null}
-          <div className="grid grid-cols-4 gap-2">
+          <div className="grid grid-cols-5 gap-1.5">
+            <RoundAction
+              icon={<Navigation className="h-4 w-4" />}
+              label="Directions"
+              onClick={() => {
+                const url = `https://www.google.com/maps/dir/?api=1&destination=${place.lat},${place.lng}`;
+                window.open(url, "_blank", "noopener,noreferrer");
+              }}
+            />
             <RoundAction
               icon={<Heart className={`h-4 w-4 ${saved ? "fill-current" : ""}`} />}
               label={saved ? "Saved" : "Save"}

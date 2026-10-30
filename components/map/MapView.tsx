@@ -5,6 +5,7 @@ import {
   Marker,
   type GeoJSONSource,
   type MapMouseEvent,
+  type TransformStyleFunction,
 } from "maplibre-gl";
 import {
   forwardRef,
@@ -45,10 +46,13 @@ type Props = {
   places: PublicPlace[];
   selectedId: string | null;
   onSelect: (id: string | null) => void;
+  /** Fired for empty-map clicks (no place hit). Used for pin-drop. */
+  onMapClick?: (coords: { lat: number; lng: number }) => void;
   userLocation?: { lat: number; lng: number } | null;
   addressMarker?: AddressMarker | null;
   flyTo?: { lat: number; lng: number; zoom?: number } | null;
   styleId?: MapStyleId;
+  pickMode?: boolean;
 };
 
 function placesToGeoJSON(places: PublicPlace[]): GeoJSON.FeatureCollection {
@@ -97,7 +101,24 @@ function placesToGeoJSON(places: PublicPlace[]): GeoJSON.FeatureCollection {
   return { type: "FeatureCollection", features };
 }
 
+/** OpenFreeMap hosts Noto Sans; MapLibre’s default Open Sans stack 404s here. */
+const PLACE_TEXT_FONT = ["Noto Sans Regular"];
+
+/** US highway shields are useless in Warsaw and emit null-filter warnings. */
+const NOISY_STYLE_LAYER_IDS = new Set([
+  "highway-shield-non-us",
+  "highway-shield-us-interstate",
+  "road_shield_us",
+]);
+
+/** Drop noisy layers before MapLibre evaluates their filters. */
+const transformStyle: TransformStyleFunction = (_previous, next) => ({
+  ...next,
+  layers: next.layers.filter((layer) => !NOISY_STYLE_LAYER_IDS.has(layer.id)),
+});
+
 function ensureLayers(map: MapLibreMap) {
+
   if (!map.getSource("places")) {
     map.addSource("places", {
       type: "geojson",
@@ -142,6 +163,7 @@ function ensureLayers(map: MapLibreMap) {
         "icon-size": 1,
         "icon-allow-overlap": true,
         "text-field": ["get", "name"],
+        "text-font": PLACE_TEXT_FONT,
         "text-offset": [0, 1.2],
         "text-size": 11,
         "text-optional": true,
@@ -152,6 +174,8 @@ function ensureLayers(map: MapLibreMap) {
         "text-halo-width": 1.5,
       },
     });
+  } else {
+    map.setLayoutProperty("places-points", "text-font", PLACE_TEXT_FONT);
   }
 }
 
@@ -193,16 +217,20 @@ export const MapView = forwardRef<MapHandle, Props>(function MapView(
     places,
     selectedId,
     onSelect,
+    onMapClick,
     userLocation,
     addressMarker,
     flyTo,
     styleId = "streets",
+    pickMode = false,
   },
   ref,
 ) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const onSelectRef = useRef(onSelect);
+  const onMapClickRef = useRef(onMapClick);
+  const pickModeRef = useRef(pickMode);
   const placesRef = useRef(places);
   const styleIdRef = useRef(styleId);
   const userMarkerRef = useRef<Marker | null>(null);
@@ -211,6 +239,18 @@ export const MapView = forwardRef<MapHandle, Props>(function MapView(
   useEffect(() => {
     onSelectRef.current = onSelect;
   }, [onSelect]);
+
+  useEffect(() => {
+    onMapClickRef.current = onMapClick;
+  }, [onMapClick]);
+
+  useEffect(() => {
+    pickModeRef.current = pickMode;
+    const map = mapRef.current;
+    if (map) {
+      map.getCanvas().style.cursor = pickMode ? "crosshair" : "";
+    }
+  }, [pickMode]);
 
   useEffect(() => {
     placesRef.current = places;
@@ -232,7 +272,7 @@ export const MapView = forwardRef<MapHandle, Props>(function MapView(
       const map = mapRef.current;
       if (!map) return;
       styleIdRef.current = next;
-      map.setStyle(MAP_STYLES[next]);
+      map.setStyle(MAP_STYLES[next], { transformStyle });
       map.once("style.load", () => {
         wireMapData(map, placesRef.current);
       });
@@ -253,6 +293,7 @@ export const MapView = forwardRef<MapHandle, Props>(function MapView(
     const map = new MapLibreMap({
       container: containerRef.current,
       style: MAP_STYLES[styleIdRef.current],
+      transformStyle,
       center: WARSAW,
       zoom: 12,
       attributionControl: {
@@ -272,14 +313,33 @@ export const MapView = forwardRef<MapHandle, Props>(function MapView(
     });
 
     const handleClick = (e: MapMouseEvent) => {
+      if (pickModeRef.current) {
+        onMapClickRef.current?.({
+          lat: e.lngLat.lat,
+          lng: e.lngLat.lng,
+        });
+        return;
+      }
       if (!map.getLayer("places-points") || !map.getLayer("places-fill")) {
+        onMapClickRef.current?.({
+          lat: e.lngLat.lat,
+          lng: e.lngLat.lng,
+        });
         return;
       }
       const features = map.queryRenderedFeatures(e.point, {
         layers: ["places-points", "places-fill"],
       });
       const id = features[0]?.properties?.id as string | undefined;
-      onSelectRef.current(id ?? null);
+      if (id) {
+        onSelectRef.current(id);
+        return;
+      }
+      onSelectRef.current(null);
+      onMapClickRef.current?.({
+        lat: e.lngLat.lat,
+        lng: e.lngLat.lng,
+      });
     };
 
     map.on("click", handleClick);
@@ -312,7 +372,7 @@ export const MapView = forwardRef<MapHandle, Props>(function MapView(
     const map = mapRef.current;
     if (!map || styleIdRef.current === styleId) return;
     styleIdRef.current = styleId;
-    map.setStyle(MAP_STYLES[styleId]);
+    map.setStyle(MAP_STYLES[styleId], { transformStyle });
     map.once("style.load", () => wireMapData(map, placesRef.current));
   }, [styleId]);
 

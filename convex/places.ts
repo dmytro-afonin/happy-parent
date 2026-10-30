@@ -292,6 +292,71 @@ export const submitPoint = mutation({
   },
 });
 
+/** Signed-in user proposes an area (polygon) → draft + queue. */
+export const submitPolygon = mutation({
+  args: {
+    language: v.string(),
+    name: v.string(),
+    description: v.optional(v.string()),
+    address: v.optional(v.string()),
+    lat: v.number(),
+    lng: v.number(),
+    boundary: v.array(
+      v.object({
+        lat: v.number(),
+        lng: v.number(),
+      }),
+    ),
+    categoryIds: v.array(v.id("catalogItems")),
+    attributeIds: v.array(v.id("catalogItems")),
+  },
+  handler: async (ctx, args) => {
+    const { user, userId } = await requireUser(ctx);
+    if (!isLang(args.language)) throw new Error("Unknown language");
+    assertCoords(args.lat, args.lng);
+    await assertCatalogIds(ctx, args.categoryIds, args.attributeIds);
+    if (args.boundary.length < 3) {
+      throw new Error("Polygon needs at least 3 vertices");
+    }
+
+    const name = args.name.trim();
+    if (!name) throw new Error("Name is required");
+    const description = args.description?.trim() ?? "";
+    const address = args.address?.trim() ?? "";
+    assertCopyLengths({ name, description, address });
+
+    const copy = emptyPlaceCopy();
+    copy[args.language] = { name, description, address };
+
+    const now = Date.now();
+    const placeId = await ctx.db.insert("places", {
+      copy,
+      categoryIds: args.categoryIds,
+      attributeIds: args.attributeIds,
+      publishStatus: "draft",
+      lat: args.lat,
+      lng: args.lng,
+      geometryType: "polygon",
+      boundary: args.boundary,
+      createdBy: userId,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    await ctx.db.insert("moderationQueue", {
+      kind: "place",
+      placeId,
+      submittedBy: userId,
+      language: args.language,
+      detail: `${LANG_LABELS[args.language]} area`,
+      body: description || name,
+      createdAt: now,
+    });
+
+    return { placeId, who: user.name ?? "You" };
+  },
+});
+
 /** Suggest an edit or translation on a public place. */
 export const suggestCopyChange = mutation({
   args: {
