@@ -2,6 +2,22 @@ import { mutation, query } from "./_generated/server";
 import type { MutationCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 
+/** Comma/space-separated emails from Convex env `ADMIN_EMAILS` (local/dev bootstrap). */
+function adminEmailSet(): Set<string> {
+  const raw = process.env.ADMIN_EMAILS ?? "";
+  return new Set(
+    raw
+      .split(/[,;\s]+/)
+      .map((e) => e.trim().toLowerCase())
+      .filter(Boolean),
+  );
+}
+
+function shouldBeAdmin(email: string | undefined): boolean {
+  if (!email) return false;
+  return adminEmailSet().has(email.trim().toLowerCase());
+}
+
 async function upsertFromIdentity(
   ctx: MutationCtx,
 ): Promise<Doc<"users"> | null> {
@@ -19,17 +35,31 @@ async function upsertFromIdentity(
 
   const name = identity.name ?? undefined;
   const email = identity.email ?? undefined;
+  const promote = shouldBeAdmin(email);
 
   if (existing) {
-    await ctx.db.patch(existing._id, { name, email });
-    return { ...existing, name, email };
+    const patch: { name?: string; email?: string; role?: "admin" } = {
+      name,
+      email,
+    };
+    // Promote matching emails; never auto-demote.
+    if (promote && existing.role !== "admin") {
+      patch.role = "admin";
+    }
+    await ctx.db.patch(existing._id, patch);
+    return {
+      ...existing,
+      name,
+      email,
+      role: promote ? "admin" : existing.role,
+    };
   }
 
   const id = await ctx.db.insert("users", {
     tokenIdentifier: identity.tokenIdentifier,
     name,
     email,
-    role: "user",
+    role: promote ? "admin" : "user",
   });
   const created = await ctx.db.get(id);
   return created;
