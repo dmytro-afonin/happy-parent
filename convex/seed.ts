@@ -171,3 +171,61 @@ export const promoteMeAdmin = internalMutation({
     return { role: "admin" as const };
   },
 });
+
+/**
+ * Promote existing users matching ADMIN_EMAILS / ADMIN_CLERK_USER_IDS.
+ * CLI only — no auth required (for anonymous/local bootstrap after first sign-in).
+ */
+export const promoteAdminsFromEnv = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const emails = new Set(
+      (process.env.ADMIN_EMAILS ?? "")
+        .split(/[,;\s]+/)
+        .map((e) => e.trim().toLowerCase())
+        .filter(Boolean),
+    );
+    const ids = new Set(
+      (process.env.ADMIN_CLERK_USER_IDS ?? "")
+        .split(/[,;\s]+/)
+        .map((e) => e.trim())
+        .filter(Boolean),
+    );
+
+    const users = await ctx.db.query("users").collect();
+    let promoted = 0;
+    const skipped: string[] = [];
+
+    for (const user of users) {
+      if (user.role === "admin") continue;
+      if (user.tokenIdentifier.startsWith("seed|")) continue;
+
+      const emailOk =
+        !!user.email && emails.has(user.email.trim().toLowerCase());
+      let idOk = false;
+      for (const id of ids) {
+        if (
+          user.tokenIdentifier === id ||
+          user.tokenIdentifier.endsWith(`|${id}`)
+        ) {
+          idOk = true;
+          break;
+        }
+      }
+
+      if (emailOk || idOk) {
+        await ctx.db.patch(user._id, { role: "admin" });
+        promoted += 1;
+      } else {
+        skipped.push(user.tokenIdentifier.slice(-24));
+      }
+    }
+
+    return {
+      promoted,
+      emailsConfigured: emails.size,
+      idsConfigured: ids.size,
+      skippedSuffixes: skipped,
+    };
+  },
+});

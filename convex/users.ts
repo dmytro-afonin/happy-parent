@@ -2,20 +2,44 @@ import { mutation, query } from "./_generated/server";
 import type { MutationCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 
-/** Comma/space-separated emails from Convex env `ADMIN_EMAILS` (local/dev bootstrap). */
-function adminEmailSet(): Set<string> {
-  const raw = process.env.ADMIN_EMAILS ?? "";
-  return new Set(
-    raw
-      .split(/[,;\s]+/)
-      .map((e) => e.trim().toLowerCase())
-      .filter(Boolean),
-  );
+function splitEnvList(raw: string | undefined): string[] {
+  return (raw ?? "")
+    .split(/[,;\s]+/)
+    .map((e) => e.trim())
+    .filter(Boolean);
 }
 
-function shouldBeAdmin(email: string | undefined): boolean {
-  if (!email) return false;
-  return adminEmailSet().has(email.trim().toLowerCase());
+/** Comma/space-separated emails from Convex env `ADMIN_EMAILS` (local/dev bootstrap). */
+function adminEmailSet(): Set<string> {
+  return new Set(splitEnvList(process.env.ADMIN_EMAILS).map((e) => e.toLowerCase()));
+}
+
+/**
+ * Clerk user ids (`user_…`) or full tokenIdentifiers from `ADMIN_CLERK_USER_IDS`.
+ * Use this when the Convex JWT has no `email` claim (common).
+ */
+function adminClerkIdSet(): Set<string> {
+  return new Set(splitEnvList(process.env.ADMIN_CLERK_USER_IDS));
+}
+
+function shouldBeAdmin(identity: {
+  email?: string | null;
+  subject?: string | null;
+  tokenIdentifier: string;
+}): boolean {
+  const email = identity.email?.trim().toLowerCase();
+  if (email && adminEmailSet().has(email)) return true;
+
+  const ids = adminClerkIdSet();
+  if (ids.size === 0) return false;
+  const subject = identity.subject?.trim();
+  if (subject && ids.has(subject)) return true;
+  for (const id of ids) {
+    if (identity.tokenIdentifier === id || identity.tokenIdentifier.endsWith(`|${id}`)) {
+      return true;
+    }
+  }
+  return false;
 }
 
 async function upsertFromIdentity(
@@ -35,7 +59,7 @@ async function upsertFromIdentity(
 
   const name = identity.name ?? undefined;
   const email = identity.email ?? undefined;
-  const promote = shouldBeAdmin(email);
+  const promote = shouldBeAdmin(identity);
 
   if (existing) {
     const patch: { name?: string; email?: string; role?: "admin" } = {

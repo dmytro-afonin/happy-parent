@@ -56,12 +56,12 @@ those. Keep Clerk secrets + `CONVEX_AGENT_MODE=anonymous`.
   `seed:promoteMeAdmin` are internal mutations, so the public client cannot call them.
   `seed:run` creates a fake `Seed` user (for `createdBy` on places) — it does
   **not** make your Clerk account admin.
-- Local/Cloud Agent admin: set Convex env `ADMIN_EMAILS` to your Clerk email
-  (comma-separated). `users.ensure` promotes matching emails to `admin` on
-  sign-in (never auto-demotes). Cloud Agent start copies `ADMIN_EMAILS` /
-  `ADMIN_EMAIL` from secrets onto the anonymous deployment. Fallback:
-  `pnpm exec convex run seed:promoteMeAdmin` while signed in, or patch
-  `users.role` in the dashboard.
+- Local/Cloud Agent admin: Clerk’s Convex JWT often has **no email claim**, so
+  `ADMIN_EMAILS` alone may not work. Prefer Convex/Cursor secret
+  `ADMIN_CLERK_USER_IDS` with your Clerk user id (`user_…` from the Clerk
+  dashboard). Optional `ADMIN_EMAILS` still works if the JWT includes email.
+  `users.ensure` promotes on sign-in; start also runs `seed:promoteAdminsFromEnv`.
+  Never auto-demotes.
 
 ### Convex migrations (do not wipe prod)
 
