@@ -32,18 +32,15 @@ pnpm exec convex run seed:run
 ```
 
 To become admin locally (anonymous Convex has no shared dashboard user list),
-prefer your Clerk **user id** (Dashboard → Users → `user_…`). The Convex JWT
-often omits email, so email-only matching fails:
+set your Clerk **user id** (Dashboard → Users → `user_…`):
 
 ```bash
 pnpm exec convex env set ADMIN_CLERK_USER_IDS "user_xxxxxxxx"
-# optional if your Convex JWT includes email:
-pnpm exec convex env set ADMIN_EMAILS "you@example.com"
 pnpm exec convex run seed:promoteAdminsFromEnv   # after you’ve signed in once
 ```
 
-Cloud Agents: secret `ADMIN_CLERK_USER_IDS` (and optional `ADMIN_EMAILS`);
-`scripts/cloud-agent-start.sh` copies them onto Convex.
+Cloud Agents: secret `ADMIN_CLERK_USER_IDS`; `scripts/cloud-agent-start.sh`
+copies it onto Convex. Email allowlists are not used (JWT omits email claims).
 
 Cloud Agents use `scripts/cloud-agent-install.sh` and `scripts/cloud-agent-start.sh`
 (anonymous Convex + Next on ports 3210 / 3000).

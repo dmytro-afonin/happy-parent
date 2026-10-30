@@ -56,10 +56,9 @@ those. Keep Clerk secrets + `CONVEX_AGENT_MODE=anonymous`.
   `seed:promoteMeAdmin` are internal mutations, so the public client cannot call them.
   `seed:run` creates a fake `Seed` user (for `createdBy` on places) — it does
   **not** make your Clerk account admin.
-- Local/Cloud Agent admin: Clerk’s Convex JWT often has **no email claim**, so
-  `ADMIN_EMAILS` alone may not work. Prefer Convex/Cursor secret
-  `ADMIN_CLERK_USER_IDS` with your Clerk user id (`user_…` from the Clerk
-  dashboard). Optional `ADMIN_EMAILS` still works if the JWT includes email.
+- Local/Cloud Agent admin: set Convex/Cursor secret `ADMIN_CLERK_USER_IDS` to
+  your Clerk user id (`user_…` from the Clerk dashboard). Do not rely on email
+  allowlists — Clerk’s default Convex JWT omits `email` / `email_verified`.
   `users.ensure` promotes on sign-in; start also runs `seed:promoteAdminsFromEnv`.
   Never auto-demotes.
 

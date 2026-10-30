@@ -149,12 +149,7 @@ if [[ -n "${CLERK_FRONTEND_API_URL:-}" ]]; then
   convex_cli env set CLERK_FRONTEND_API_URL "$CLERK_FRONTEND_API_URL" >/dev/null || true
 fi
 
-# Optional admin bootstrap (Clerk JWT often omits email — prefer ADMIN_CLERK_USER_IDS).
-ADMIN_EMAILS_VALUE="${ADMIN_EMAILS:-${ADMIN_EMAIL:-}}"
-if [[ -n "$ADMIN_EMAILS_VALUE" ]]; then
-  echo "[cloud-agent-start] ensuring ADMIN_EMAILS on Convex…"
-  convex_cli env set ADMIN_EMAILS "$ADMIN_EMAILS_VALUE" >/dev/null || true
-fi
+# Admin bootstrap via Clerk user id (JWT typically has no usable email claims).
 if [[ -n "${ADMIN_CLERK_USER_IDS:-}" ]]; then
   echo "[cloud-agent-start] ensuring ADMIN_CLERK_USER_IDS on Convex…"
   convex_cli env set ADMIN_CLERK_USER_IDS "$ADMIN_CLERK_USER_IDS" >/dev/null || true

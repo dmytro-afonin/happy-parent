@@ -2,42 +2,24 @@ import { mutation, query } from "./_generated/server";
 import type { MutationCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 
-function splitEnvList(raw: string | undefined): string[] {
-  return (raw ?? "")
-    .split(/[,;\s]+/)
-    .map((e) => e.trim())
-    .filter(Boolean);
-}
-
-/** Comma/space-separated emails from Convex env `ADMIN_EMAILS` (local/dev bootstrap). */
-function adminEmailSet(): Set<string> {
-  return new Set(splitEnvList(process.env.ADMIN_EMAILS).map((e) => e.toLowerCase()));
-}
-
 /**
  * Clerk user ids (`user_…`) or full tokenIdentifiers from `ADMIN_CLERK_USER_IDS`.
- * Use this when the Convex JWT has no `email` claim (common).
+ * Email allowlists are intentionally unused: Clerk's default Convex JWT omits
+ * `email` / `email_verified`, so email matching is either ineffective or unsafe.
  */
 function adminClerkIdSet(): Set<string> {
-  return new Set(splitEnvList(process.env.ADMIN_CLERK_USER_IDS));
+  return new Set(
+    (process.env.ADMIN_CLERK_USER_IDS ?? "")
+      .split(/[,;\s]+/)
+      .map((e) => e.trim())
+      .filter(Boolean),
+  );
 }
 
 function shouldBeAdmin(identity: {
-  email?: string | null;
-  emailVerified?: boolean;
   subject?: string | null;
   tokenIdentifier: string;
 }): boolean {
-  const email = identity.email?.trim().toLowerCase();
-  // Require JWT email_verified so an unverified allowlisted address cannot become admin.
-  if (
-    email &&
-    identity.emailVerified === true &&
-    adminEmailSet().has(email)
-  ) {
-    return true;
-  }
-
   const ids = adminClerkIdSet();
   if (ids.size === 0) return false;
   const subject = identity.subject?.trim();
@@ -74,7 +56,7 @@ async function upsertFromIdentity(
       name,
       email,
     };
-    // Promote matching emails; never auto-demote.
+    // Promote matching Clerk user ids; never auto-demote.
     if (promote && existing.role !== "admin") {
       patch.role = "admin";
     }
