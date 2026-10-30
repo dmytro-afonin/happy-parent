@@ -2,6 +2,36 @@ import { mutation, query } from "./_generated/server";
 import type { MutationCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 
+/**
+ * Clerk user ids (`user_…`) or full tokenIdentifiers from `ADMIN_CLERK_USER_IDS`.
+ * Email allowlists are intentionally unused: Clerk's default Convex JWT omits
+ * `email` / `email_verified`, so email matching is either ineffective or unsafe.
+ */
+function adminClerkIdSet(): Set<string> {
+  return new Set(
+    (process.env.ADMIN_CLERK_USER_IDS ?? "")
+      .split(/[,;\s]+/)
+      .map((e) => e.trim())
+      .filter(Boolean),
+  );
+}
+
+function shouldBeAdmin(identity: {
+  subject?: string | null;
+  tokenIdentifier: string;
+}): boolean {
+  const ids = adminClerkIdSet();
+  if (ids.size === 0) return false;
+  const subject = identity.subject?.trim();
+  if (subject && ids.has(subject)) return true;
+  for (const id of ids) {
+    if (identity.tokenIdentifier === id || identity.tokenIdentifier.endsWith(`|${id}`)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 async function upsertFromIdentity(
   ctx: MutationCtx,
 ): Promise<Doc<"users"> | null> {
@@ -19,17 +49,31 @@ async function upsertFromIdentity(
 
   const name = identity.name ?? undefined;
   const email = identity.email ?? undefined;
+  const promote = shouldBeAdmin(identity);
 
   if (existing) {
-    await ctx.db.patch(existing._id, { name, email });
-    return { ...existing, name, email };
+    const patch: { name?: string; email?: string; role?: "admin" } = {
+      name,
+      email,
+    };
+    // Promote matching Clerk user ids; never auto-demote.
+    if (promote && existing.role !== "admin") {
+      patch.role = "admin";
+    }
+    await ctx.db.patch(existing._id, patch);
+    return {
+      ...existing,
+      name,
+      email,
+      role: promote ? "admin" : existing.role,
+    };
   }
 
   const id = await ctx.db.insert("users", {
     tokenIdentifier: identity.tokenIdentifier,
     name,
     email,
-    role: "user",
+    role: promote ? "admin" : "user",
   });
   const created = await ctx.db.get(id);
   return created;

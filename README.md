@@ -31,6 +31,17 @@ Open http://localhost:3000. Seed demo places:
 pnpm exec convex run seed:run
 ```
 
+To become admin locally (anonymous Convex has no shared dashboard user list),
+set your Clerk **user id** (Dashboard → Users → `user_…`):
+
+```bash
+pnpm exec convex env set ADMIN_CLERK_USER_IDS "user_xxxxxxxx"
+pnpm exec convex run seed:promoteAdminsFromEnv   # after you’ve signed in once
+```
+
+Cloud Agents: secret `ADMIN_CLERK_USER_IDS`; `scripts/cloud-agent-start.sh`
+copies it onto Convex. Email allowlists are not used (JWT omits email claims).
+
 Cloud Agents use `scripts/cloud-agent-install.sh` and `scripts/cloud-agent-start.sh`
 (anonymous Convex + Next on ports 3210 / 3000).
 

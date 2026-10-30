@@ -171,3 +171,52 @@ export const promoteMeAdmin = internalMutation({
     return { role: "admin" as const };
   },
 });
+
+/**
+ * Promote existing users matching ADMIN_CLERK_USER_IDS only.
+ * CLI only — no auth / no email matching (cannot verify email_verified offline).
+ */
+export const promoteAdminsFromEnv = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const ids = new Set(
+      (process.env.ADMIN_CLERK_USER_IDS ?? "")
+        .split(/[,;\s]+/)
+        .map((e) => e.trim())
+        .filter(Boolean),
+    );
+
+    const users = await ctx.db.query("users").collect();
+    let promoted = 0;
+    const skipped: string[] = [];
+
+    for (const user of users) {
+      if (user.role === "admin") continue;
+      if (user.tokenIdentifier.startsWith("seed|")) continue;
+
+      let idOk = false;
+      for (const id of ids) {
+        if (
+          user.tokenIdentifier === id ||
+          user.tokenIdentifier.endsWith(`|${id}`)
+        ) {
+          idOk = true;
+          break;
+        }
+      }
+
+      if (idOk) {
+        await ctx.db.patch(user._id, { role: "admin" });
+        promoted += 1;
+      } else {
+        skipped.push(user.tokenIdentifier.slice(-24));
+      }
+    }
+
+    return {
+      promoted,
+      idsConfigured: ids.size,
+      skippedSuffixes: skipped,
+    };
+  },
+});

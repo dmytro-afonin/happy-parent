@@ -149,6 +149,12 @@ if [[ -n "${CLERK_FRONTEND_API_URL:-}" ]]; then
   convex_cli env set CLERK_FRONTEND_API_URL "$CLERK_FRONTEND_API_URL" >/dev/null || true
 fi
 
+# Admin bootstrap via Clerk user id (JWT typically has no usable email claims).
+if [[ -n "${ADMIN_CLERK_USER_IDS:-}" ]]; then
+  echo "[cloud-agent-start] ensuring ADMIN_CLERK_USER_IDS on Convex…"
+  convex_cli env set ADMIN_CLERK_USER_IDS "$ADMIN_CLERK_USER_IDS" >/dev/null || true
+fi
+
 # Port up != functions pushed. Retry until seed:run exists (idempotent insert-only).
 echo "[cloud-agent-start] waiting for Convex functions, then seeding…"
 seeded=0
@@ -164,6 +170,9 @@ if [[ "$seeded" -ne 1 ]]; then
   tail -n 40 /tmp/cloud-agent-seed.log >&2 || true
   exit 1
 fi
+
+# Promote any already-signed-in users matching admin env (no-op if none yet).
+convex_cli run seed:promoteAdminsFromEnv >/tmp/cloud-agent-promote.log 2>&1 || true
 
 if next_up; then
   echo "[cloud-agent-start] Next.js already on :3000 — idle."

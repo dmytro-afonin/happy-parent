@@ -54,8 +54,13 @@ those. Keep Clerk secrets + `CONVEX_AGENT_MODE=anonymous`.
 - OpenFreeMap tiles require outbound internet.
 - Seed demo places from the CLI: `pnpm exec convex run seed:run`. `seed:run` and
   `seed:promoteMeAdmin` are internal mutations, so the public client cannot call them.
-- Promote a signed-in user to admin locally by setting `users.role` to `admin`
-  in the Convex dashboard Data tab.
+  `seed:run` creates a fake `Seed` user (for `createdBy` on places) — it does
+  **not** make your Clerk account admin.
+- Local/Cloud Agent admin: set Convex/Cursor secret `ADMIN_CLERK_USER_IDS` to
+  your Clerk user id (`user_…` from the Clerk dashboard). Do not rely on email
+  allowlists — Clerk’s default Convex JWT omits `email` / `email_verified`.
+  `users.ensure` promotes on sign-in; start also runs `seed:promoteAdminsFromEnv`.
+  Never auto-demotes.
 
 ### Convex migrations (do not wipe prod)
 
