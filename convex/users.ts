@@ -24,11 +24,19 @@ function adminClerkIdSet(): Set<string> {
 
 function shouldBeAdmin(identity: {
   email?: string | null;
+  emailVerified?: boolean;
   subject?: string | null;
   tokenIdentifier: string;
 }): boolean {
   const email = identity.email?.trim().toLowerCase();
-  if (email && adminEmailSet().has(email)) return true;
+  // Require JWT email_verified so an unverified allowlisted address cannot become admin.
+  if (
+    email &&
+    identity.emailVerified === true &&
+    adminEmailSet().has(email)
+  ) {
+    return true;
+  }
 
   const ids = adminClerkIdSet();
   if (ids.size === 0) return false;

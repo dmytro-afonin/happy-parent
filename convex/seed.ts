@@ -173,18 +173,12 @@ export const promoteMeAdmin = internalMutation({
 });
 
 /**
- * Promote existing users matching ADMIN_EMAILS / ADMIN_CLERK_USER_IDS.
- * CLI only — no auth required (for anonymous/local bootstrap after first sign-in).
+ * Promote existing users matching ADMIN_CLERK_USER_IDS only.
+ * CLI only — no auth / no email matching (cannot verify email_verified offline).
  */
 export const promoteAdminsFromEnv = internalMutation({
   args: {},
   handler: async (ctx) => {
-    const emails = new Set(
-      (process.env.ADMIN_EMAILS ?? "")
-        .split(/[,;\s]+/)
-        .map((e) => e.trim().toLowerCase())
-        .filter(Boolean),
-    );
     const ids = new Set(
       (process.env.ADMIN_CLERK_USER_IDS ?? "")
         .split(/[,;\s]+/)
@@ -200,8 +194,6 @@ export const promoteAdminsFromEnv = internalMutation({
       if (user.role === "admin") continue;
       if (user.tokenIdentifier.startsWith("seed|")) continue;
 
-      const emailOk =
-        !!user.email && emails.has(user.email.trim().toLowerCase());
       let idOk = false;
       for (const id of ids) {
         if (
@@ -213,7 +205,7 @@ export const promoteAdminsFromEnv = internalMutation({
         }
       }
 
-      if (emailOk || idOk) {
+      if (idOk) {
         await ctx.db.patch(user._id, { role: "admin" });
         promoted += 1;
       } else {
@@ -223,7 +215,6 @@ export const promoteAdminsFromEnv = internalMutation({
 
     return {
       promoted,
-      emailsConfigured: emails.size,
       idsConfigured: ids.size,
       skippedSuffixes: skipped,
     };
