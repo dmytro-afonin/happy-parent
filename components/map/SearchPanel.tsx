@@ -51,6 +51,7 @@ type Props = {
   onCommitSearch: () => void;
   selectedPlace: PublicPlace | null;
   addressPreview: WarsawAddress | null;
+  addressNearbyPlace: PublicPlace | null;
   onCloseAddressPreview: () => void;
   placeSheet: React.ReactNode;
 };
@@ -84,21 +85,18 @@ export function SearchPanel({
   onCommitSearch,
   selectedPlace,
   addressPreview,
+  addressNearbyPlace,
   onCloseAddressPreview,
   placeSheet,
 }: Props) {
   const { isSignedIn, user } = useUser();
   const { openUserProfile } = useClerk();
   const needle = query.trim();
-  const showResults =
-    panel === "favourites" ||
-    (panel === "search" &&
-      (!needle ||
-        placeHits.length > 0 ||
-        addressHits.length > 0 ||
-        filterHits.length > 0 ||
-        recents.length > 0 ||
-        favouritePlaces.length > 0));
+  // Keep the drawer open for any search focus — including zero-hit needles —
+  // so "No matches" can render instead of the panel vanishing.
+  const showResults = panel === "favourites" || panel === "search";
+  const sheetOpen =
+    panel === "closed" && Boolean(selectedPlace || addressPreview);
 
   return (
     <div className="pointer-events-none absolute inset-x-0 top-0 z-20 p-3 sm:p-4">
@@ -173,33 +171,35 @@ export function SearchPanel({
         </div>
       </div>
 
-      <div className="pointer-events-auto mx-auto mt-2.5 flex w-full max-w-3xl gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        {categories.map((item) => (
-          <button
-            key={item._id}
-            type="button"
-            className="map-chip shrink-0"
-            data-active={categoryIds.includes(item._id)}
-            onClick={() => onToggleCategory(item._id)}
-          >
-            {item.label}
-          </button>
-        ))}
-        {attributes.map((item) => (
-          <button
-            key={item._id}
-            type="button"
-            className="map-chip shrink-0"
-            data-active={attributeIds.includes(item._id)}
-            onClick={() => onToggleAttribute(item._id)}
-          >
-            {item.label}
-          </button>
-        ))}
-      </div>
+      {!sheetOpen ? (
+        <div className="pointer-events-auto mx-auto mt-2.5 flex w-full max-w-3xl gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {categories.map((item) => (
+            <button
+              key={item._id}
+              type="button"
+              className="map-chip shrink-0"
+              data-active={categoryIds.includes(item._id)}
+              onClick={() => onToggleCategory(item._id)}
+            >
+              {item.label}
+            </button>
+          ))}
+          {attributes.map((item) => (
+            <button
+              key={item._id}
+              type="button"
+              className="map-chip shrink-0"
+              data-active={attributeIds.includes(item._id)}
+              onClick={() => onToggleAttribute(item._id)}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+      ) : null}
 
       {showResults ? (
-        <div className="pointer-events-auto map-sheet mx-auto mt-2 max-h-[min(52vh,28rem)] w-full max-w-3xl overflow-y-auto p-2">
+        <div className="pointer-events-auto map-sheet mx-auto mt-2 max-h-[min(42vh,22rem)] w-full max-w-3xl overflow-y-auto p-1.5">
           {panel === "favourites" ? (
             <Section title="Favourites">
               {favouritePlaces.length === 0 ? (
@@ -385,17 +385,28 @@ export function SearchPanel({
               <X className="h-4 w-4" />
             </button>
           </div>
-          <button
-            type="button"
-            className="mt-3 flex items-center gap-2 rounded-full bg-primary px-3 py-2 text-sm font-medium text-primary-foreground transition hover:brightness-110"
-            onClick={() => {
-              const url = `https://www.google.com/maps/dir/?api=1&destination=${addressPreview.lat},${addressPreview.lng}`;
-              window.open(url, "_blank", "noopener,noreferrer");
-            }}
-          >
-            <Navigation className="h-4 w-4" />
-            Directions
-          </button>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              className="flex items-center gap-2 rounded-full bg-primary px-3 py-2 text-sm font-medium text-primary-foreground transition hover:brightness-110"
+              onClick={() => {
+                const url = `https://www.google.com/maps/dir/?api=1&destination=${addressPreview.lat},${addressPreview.lng}`;
+                window.open(url, "_blank", "noopener,noreferrer");
+              }}
+            >
+              <Navigation className="h-4 w-4" />
+              Directions
+            </button>
+            {addressNearbyPlace ? (
+              <button
+                type="button"
+                className="rounded-full px-3 py-2 text-sm text-[var(--ink-muted)] ring-1 ring-[var(--line)] transition hover:bg-[#f3f7f3] hover:text-[var(--ink)]"
+                onClick={() => onOpenPlace(addressNearbyPlace._id)}
+              >
+                View {addressNearbyPlace.name}
+              </button>
+            ) : null}
+          </div>
         </div>
       ) : null}
     </div>

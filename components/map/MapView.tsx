@@ -120,10 +120,15 @@ const transformStyle: TransformStyleFunction = (_previous, next) => ({
 /** OpenFreeMap sprites sometimes omit POI icons — stub them to silence warnings. */
 function installMissingImageStub(map: MapLibreMap) {
   const empty = new ImageData(1, 1);
-  map.setMissingStyleImageResolver((name) => {
+  const addStub = (name: string) => {
     if (!map.hasImage(name)) {
       map.addImage(name, empty, { pixelRatio: 1 });
     }
+  };
+  map.setMissingStyleImageResolver(addStub);
+  // styleimagemissing fires during parse before the resolver always runs.
+  map.on("styleimagemissing", (e) => {
+    addStub(e.id);
   });
 }
 
@@ -331,6 +336,7 @@ export const MapView = forwardRef<MapHandle, Props>(function MapView(
       },
     });
     mapRef.current = map;
+    installMissingImageStub(map);
 
     const resize = () => map.resize();
     resize();
@@ -339,7 +345,6 @@ export const MapView = forwardRef<MapHandle, Props>(function MapView(
 
     map.on("load", () => {
       resize();
-      installMissingImageStub(map);
       wireMapData(map, placesRef.current);
     });
 

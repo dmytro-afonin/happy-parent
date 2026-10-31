@@ -99,11 +99,57 @@ export const backfillPlacesV2 = migrations.define({
 });
 
 /**
+ * Fill catalog IDs that `backfillPlacesV2` skipped when the catalog was empty.
+ * Safe to re-run: only patches docs still missing resolvable IDs.
+ */
+export const backfillPlaceCatalogIds = migrations.define({
+  table: "places",
+  migrateOne: async (ctx, doc) => {
+    const patch: Record<string, unknown> = {};
+
+    const needsCategories =
+      doc.categoryIds === undefined ||
+      (Array.isArray(doc.categoryIds) &&
+        doc.categoryIds.length === 0 &&
+        Boolean(doc.type));
+    if (needsCategories && doc.type) {
+      const cat = await ctx.db
+        .query("catalogItems")
+        .withIndex("by_slug", (q) => q.eq("slug", doc.type as string))
+        .unique();
+      if (cat) patch.categoryIds = [cat._id];
+    }
+
+    const legacyAttrs = doc.attributes ?? [];
+    const needsAttributes =
+      doc.attributeIds === undefined ||
+      (Array.isArray(doc.attributeIds) &&
+        doc.attributeIds.length === 0 &&
+        legacyAttrs.length > 0);
+    if (needsAttributes && legacyAttrs.length > 0) {
+      const attributeIds = [];
+      for (const slug of legacyAttrs) {
+        const attr = await ctx.db
+          .query("catalogItems")
+          .withIndex("by_slug", (q) => q.eq("slug", slug))
+          .unique();
+        if (attr) attributeIds.push(attr._id);
+      }
+      if (attributeIds.length > 0) patch.attributeIds = attributeIds;
+    }
+
+    if (Object.keys(patch).length === 0) return;
+    return patch;
+  },
+});
+
+/**
  * Ordered migrations applied after each production Convex deploy.
  * Only idempotent transforms. Never wipe/clear helpers.
  */
 const POST_DEPLOY_MIGRATIONS: MigrationFunctionReference[] = [
   internal.migrations.backfillPlacesV2,
+  internal.migrations.backfillPlaceCatalogIds,
 ];
 
 /** Post-deploy entrypoint. No-ops when the list is empty. */

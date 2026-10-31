@@ -33,9 +33,6 @@ import {
   type WarsawAddress,
 } from "@/lib/warsaw-addresses";
 
-const WARSAW_CENTER = { lat: 52.2297, lng: 21.0122 };
-const NEAR_PLACE_M = 90;
-
 function toggle(list: string[], value: string): string[] {
   return list.includes(value)
     ? list.filter((item) => item !== value)
@@ -46,22 +43,6 @@ function clearRecentsStorage() {
   if (typeof window !== "undefined") {
     window.localStorage.removeItem("hp-map-recents-v1");
   }
-}
-
-function nearestPlace(
-  places: PublicPlace[],
-  at: { lat: number; lng: number },
-): PublicPlace | null {
-  let best: PublicPlace | null = null;
-  let bestDist = NEAR_PLACE_M;
-  for (const place of places) {
-    const d = haversineMeters(at, place);
-    if (d < bestDist) {
-      best = place;
-      bestDist = d;
-    }
-  }
-  return best;
 }
 
 export default function MapPage() {
@@ -172,7 +153,9 @@ export default function MapPage() {
 
   const selected = selectedId ? (placesById.get(selectedId) ?? null) : null;
   const needle = query.trim().toLowerCase();
-  const origin = location ?? WARSAW_CENTER;
+  // Only show distances once the user has shared a real location — Warsaw
+  // center as a fake origin reads as noise.
+  const origin = location;
 
   const placeHits = useMemo(() => {
     if (!needle || !places) return [];
@@ -215,6 +198,21 @@ export default function MapPage() {
       .filter((place): place is PublicPlace => Boolean(place));
   }, [favouriteIds, placesById]);
 
+  /** Soft suggestion only — never auto-open when picking an address. */
+  const addressNearbyPlace = useMemo(() => {
+    if (!addressMarker || !places) return null;
+    let best: PublicPlace | null = null;
+    let bestDist = 75;
+    for (const place of places) {
+      const d = haversineMeters(addressMarker, place);
+      if (d < bestDist) {
+        best = place;
+        bestDist = d;
+      }
+    }
+    return best;
+  }, [addressMarker, places]);
+
   function openPlace(id: string) {
     const place = placesById.get(id);
     if (!place) return;
@@ -254,11 +252,8 @@ export default function MapPage() {
   }
 
   function openAddress(hit: WarsawAddress) {
-    const match = places ? nearestPlace(places, hit) : null;
-    if (match) {
-      openPlace(match._id);
-      return;
-    }
+    // Always open the address preview — never silently swap to a nearby
+    // curated place (district/street hits were landing on unrelated pins).
     setAddressMarker(hit);
     setSelectedId(null);
     setQuery(hit.label);
@@ -388,6 +383,7 @@ export default function MapPage() {
         onCommitSearch={commitSearch}
         selectedPlace={selected}
         addressPreview={addressMarker}
+        addressNearbyPlace={addressNearbyPlace}
         onCloseAddressPreview={() => {
           setAddressMarker(null);
           setFlyTarget(null);
