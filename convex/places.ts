@@ -146,11 +146,35 @@ export const listAdmin = query({
       users.map((u) => [u._id, u.name ?? "Parent"] as const),
     );
 
-    const places = docs.map((doc) => {
+    const places = [];
+    for (const doc of docs) {
       const place = normalizePlace(doc);
       const display = placeDisplay(place);
       const waiting = queue.filter((item) => item.placeId === place._id);
-      return {
+      const waitingWithPhotos = [];
+      for (const item of waiting) {
+        let photoUrl: string | null = null;
+        if (item.photoId) {
+          const photo = await ctx.db.get(item.photoId);
+          if (photo) {
+            photoUrl = await ctx.storage.getUrl(photo.storageId);
+          }
+        }
+        waitingWithPhotos.push({
+          _id: item._id,
+          kind: item.kind,
+          detail: item.detail,
+          body: item.body,
+          language: item.language,
+          who: nameByUser.get(item.submittedBy) ?? "Parent",
+          photoId: item.photoId,
+          photoUrl,
+          commentId: item.commentId,
+          field: item.field,
+          createdAt: item.createdAt,
+        });
+      }
+      places.push({
         _id: place._id,
         copy: place.copy,
         name: display.name,
@@ -171,20 +195,9 @@ export const listAdmin = query({
         boundary: place.boundary,
         filledLangs: display.filledLangs,
         updatedAt: place.updatedAt,
-        queue: waiting.map((item) => ({
-          _id: item._id,
-          kind: item.kind,
-          detail: item.detail,
-          body: item.body,
-          language: item.language,
-          who: nameByUser.get(item.submittedBy) ?? "Parent",
-          photoId: item.photoId,
-          commentId: item.commentId,
-          field: item.field,
-          createdAt: item.createdAt,
-        })),
-      };
-    });
+        queue: waitingWithPhotos,
+      });
+    }
 
     return { places, queueCount: queue.length };
   },

@@ -87,10 +87,18 @@
   -webkit-appearance: none;
 }
 
-/* Clerk UserButton sizing goes through appearance.elements — do not target .cl-*. */
+/* Full-bleed account avatar (custom img, not Clerk UserButton). */
 .map-user-btn {
   padding: 0 !important;
-  border: 1.5px solid rgb(20 53 40 / 10%);
+  border: 1.5px solid rgb(20 53 40 / 12%);
+}
+
+.map-user-btn img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: inherit;
 }
 
 .map-chip {

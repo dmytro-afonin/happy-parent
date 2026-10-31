@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  Layers,
-  LocateFixed,
-  Minus,
-  Mountain,
-  Plus,
-} from "lucide-react";
+import { Box, Layers, LocateFixed, Minus, Plus, Square } from "lucide-react";
 import { useState } from "react";
 import type { MapStyleId } from "@/components/map/MapView";
 
@@ -104,7 +98,21 @@ export function MapControls({
           className="map-fab h-10 w-10 rounded-2xl"
           onClick={onToggle3d}
         >
-          <Mountain className="h-4 w-4" />
+          {pitch3d ? (
+            <span className="flex flex-col items-center leading-none">
+              <Square className="h-3.5 w-3.5" strokeWidth={2.25} />
+              <span className="mt-0.5 text-[9px] font-semibold tracking-wide">
+                2D
+              </span>
+            </span>
+          ) : (
+            <span className="flex flex-col items-center leading-none">
+              <Box className="h-3.5 w-3.5" strokeWidth={2.25} />
+              <span className="mt-0.5 text-[9px] font-semibold tracking-wide">
+                3D
+              </span>
+            </span>
+          )}
         </button>
 
         <button

@@ -117,6 +117,16 @@ const transformStyle: TransformStyleFunction = (_previous, next) => ({
   layers: next.layers.filter((layer) => !NOISY_STYLE_LAYER_IDS.has(layer.id)),
 });
 
+/** OpenFreeMap sprites sometimes omit POI icons — stub them to silence warnings. */
+function installMissingImageStub(map: MapLibreMap) {
+  const empty = new ImageData(1, 1);
+  map.setMissingStyleImageResolver((name) => {
+    if (!map.hasImage(name)) {
+      map.addImage(name, empty, { pixelRatio: 1 });
+    }
+  });
+}
+
 function ensureLayers(map: MapLibreMap) {
 
   if (!map.getSource("places")) {
@@ -152,6 +162,21 @@ function ensureLayers(map: MapLibreMap) {
     });
   }
 
+  // Invisible hit target — symbol icons are easy to miss with fat fingers / automation.
+  if (!map.getLayer("places-hit")) {
+    map.addLayer({
+      id: "places-hit",
+      type: "circle",
+      source: "places",
+      filter: ["==", ["get", "kind"], "point"],
+      paint: {
+        "circle-radius": 18,
+        "circle-color": "#000000",
+        "circle-opacity": 0,
+      },
+    });
+  }
+
   if (!map.getLayer("places-points")) {
     map.addLayer({
       id: "places-points",
@@ -160,13 +185,17 @@ function ensureLayers(map: MapLibreMap) {
       filter: ["==", ["get", "kind"], "point"],
       layout: {
         "icon-image": "place-pin",
-        "icon-size": 1,
+        "icon-size": 1.15,
+        "icon-anchor": "bottom",
         "icon-allow-overlap": true,
+        "icon-ignore-placement": true,
         "text-field": ["get", "name"],
         "text-font": PLACE_TEXT_FONT,
-        "text-offset": [0, 1.2],
+        "text-offset": [0, 0.6],
+        "text-anchor": "top",
         "text-size": 11,
         "text-optional": true,
+        "text-allow-overlap": false,
       },
       paint: {
         "text-color": "#143528",
@@ -274,6 +303,7 @@ export const MapView = forwardRef<MapHandle, Props>(function MapView(
       styleIdRef.current = next;
       map.setStyle(MAP_STYLES[next], { transformStyle });
       map.once("style.load", () => {
+        installMissingImageStub(map);
         wireMapData(map, placesRef.current);
       });
     },
@@ -309,8 +339,14 @@ export const MapView = forwardRef<MapHandle, Props>(function MapView(
 
     map.on("load", () => {
       resize();
+      installMissingImageStub(map);
       wireMapData(map, placesRef.current);
     });
+
+    const hitLayers = () =>
+      ["places-hit", "places-points", "places-fill"].filter((id) =>
+        Boolean(map.getLayer(id)),
+      );
 
     const handleClick = (e: MapMouseEvent) => {
       if (pickModeRef.current) {
@@ -320,16 +356,15 @@ export const MapView = forwardRef<MapHandle, Props>(function MapView(
         });
         return;
       }
-      if (!map.getLayer("places-points") || !map.getLayer("places-fill")) {
+      const layers = hitLayers();
+      if (layers.length === 0) {
         onMapClickRef.current?.({
           lat: e.lngLat.lat,
           lng: e.lngLat.lng,
         });
         return;
       }
-      const features = map.queryRenderedFeatures(e.point, {
-        layers: ["places-points", "places-fill"],
-      });
+      const features = map.queryRenderedFeatures(e.point, { layers });
       const id = features[0]?.properties?.id as string | undefined;
       if (id) {
         onSelectRef.current(id);
@@ -343,12 +378,17 @@ export const MapView = forwardRef<MapHandle, Props>(function MapView(
     };
 
     map.on("click", handleClick);
-    map.on("mouseenter", "places-points", () => {
-      map.getCanvas().style.cursor = "pointer";
-    });
-    map.on("mouseleave", "places-points", () => {
-      map.getCanvas().style.cursor = "";
-    });
+
+    const setPointer = () => {
+      if (!pickModeRef.current) map.getCanvas().style.cursor = "pointer";
+    };
+    const clearPointer = () => {
+      if (!pickModeRef.current) map.getCanvas().style.cursor = "";
+    };
+    map.on("mouseenter", "places-hit", setPointer);
+    map.on("mouseleave", "places-hit", clearPointer);
+    map.on("mouseenter", "places-points", setPointer);
+    map.on("mouseleave", "places-points", clearPointer);
 
     return () => {
       ro.disconnect();
@@ -373,7 +413,10 @@ export const MapView = forwardRef<MapHandle, Props>(function MapView(
     if (!map || styleIdRef.current === styleId) return;
     styleIdRef.current = styleId;
     map.setStyle(MAP_STYLES[styleId], { transformStyle });
-    map.once("style.load", () => wireMapData(map, placesRef.current));
+    map.once("style.load", () => {
+      installMissingImageStub(map);
+      wireMapData(map, placesRef.current);
+    });
   }, [styleId]);
 
   const selectedPlace = places.find((p) => p._id === selectedId);
@@ -390,15 +433,19 @@ export const MapView = forwardRef<MapHandle, Props>(function MapView(
     });
   }, [selectedId, selectedLng, selectedLat]);
 
+  const flyLat = flyTo?.lat;
+  const flyLng = flyTo?.lng;
+  const flyZoom = flyTo?.zoom;
+
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !flyTo) return;
+    if (!map || flyLat === undefined || flyLng === undefined) return;
     map.easeTo({
-      center: [flyTo.lng, flyTo.lat],
-      zoom: flyTo.zoom ?? Math.max(map.getZoom(), 14),
+      center: [flyLng, flyLat],
+      zoom: flyZoom ?? Math.max(map.getZoom(), 14),
       duration: 500,
     });
-  }, [flyTo]);
+  }, [flyLat, flyLng, flyZoom]);
 
   useEffect(() => {
     const map = mapRef.current;

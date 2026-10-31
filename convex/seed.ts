@@ -430,9 +430,18 @@ export const run = internalMutation({
     let placesInserted = 0;
     for (const place of SEED_PLACES) {
       const copy = withPlaceCopy(place.copy);
-      const displayName =
-        copy.pl.name || copy.en.name || copy.uk.name || copy.ru.name;
-      if (knownNames.has(displayName)) continue;
+      const seedNames = [
+        copy.pl.name,
+        copy.en.name,
+        copy.uk.name,
+        copy.ru.name,
+        copy.be.name,
+      ]
+        .map((n) => n.trim())
+        .filter(Boolean);
+      // Match any locale (incl. legacy English titles) so re-seed after migrate
+      // does not duplicate places that still have English-only names.
+      if (seedNames.some((n) => knownNames.has(n))) continue;
 
       const categoryIds = place.categories
         .map((slug) => slugToId.get(slug))
@@ -454,6 +463,7 @@ export const run = internalMutation({
         createdAt: now,
         updatedAt: now,
       });
+      for (const n of seedNames) knownNames.add(n);
       placesInserted += 1;
     }
 

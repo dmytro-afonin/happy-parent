@@ -94,8 +94,23 @@ export function SubmitPlaceForm({
     };
   }, [locationQuery]);
 
-  const resolvedLat = pinned?.lat ?? Number(lat);
-  const resolvedLng = pinned?.lng ?? Number(lng);
+  // Sync incoming pin into editable lat/lng without an effect.
+  const pinKey = pinned ? `${pinned.lat},${pinned.lng}` : "";
+  const [appliedPinKey, setAppliedPinKey] = useState(pinKey);
+  if (pinKey !== appliedPinKey) {
+    setAppliedPinKey(pinKey);
+    if (pinned) {
+      setLat(String(pinned.lat));
+      setLng(String(pinned.lng));
+      if (pinned.label) {
+        setAddress((prev) => prev || pinned.label || "");
+        setLocationQuery(pinned.label);
+      }
+    }
+  }
+
+  const resolvedLat = Number(lat);
+  const resolvedLng = Number(lng);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();

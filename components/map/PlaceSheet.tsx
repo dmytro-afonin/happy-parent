@@ -47,6 +47,9 @@ export function PlaceSheet({ place, saved, onClose, onToggleSave }: Props) {
   const [commentLang, setCommentLang] = useState<Lang>("en");
   const [editDraft, setEditDraft] = useState("");
   const [editLang, setEditLang] = useState<Lang>("en");
+  const [editField, setEditField] = useState<
+    "name" | "description" | "address"
+  >("description");
   const [editSent, setEditSent] = useState(false);
   const [photoSent, setPhotoSent] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -82,7 +85,7 @@ export function PlaceSheet({ place, saved, onClose, onToggleSave }: Props) {
       await suggestCopy({
         placeId: place._id as Id<"places">,
         language: editLang,
-        field: "description",
+        field: editField,
         body,
         kind: "edit",
       });
@@ -182,11 +185,25 @@ export function PlaceSheet({ place, saved, onClose, onToggleSave }: Props) {
                 window.open(url, "_blank", "noopener,noreferrer");
               }}
             />
-            <RoundAction
-              icon={<Heart className={`h-4 w-4 ${saved ? "fill-current" : ""}`} />}
-              label={saved ? "Saved" : "Save"}
-              onClick={onToggleSave}
-            />
+            <Authenticated>
+              <RoundAction
+                icon={
+                  <Heart className={`h-4 w-4 ${saved ? "fill-current" : ""}`} />
+                }
+                label={saved ? "Saved" : "Save"}
+                onClick={onToggleSave}
+              />
+            </Authenticated>
+            <Unauthenticated>
+              <SignInButton mode="modal">
+                <span className="flex flex-col items-center gap-1 text-[11px] text-[var(--ink)]">
+                  <span className="map-fab inline-flex h-9 w-9 items-center justify-center rounded-full">
+                    <Heart className="h-4 w-4" />
+                  </span>
+                  Save
+                </span>
+              </SignInButton>
+            </Unauthenticated>
             <RoundAction
               icon={<MessageCircle className="h-4 w-4" />}
               label="Comments"
@@ -253,7 +270,8 @@ export function PlaceSheet({ place, saved, onClose, onToggleSave }: Props) {
       {sheet === "edit" ? (
         <SheetBody title="Suggest an edit" onBack={() => setSheet("preview")}>
           <p className="text-xs text-[var(--ink-muted)]">
-            Describe what should change. An admin reviews it on the place.
+            Submit the corrected text for a field. Approving replaces that field
+            on the place — use Comments for freeform notes.
           </p>
           <AuthGate>
             <select
@@ -267,10 +285,27 @@ export function PlaceSheet({ place, saved, onClose, onToggleSave }: Props) {
                 </option>
               ))}
             </select>
+            <select
+              value={editField}
+              onChange={(e) =>
+                setEditField(e.target.value as "name" | "description" | "address")
+              }
+              className="rounded-md border border-[var(--line)] px-2 py-1.5 text-sm"
+            >
+              <option value="description">Description</option>
+              <option value="name">Name</option>
+              <option value="address">Address</option>
+            </select>
             <textarea
               value={editDraft}
               onChange={(e) => setEditDraft(e.target.value)}
-              placeholder="The entrance is on the other street"
+              placeholder={
+                editField === "address"
+                  ? "Full corrected address"
+                  : editField === "name"
+                    ? "Corrected place name"
+                    : "Full corrected description"
+              }
               rows={3}
               className="rounded-md border border-[var(--line)] px-3 py-2 text-sm"
             />

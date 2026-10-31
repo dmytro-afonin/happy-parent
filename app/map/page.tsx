@@ -1,5 +1,6 @@
 "use client";
 
+import { useAuth } from "@clerk/nextjs";
 import { useMutation, useQuery } from "convex/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { MapControls } from "@/components/map/MapControls";
@@ -16,7 +17,11 @@ import "@/components/map/map-chrome.css";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import type { CatalogItem } from "@/lib/catalog";
-import { filterPlaces, type PublicPlace } from "@/lib/filter-places";
+import {
+  filterPlaces,
+  haversineMeters,
+  type PublicPlace,
+} from "@/lib/filter-places";
 import { searchLocationIq } from "@/lib/locationiq";
 import {
   loadRecents,
@@ -27,6 +32,9 @@ import {
   searchWarsawAddresses,
   type WarsawAddress,
 } from "@/lib/warsaw-addresses";
+
+const WARSAW_CENTER = { lat: 52.2297, lng: 21.0122 };
+const NEAR_PLACE_M = 90;
 
 function toggle(list: string[], value: string): string[] {
   return list.includes(value)
@@ -40,11 +48,28 @@ function clearRecentsStorage() {
   }
 }
 
+function nearestPlace(
+  places: PublicPlace[],
+  at: { lat: number; lng: number },
+): PublicPlace | null {
+  let best: PublicPlace | null = null;
+  let bestDist = NEAR_PLACE_M;
+  for (const place of places) {
+    const d = haversineMeters(at, place);
+    if (d < bestDist) {
+      best = place;
+      bestDist = d;
+    }
+  }
+  return best;
+}
+
 export default function MapPage() {
   const places = useQuery(api.places.listPublic) as PublicPlace[] | undefined;
   const catalog = useQuery(api.catalog.list) as CatalogItem[] | undefined;
   const favouriteIds = useQuery(api.favorites.listMine);
   const me = useQuery(api.users.me);
+  const { isSignedIn } = useAuth();
   const toggleFavourite = useMutation(api.favorites.toggle);
   const mapRef = useRef<MapHandle>(null);
 
@@ -64,6 +89,11 @@ export default function MapPage() {
   const [addressMarker, setAddressMarker] = useState<WarsawAddress | null>(
     null,
   );
+  const [flyTarget, setFlyTarget] = useState<{
+    lat: number;
+    lng: number;
+    zoom?: number;
+  } | null>(null);
   const [liqHits, setLiqHits] = useState<WarsawAddress[]>([]);
   const [showSubmit, setShowSubmit] = useState(false);
   const [pickMode, setPickMode] = useState(false);
@@ -118,8 +148,31 @@ export default function MapPage() {
     return map;
   }, [places]);
 
+  const favouriteIdSet = useMemo(() => {
+    const ids = new Set<string>();
+    for (const id of favouriteIds ?? []) ids.add(id);
+    return ids;
+  }, [favouriteIds]);
+
+  const recentPlaceIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const item of recents) {
+      if (item.kind === "place") ids.add(item.placeId);
+    }
+    return ids;
+  }, [recents]);
+
+  const recentQueries = useMemo(() => {
+    const qs = new Set<string>();
+    for (const item of recents) {
+      if (item.kind === "search") qs.add(item.query.toLowerCase());
+    }
+    return qs;
+  }, [recents]);
+
   const selected = selectedId ? (placesById.get(selectedId) ?? null) : null;
   const needle = query.trim().toLowerCase();
+  const origin = location ?? WARSAW_CENTER;
 
   const placeHits = useMemo(() => {
     if (!needle || !places) return [];
@@ -129,7 +182,7 @@ export default function MapPage() {
           .toLowerCase()
           .includes(needle),
       )
-      .slice(0, 5);
+      .slice(0, 8);
   }, [places, needle]);
 
   const filterHits = useMemo(() => {
@@ -167,6 +220,7 @@ export default function MapPage() {
     if (!place) return;
     setSelectedId(id);
     setAddressMarker(null);
+    setFlyTarget(null);
     setPanel("closed");
     setQuery(place.name);
     setRecents((prev) =>
@@ -200,10 +254,16 @@ export default function MapPage() {
   }
 
   function openAddress(hit: WarsawAddress) {
+    const match = places ? nearestPlace(places, hit) : null;
+    if (match) {
+      openPlace(match._id);
+      return;
+    }
     setAddressMarker(hit);
     setSelectedId(null);
     setQuery(hit.label);
     setPanel("closed");
+    setFlyTarget({ lat: hit.lat, lng: hit.lng, zoom: 15 });
     setRecents((prev) =>
       rememberRecent(prev, {
         kind: "search",
@@ -211,6 +271,14 @@ export default function MapPage() {
         at: Date.now(),
       }),
     );
+  }
+
+  function clearSearchChrome() {
+    setQuery("");
+    setPanel("closed");
+    setSelectedId(null);
+    setAddressMarker(null);
+    setFlyTarget(null);
   }
 
   function requestLocation() {
@@ -230,8 +298,14 @@ export default function MapPage() {
   }
 
   async function onToggleSave() {
-    if (!selectedId) return;
+    if (!selectedId || !isSignedIn) return;
     await toggleFavourite({ placeId: selectedId as Id<"places"> });
+  }
+
+  function openSuggest() {
+    if (!isSignedIn) return;
+    setShowSubmit(true);
+    setPickMode(false);
   }
 
   return (
@@ -248,6 +322,7 @@ export default function MapPage() {
             if (id) openPlace(id);
             else {
               setSelectedId(null);
+              setAddressMarker(null);
               setPanel("closed");
             }
           }}
@@ -269,15 +344,7 @@ export default function MapPage() {
                 }
               : addressMarker
           }
-          flyTo={
-            addressMarker && !submitPin
-              ? {
-                  lat: addressMarker.lat,
-                  lng: addressMarker.lng,
-                  zoom: 14,
-                }
-              : null
-          }
+          flyTo={flyTarget}
         />
       </div>
 
@@ -297,6 +364,7 @@ export default function MapPage() {
           setPanel(next);
           if (next === "favourites") setSelectedId(null);
         }}
+        onClear={clearSearchChrome}
         onOpenMenu={() => setMenuOpen(true)}
         categories={categories}
         attributes={attributes}
@@ -308,18 +376,28 @@ export default function MapPage() {
         addressHits={addressHits}
         filterHits={filterHits}
         recents={recents}
+        favouriteIds={favouriteIdSet}
         favouritePlaces={favouritePlaces}
         placesById={placesById}
+        recentPlaceIds={recentPlaceIds}
+        recentQueries={recentQueries}
+        origin={origin}
         onOpenPlace={openPlace}
         onOpenAddress={openAddress}
         onApplyFilter={applyFilter}
         onCommitSearch={commitSearch}
         selectedPlace={selected}
+        addressPreview={addressMarker}
+        onCloseAddressPreview={() => {
+          setAddressMarker(null);
+          setFlyTarget(null);
+        }}
         placeSheet={
           selected ? (
             <PlaceSheet
+              key={selected._id}
               place={selected}
-              saved={(favouriteIds ?? []).some((id) => id === selected._id)}
+              saved={favouriteIdSet.has(selected._id)}
               onClose={() => {
                 setSelectedId(null);
                 setQuery("");
@@ -348,13 +426,11 @@ export default function MapPage() {
         open={menuOpen}
         onClose={() => setMenuOpen(false)}
         isAdmin={me?.role === "admin"}
+        isSignedIn={Boolean(isSignedIn)}
         favouritePlaces={favouritePlaces}
         recents={recents}
         placesById={placesById}
-        onSuggestPlace={() => {
-          setShowSubmit(true);
-          setPickMode(false);
-        }}
+        onSuggestPlace={openSuggest}
         onOpenPlace={openPlace}
         onSearchRecent={(value) => {
           setQuery(value);
@@ -366,18 +442,25 @@ export default function MapPage() {
         }}
       />
 
-      {showSubmit && !pickMode ? (
+      {showSubmit ? (
         <>
-          <button
-            type="button"
-            aria-label="Close suggest place"
-            className="absolute inset-0 z-40 bg-[rgb(20_53_40/18%)]"
-            onClick={() => {
-              setShowSubmit(false);
-              setSubmitPin(null);
-            }}
-          />
-          <div className="map-sheet absolute top-[max(0.75rem,env(safe-area-inset-top))] left-1/2 z-50 w-[min(26rem,calc(100%-1.5rem))] -translate-x-1/2 p-4 sm:top-1/2 sm:-translate-y-1/2">
+          {!pickMode ? (
+            <button
+              type="button"
+              aria-label="Close suggest place"
+              className="absolute inset-0 z-40 bg-[rgb(20_53_40/18%)]"
+              onClick={() => {
+                setShowSubmit(false);
+                setSubmitPin(null);
+                setPickMode(false);
+              }}
+            />
+          ) : null}
+          <div
+            className={`map-sheet absolute top-[max(0.75rem,env(safe-area-inset-top))] left-1/2 z-50 w-[min(26rem,calc(100%-1.5rem))] -translate-x-1/2 p-4 sm:top-1/2 sm:-translate-y-1/2 ${
+              pickMode ? "hidden" : ""
+            }`}
+          >
             <SubmitPlaceForm
               categories={categories}
               attributes={attributes}
@@ -391,7 +474,6 @@ export default function MapPage() {
               picking={pickMode}
               onStartPick={() => {
                 setPickMode(true);
-                setShowSubmit(false);
               }}
               onCancelPick={() => setPickMode(false)}
               onPinnedFromSearch={(hit) => {
@@ -427,7 +509,6 @@ export default function MapPage() {
           className="map-fab absolute bottom-24 left-1/2 z-40 -translate-x-1/2 rounded-full px-4 py-2 text-sm"
           onClick={() => {
             setPickMode(false);
-            setShowSubmit(true);
           }}
         >
           Cancel pin

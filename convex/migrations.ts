@@ -61,27 +61,36 @@ export const backfillPlacesV2 = migrations.define({
     }
 
     if (doc.categoryIds === undefined) {
-      const categoryIds = [];
       if (doc.type) {
         const cat = await ctx.db
           .query("catalogItems")
           .withIndex("by_slug", (q) => q.eq("slug", doc.type as string))
           .unique();
-        if (cat) categoryIds.push(cat._id);
+        // Skip writing empty arrays when catalog isn't seeded yet so a later
+        // migrate pass can still resolve the slug.
+        if (cat) patch.categoryIds = [cat._id];
+      } else {
+        patch.categoryIds = [];
       }
-      patch.categoryIds = categoryIds;
     }
 
     if (doc.attributeIds === undefined) {
-      const attributeIds = [];
-      for (const slug of doc.attributes ?? []) {
-        const attr = await ctx.db
-          .query("catalogItems")
-          .withIndex("by_slug", (q) => q.eq("slug", slug))
-          .unique();
-        if (attr) attributeIds.push(attr._id);
+      const slugs = doc.attributes ?? [];
+      if (slugs.length === 0) {
+        patch.attributeIds = [];
+      } else {
+        const attributeIds = [];
+        for (const slug of slugs) {
+          const attr = await ctx.db
+            .query("catalogItems")
+            .withIndex("by_slug", (q) => q.eq("slug", slug))
+            .unique();
+          if (attr) attributeIds.push(attr._id);
+        }
+        if (attributeIds.length > 0) {
+          patch.attributeIds = attributeIds;
+        }
       }
-      patch.attributeIds = attributeIds;
     }
 
     if (Object.keys(patch).length === 0) return;

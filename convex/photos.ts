@@ -26,6 +26,15 @@ export const submit = mutation({
       throw new Error("Place is not public yet");
     }
 
+    const meta = await ctx.storage.getMetadata(args.storageId);
+    if (!meta) throw new Error("Upload not found");
+
+    const alreadyUsed = await ctx.db
+      .query("photos")
+      .filter((q) => q.eq(q.field("storageId"), args.storageId))
+      .first();
+    if (alreadyUsed) throw new Error("Photo already submitted");
+
     const now = Date.now();
     const photoId = await ctx.db.insert("photos", {
       placeId: args.placeId,

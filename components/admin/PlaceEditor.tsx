@@ -17,6 +17,7 @@ export type AdminQueueItem = {
   language?: Lang;
   who: string;
   photoId?: Id<"photos">;
+  photoUrl?: string | null;
   commentId?: Id<"comments">;
   field?: "name" | "description" | "address";
 };
@@ -329,12 +330,25 @@ export function PlaceEditor({
         {pending
           .filter((item) => item.kind === "photo")
           .map((item) => (
-            <DecisionRow
-              key={item._id}
-              text={`${item.who} added a photo.`}
-              onApprove={() => void onApprove(item)}
-              onReject={() => void onReject(item)}
-            />
+            <div key={item._id} className="flex flex-col gap-2">
+              {item.photoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={item.photoUrl}
+                  alt={`Photo from ${item.who}`}
+                  className="max-h-48 w-auto rounded-md object-contain ring-1 ring-[var(--line)]"
+                />
+              ) : (
+                <p className="text-xs text-[var(--ink-muted)]">
+                  Preview unavailable
+                </p>
+              )}
+              <DecisionRow
+                text={`${item.who} added a photo.`}
+                onApprove={() => void onApprove(item)}
+                onReject={() => void onReject(item)}
+              />
+            </div>
           ))}
       </div>
 

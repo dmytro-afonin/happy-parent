@@ -1,5 +1,6 @@
 "use client";
 
+import { SignInButton } from "@clerk/nextjs";
 import {
   ChevronDown,
   Clock,
@@ -18,6 +19,7 @@ type Props = {
   open: boolean;
   onClose: () => void;
   isAdmin: boolean;
+  isSignedIn: boolean;
   favouritePlaces: PublicPlace[];
   recents: Recent[];
   placesById: Map<string, PublicPlace>;
@@ -31,6 +33,7 @@ export function MapMenu({
   open,
   onClose,
   isAdmin,
+  isSignedIn,
   favouritePlaces,
   recents,
   placesById,
@@ -202,17 +205,30 @@ export function MapMenu({
         </nav>
 
         <div className="border-t border-[var(--line)]/60 px-2 py-2">
-          <button
-            type="button"
-            className="flex w-full items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-xs text-[var(--ink-muted)] transition hover:bg-[#f3f7f3] hover:text-[var(--ink)] focus-visible:outline-2 focus-visible:outline-primary"
-            onClick={() => {
-              onSuggestPlace();
-              onClose();
-            }}
-          >
-            <Plus className="h-3.5 w-3.5" />
-            Suggest a place
-          </button>
+          {isSignedIn ? (
+            <button
+              type="button"
+              className="flex w-full items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-xs text-[var(--ink-muted)] transition hover:bg-[#f3f7f3] hover:text-[var(--ink)] focus-visible:outline-2 focus-visible:outline-primary"
+              onClick={() => {
+                onSuggestPlace();
+                onClose();
+              }}
+            >
+              <Plus className="h-3.5 w-3.5" />
+              Suggest a place
+            </button>
+          ) : (
+            <SignInButton mode="modal">
+              <button
+                type="button"
+                className="flex w-full items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-xs text-[var(--ink-muted)] transition hover:bg-[#f3f7f3] hover:text-[var(--ink)] focus-visible:outline-2 focus-visible:outline-primary"
+                onClick={onClose}
+              >
+                <Plus className="h-3.5 w-3.5" />
+                Sign in to suggest a place
+              </button>
+            </SignInButton>
+          )}
         </div>
       </aside>
     </>
