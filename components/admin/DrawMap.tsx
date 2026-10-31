@@ -19,9 +19,10 @@ export type DrawnPolygon = {
 
 type Props = {
   onPolygon: (polygon: DrawnPolygon | null) => void;
+  className?: string;
 };
 
-export function DrawMap({ onPolygon }: Props) {
+export function DrawMap({ onPolygon, className }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const onPolygonRef = useRef(onPolygon);
 
@@ -33,9 +34,20 @@ export function DrawMap({ onPolygon }: Props) {
     if (!containerRef.current) return;
 
     ensureMapLibreWorker();
+    const noisyShields = new Set([
+      "highway-shield-non-us",
+      "highway-shield-us-interstate",
+      "road_shield_us",
+    ]);
     const map = new MapLibreMap({
       container: containerRef.current,
       style: STYLE_URL,
+      transformStyle: (_prev, next) => ({
+        ...next,
+        layers: (next.layers ?? []).filter(
+          (layer) => !noisyShields.has(layer.id),
+        ),
+      }),
       center: WARSAW,
       zoom: 12,
     });
@@ -79,7 +91,10 @@ export function DrawMap({ onPolygon }: Props) {
   return (
     <div
       ref={containerRef}
-      className="h-[420px] w-full border border-[var(--line)]"
+      className={
+        className ??
+        "h-[420px] w-full overflow-hidden rounded-xl border border-[var(--line)]"
+      }
       role="presentation"
     />
   );
