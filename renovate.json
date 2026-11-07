@@ -1,0 +1,26 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "description": "pnpm updates for Happy Parent. Pull requests open Friday night into Saturday morning (Europe/Warsaw) and are ready before 07:00. Automerge is off.",
+  "extends": ["group:allNonMajor"],
+  "timezone": "Europe/Warsaw",
+  "schedule": ["* 22-23 * * 5", "* 0-6 * * 6"],
+  "dependencyDashboard": true,
+  "automerge": false,
+  "separateMajorMinor": true,
+  "prConcurrentLimit": 5,
+  "lockFileMaintenance": {
+    "enabled": true,
+    "automerge": false,
+    "schedule": ["* 22-23 * * 5", "* 0-6 * * 6"]
+  },
+  "packageRules": [
+    {
+      "description": "Do not bump engines.node on minor or patch. A major Node engine update is its own pull request.",
+      "matchManagers": ["npm"],
+      "matchDepTypes": ["engines"],
+      "matchPackageNames": ["node"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "enabled": false
+    }
+  ]
+}
