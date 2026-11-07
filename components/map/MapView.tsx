@@ -117,6 +117,9 @@ const transformStyle: TransformStyleFunction = (_previous, next) => ({
   layers: next.layers.filter((layer) => !NOISY_STYLE_LAYER_IDS.has(layer.id)),
 });
 
+/** One listener per map. `style.load` calls this again after every layer switch. */
+const missingImageStubBound = new WeakSet<MapLibreMap>();
+
 /** OpenFreeMap sprites sometimes omit POI icons — stub them to silence warnings. */
 function installMissingImageStub(map: MapLibreMap) {
   const empty = new ImageData(1, 1);
@@ -126,6 +129,8 @@ function installMissingImageStub(map: MapLibreMap) {
     }
   };
   map.setMissingStyleImageResolver(addStub);
+  if (missingImageStubBound.has(map)) return;
+  missingImageStubBound.add(map);
   // styleimagemissing fires during parse before the resolver always runs.
   map.on("styleimagemissing", (e) => {
     addStub(e.id);

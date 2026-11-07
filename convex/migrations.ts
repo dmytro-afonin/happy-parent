@@ -101,6 +101,10 @@ export const backfillPlacesV2 = migrations.define({
 /**
  * Fill catalog IDs that `backfillPlacesV2` skipped when the catalog was empty.
  * Safe to re-run: only patches docs still missing resolvable IDs.
+ *
+ * `@convex-dev/migrations` treats a void return as done and will not revisit
+ * the doc. Production `runAll` does not seed first, so an empty catalog must
+ * fail the batch and leave this migration unfinished until items exist.
  */
 export const backfillPlaceCatalogIds = migrations.define({
   table: "places",
@@ -136,6 +140,23 @@ export const backfillPlaceCatalogIds = migrations.define({
         if (attr) attributeIds.push(attr._id);
       }
       if (attributeIds.length > 0) patch.attributeIds = attributeIds;
+    }
+
+    const categoryStillOpen = Boolean(
+      needsCategories && doc.type && patch.categoryIds === undefined,
+    );
+    const attributesStillOpen = Boolean(
+      needsAttributes &&
+        legacyAttrs.length > 0 &&
+        patch.attributeIds === undefined,
+    );
+    if (categoryStillOpen || attributesStillOpen) {
+      const anyCatalog = await ctx.db.query("catalogItems").take(1);
+      if (anyCatalog.length === 0) {
+        throw new Error(
+          "backfillPlaceCatalogIds: catalog is empty; leaving migration unfinished",
+        );
+      }
     }
 
     if (Object.keys(patch).length === 0) return;
