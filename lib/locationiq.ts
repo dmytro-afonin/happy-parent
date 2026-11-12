@@ -11,7 +11,8 @@ export async function searchLocationIq(
       { signal: AbortSignal.timeout(5000) },
     );
     if (!res.ok) return [];
-    return (await res.json()) as WarsawAddress[];
+    const data: unknown = await res.json();
+    return Array.isArray(data) ? (data as WarsawAddress[]) : [];
   } catch {
     return [];
   }

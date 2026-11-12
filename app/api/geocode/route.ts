@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
 import { shortenAddress } from "@/lib/format-address";
+import {
+  GEOCODE_COOKIE,
+  verifyGeocodeCookieValue,
+} from "@/lib/geocode-gate";
 
 type LocationIqHit = {
   place_id: string | number;
@@ -104,6 +108,21 @@ const noStore = { "Cache-Control": "no-store" } as const;
 export async function GET(request: Request) {
   if (!isSameAppBrowserRequest(request)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403, headers: noStore });
+  }
+
+  // Require the signed map-session cookie minted by proxy middleware.
+  // Sec-Fetch-Site alone is attacker-spoofable; this HMAC is not.
+  const cookieHeader = request.headers.get("cookie") ?? "";
+  const geoCookie = cookieHeader
+    .split(";")
+    .map((part) => part.trim())
+    .find((part) => part.startsWith(`${GEOCODE_COOKIE}=`))
+    ?.slice(GEOCODE_COOKIE.length + 1);
+  if (!verifyGeocodeCookieValue(geoCookie)) {
+    return NextResponse.json(
+      { error: "Forbidden" },
+      { status: 403, headers: noStore },
+    );
   }
 
   const { searchParams } = new URL(request.url);
