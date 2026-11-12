@@ -1,11 +1,14 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "description": "pnpm updates for Happy Parent. Pull requests open Friday night into Saturday morning (Europe/Warsaw) and are ready before 07:00. Automerge is off.",
+  "description": "pnpm updates for Happy Parent. Pull requests open Friday night into Saturday morning (Europe/Warsaw) and are ready before 07:00. Automerge is off. Pull request bodies include release notes.",
   "extends": ["group:allNonMajor"],
   "timezone": "Europe/Warsaw",
   "schedule": ["* 22-23 * * 5", "* 0-6 * * 6"],
-  "dependencyDashboard": true,
+  "dependencyDashboard": {
+    "enabled": true
+  },
   "automerge": false,
+  "fetchChangeLogs": "pr",
   "separateMajorMinor": true,
   "prConcurrentLimit": 5,
   "lockFileMaintenance": {
@@ -21,6 +24,34 @@
       "matchPackageNames": ["node"],
       "matchUpdateTypes": ["minor", "patch"],
       "enabled": false
+    },
+    {
+      "description": "Next.js majors move with React, react-dom, their type packages, and eslint-config-next. Minor and patch stay in the single non-major group.",
+      "matchPackageNames": [
+        "next",
+        "eslint-config-next",
+        "react",
+        "react-dom",
+        "@types/react",
+        "@types/react-dom"
+      ],
+      "matchUpdateTypes": ["major"],
+      "groupName": "Next.js, React, and types",
+      "groupSlug": "next-react-major"
+    },
+    {
+      "description": "Tailwind majors move together. Minor and patch stay in the single non-major group.",
+      "extends": ["monorepo:tailwindcss"],
+      "matchUpdateTypes": ["major"],
+      "groupName": "Tailwind CSS",
+      "groupSlug": "tailwind-major"
+    },
+    {
+      "description": "Terra Draw majors move with the MapLibre adapter. Minor and patch stay in the single non-major group.",
+      "matchPackageNames": ["terra-draw", "terra-draw-maplibre-gl-adapter"],
+      "matchUpdateTypes": ["major"],
+      "groupName": "Terra Draw",
+      "groupSlug": "terra-draw-major"
     }
   ]
 }
