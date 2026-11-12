@@ -17,6 +17,14 @@ Convex (data) and Clerk (auth). MapLibre + OpenFreeMap power the public map;
 Terra Draw is admin-only. Standard commands live in `README.md` and
 `package.json` scripts.
 
+### pstack skills
+
+Poteto's pstack development skills are in `.agents/skills/` (from
+[cursor/plugins](https://github.com/cursor/plugins/tree/main/pstack), next to
+the Clerk skills). For rigorous work, read `poteto-mode`. It routes to the
+`principle-*` skills (including `principle-prove-it-works`), `reflect`, and
+the other workflow skills in that directory.
+
 ### Node and pnpm
 
 - Runtime pin is `devEngines.runtime` in `package.json` (Node `^26.13.0`, downloaded when the shell Node does not match). `engines.node` is `26.x` so Vercel stays on the Node 26 major and does not float forward when the next major is released. There is no `.nvmrc`.
