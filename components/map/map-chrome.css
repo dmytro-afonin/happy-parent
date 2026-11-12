@@ -1,0 +1,224 @@
+/* Floating map chrome — soft elevation, no hard panel frames */
+
+.map-fab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: #fff;
+  color: var(--ink);
+  box-shadow:
+    0 1px 2px rgb(20 53 40 / 8%),
+    0 4px 14px rgb(20 53 40 / 10%);
+  transition:
+    background-color 140ms ease,
+    box-shadow 140ms ease,
+    transform 120ms ease,
+    color 140ms ease;
+  cursor: pointer;
+}
+
+.map-fab:hover {
+  background: #f7faf6;
+  box-shadow:
+    0 2px 4px rgb(20 53 40 / 10%),
+    0 8px 20px rgb(20 53 40 / 12%);
+}
+
+.map-fab:active {
+  transform: scale(0.96);
+  background: #eef5ee;
+}
+
+.map-fab:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.map-fab[aria-pressed="true"],
+.map-fab[data-active="true"] {
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+
+.map-fab[aria-pressed="true"]:hover,
+.map-fab[data-active="true"]:hover {
+  background: color-mix(in oklab, var(--primary) 92%, black);
+}
+
+.map-search {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 2.75rem;
+  padding: 0 0.85rem;
+  border-radius: 999px;
+  background: #fff;
+  box-shadow:
+    0 1px 2px rgb(20 53 40 / 8%),
+    0 6px 18px rgb(20 53 40 / 12%);
+  transition: box-shadow 140ms ease;
+}
+
+.map-search:focus-within {
+  box-shadow:
+    0 1px 2px rgb(20 53 40 / 10%),
+    0 8px 24px rgb(20 53 40 / 14%),
+    0 0 0 2px color-mix(in oklab, var(--primary) 35%, transparent);
+}
+
+.map-search input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  font: inherit;
+  font-size: 0.9375rem;
+  color: var(--ink);
+  outline: none;
+}
+
+/* Kill native search clear so we only show one X */
+.map-search input::-webkit-search-decoration,
+.map-search input::-webkit-search-cancel-button,
+.map-search input::-webkit-search-results-button,
+.map-search input::-webkit-search-results-decoration {
+  display: none;
+  -webkit-appearance: none;
+}
+
+/* Full-bleed account avatar (custom img, not Clerk UserButton). */
+.map-user-btn {
+  padding: 0 !important;
+  border: 1.5px solid rgb(20 53 40 / 12%);
+}
+
+.map-user-btn img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: inherit;
+}
+
+.map-chip {
+  border: none;
+  border-radius: 999px;
+  background: #fff;
+  color: var(--ink);
+  padding: 0.4rem 0.85rem;
+  font-size: 0.8125rem;
+  box-shadow:
+    0 1px 2px rgb(20 53 40 / 6%),
+    0 3px 10px rgb(20 53 40 / 8%);
+  transition:
+    background-color 140ms ease,
+    transform 120ms ease,
+    box-shadow 140ms ease,
+    color 140ms ease;
+  cursor: pointer;
+}
+
+.map-chip:hover {
+  background: #f7faf6;
+}
+
+.map-chip:active {
+  transform: scale(0.97);
+}
+
+.map-chip:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.map-chip[data-active="true"] {
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+
+.map-sheet {
+  background: #fff;
+  border-radius: 1.1rem;
+  box-shadow:
+    0 2px 6px rgb(20 53 40 / 8%),
+    0 16px 40px rgb(20 53 40 / 14%);
+}
+
+.map-row {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 0.65rem;
+  border: none;
+  background: transparent;
+  text-align: left;
+  border-radius: 0.75rem;
+  padding: 0.55rem 0.65rem;
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+  transition: background-color 120ms ease;
+}
+
+.map-row:hover {
+  background: #f3f7f3;
+}
+
+.map-row:active {
+  background: #e8f0e8;
+}
+
+.map-row:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 1px;
+}
+
+.map-menu-item {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 0.75rem;
+  border: none;
+  background: transparent;
+  text-align: left;
+  border-radius: 0.85rem;
+  padding: 0.7rem 0.85rem;
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.9375rem;
+  cursor: pointer;
+  transition: background-color 120ms ease;
+}
+
+.map-menu-item:hover {
+  background: #f3f7f3;
+}
+
+.map-menu-item:active {
+  background: #e8f0e8;
+}
+
+.map-menu-item:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 1px;
+}
+
+/* Keep MapLibre attribution clear of our control stack */
+.map-root .maplibregl-ctrl-bottom-right {
+  right: 12px;
+  bottom: 12px;
+  max-width: calc(100% - 5.5rem);
+}
+
+.map-root .maplibregl-ctrl-attrib {
+  border-radius: 999px;
+  background: rgb(255 255 255 / 88%);
+  box-shadow: 0 1px 4px rgb(20 53 40 / 8%);
+  padding: 2px 8px;
+}
+
+.map-root .maplibregl-ctrl-top-right,
+.map-root .maplibregl-ctrl-top-left {
+  display: none;
+}
