@@ -11,8 +11,10 @@
 import type * as catalog from "../catalog.js";
 import type * as comments from "../comments.js";
 import type * as favorites from "../favorites.js";
+import type * as geocodeSessions from "../geocodeSessions.js";
 import type * as lib_catalog from "../lib/catalog.js";
 import type * as lib_copy from "../lib/copy.js";
+import type * as lib_geocodeSignature from "../lib/geocodeSignature.js";
 import type * as lib_langs from "../lib/langs.js";
 import type * as lib_placeDoc from "../lib/placeDoc.js";
 import type * as migrations from "../migrations.js";
@@ -32,8 +34,10 @@ declare const fullApi: ApiFromModules<{
   catalog: typeof catalog;
   comments: typeof comments;
   favorites: typeof favorites;
+  geocodeSessions: typeof geocodeSessions;
   "lib/catalog": typeof lib_catalog;
   "lib/copy": typeof lib_copy;
+  "lib/geocodeSignature": typeof lib_geocodeSignature;
   "lib/langs": typeof lib_langs;
   "lib/placeDoc": typeof lib_placeDoc;
   migrations: typeof migrations;

@@ -129,4 +129,14 @@ export default defineSchema({
   })
     .index("by_user", ["userId"])
     .index("by_user_place", ["userId", "placeId"]),
+
+  /**
+   * One row per `hp_geo` session id. The geocode route increments `count`
+   * inside a one-hour window so every Vercel isolate shares the same quota.
+   */
+  geocodeSessions: defineTable({
+    sessionId: v.string(),
+    windowStart: v.number(),
+    count: v.number(),
+  }).index("by_sessionId", ["sessionId"]),
 });

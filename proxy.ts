@@ -2,6 +2,8 @@ import { clerkMiddleware } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import {
   GEOCODE_COOKIE,
+  GEOCODE_COOKIE_MAX_AGE_SEC,
+  isMissingGeocodeProxySecret,
   mintGeocodeCookieValue,
   verifyGeocodeCookieValue,
 } from "@/lib/geocode-gate";
@@ -13,24 +15,27 @@ export default clerkMiddleware(async (auth, request) => {
 
   const response = NextResponse.next();
 
-  // Issue a short-lived signed cookie so `/api/geocode` is not an open proxy.
-  // Browsers that load the app receive it; raw unauthenticated scrapers do not.
+  // Issue a signed cookie carrying a random session id so `/api/geocode`
+  // can share one quota across isolates. A missing GEOCODE_PROXY_SECRET
+  // fails closed: no cookie is set, and the route refuses the request.
   if (
     request.method === "GET" &&
     !request.nextUrl.pathname.startsWith("/api/")
   ) {
-    const existing = request.cookies.get(GEOCODE_COOKIE)?.value;
-    if (!verifyGeocodeCookieValue(existing)) {
-      const minted = mintGeocodeCookieValue();
-      if (minted) {
+    try {
+      const existing = request.cookies.get(GEOCODE_COOKIE)?.value;
+      if (!(await verifyGeocodeCookieValue(existing))) {
+        const minted = await mintGeocodeCookieValue();
         response.cookies.set(GEOCODE_COOKIE, minted, {
           httpOnly: true,
           sameSite: "lax",
           secure: process.env.NODE_ENV === "production",
           path: "/",
-          maxAge: 12 * 60 * 60,
+          maxAge: GEOCODE_COOKIE_MAX_AGE_SEC,
         });
       }
+    } catch (error) {
+      if (!isMissingGeocodeProxySecret(error)) throw error;
     }
   }
 

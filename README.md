@@ -94,3 +94,4 @@ See `.env.example`. Required for a working map + auth:
 - `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
 - `CLERK_SECRET_KEY`
 - `CLERK_FRONTEND_API_URL` on the **Convex deployment**
+- `GEOCODE_PROXY_SECRET` on Vercel (Preview and Production) and on Convex (same value). Generate with `openssl rand -base64 32`. `/api/geocode` fails closed without it.

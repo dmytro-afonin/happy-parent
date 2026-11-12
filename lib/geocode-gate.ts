@@ -1,45 +1,80 @@
-import { createHmac, timingSafeEqual } from "node:crypto";
+import { randomUUID } from "node:crypto";
+import {
+  GEOCODE_COOKIE_MAX_AGE_SEC,
+  GEOCODE_COOKIE_TTL_MS,
+  GEOCODE_SESSION_ID_RE,
+  geocodeSignaturePayload,
+  geocodeSignaturesMatch,
+  signGeocodePayload,
+} from "@/convex/lib/geocodeSignature";
 
 export const GEOCODE_COOKIE = "hp_geo";
-const TTL_MS = 12 * 60 * 60 * 1000;
+export { GEOCODE_COOKIE_MAX_AGE_SEC, GEOCODE_COOKIE_TTL_MS };
 
-function secret(): string {
+export class GeocodeProxySecretMissingError extends Error {
+  constructor() {
+    super("GEOCODE_PROXY_SECRET is not set");
+    this.name = "GeocodeProxySecretMissingError";
+  }
+}
+
+export function isMissingGeocodeProxySecret(error: unknown): boolean {
   return (
-    process.env.GEOCODE_PROXY_SECRET ||
-    process.env.CLERK_SECRET_KEY ||
-    ""
+    error instanceof GeocodeProxySecretMissingError ||
+    (error instanceof Error &&
+      error.message === "GEOCODE_PROXY_SECRET is not set")
   );
 }
 
-/** Mint an httpOnly map-session cookie that authorizes `/api/geocode`. */
-export function mintGeocodeCookieValue(now = Date.now()): string | null {
-  const s = secret();
-  if (!s) return null;
-  const payload = String(now + TTL_MS);
-  const sig = createHmac("sha256", s).update(payload).digest("base64url");
-  return `${payload}.${sig}`;
+/** HMAC key for `hp_geo`. Missing secret fails closed; never use Clerk's key. */
+export function geocodeProxySecret(): string {
+  const secret = process.env.GEOCODE_PROXY_SECRET?.trim() ?? "";
+  if (!secret) throw new GeocodeProxySecretMissingError();
+  return secret;
 }
 
-export function verifyGeocodeCookieValue(
+export type GeocodeSession = {
+  sessionId: string;
+  expiresAt: number;
+  signature: string;
+};
+
+/**
+ * Mint `sessionId.expiresAt.signature`. The session id is what the shared
+ * Convex counter keys on.
+ */
+export async function mintGeocodeCookieValue(now = Date.now()): Promise<string> {
+  const secret = geocodeProxySecret();
+  const sessionId = randomUUID();
+  const expiresAt = now + GEOCODE_COOKIE_TTL_MS;
+  const payload = geocodeSignaturePayload(sessionId, expiresAt);
+  const signature = await signGeocodePayload(secret, payload);
+  return `${payload}.${signature}`;
+}
+
+export async function readGeocodeSession(
   value: string | undefined,
   now = Date.now(),
-): boolean {
-  if (!value) return false;
-  const s = secret();
-  if (!s) return false;
-  const dot = value.indexOf(".");
-  if (dot <= 0) return false;
-  const payload = value.slice(0, dot);
-  const sig = value.slice(dot + 1);
-  const exp = Number(payload);
-  if (!Number.isFinite(exp) || exp < now) return false;
-  const expected = createHmac("sha256", s).update(payload).digest("base64url");
-  const a = Buffer.from(sig);
-  const b = Buffer.from(expected);
-  if (a.length !== b.length) return false;
-  try {
-    return timingSafeEqual(a, b);
-  } catch {
-    return false;
-  }
+): Promise<GeocodeSession | null> {
+  const secret = geocodeProxySecret();
+  if (!value) return null;
+  const parts = value.split(".");
+  if (parts.length !== 3) return null;
+  const [sessionId, expiresAtStr, signature] = parts;
+  if (!sessionId || !expiresAtStr || !signature) return null;
+  if (!GEOCODE_SESSION_ID_RE.test(sessionId)) return null;
+  if (!/^\d+$/.test(expiresAtStr)) return null;
+  const expiresAt = Number(expiresAtStr);
+  if (!Number.isSafeInteger(expiresAt) || expiresAt < now) return null;
+  const payload = geocodeSignaturePayload(sessionId, expiresAtStr);
+  const ok = await geocodeSignaturesMatch(secret, payload, signature);
+  if (!ok) return null;
+  return { sessionId, expiresAt, signature };
+}
+
+export async function verifyGeocodeCookieValue(
+  value: string | undefined,
+  now = Date.now(),
+): Promise<boolean> {
+  return (await readGeocodeSession(value, now)) !== null;
 }
