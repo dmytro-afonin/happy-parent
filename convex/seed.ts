@@ -1,6 +1,8 @@
-import { internalMutation } from "./_generated/server";
+import { internalMutation, type MutationCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import { emptyLangNames, withPlaceCopy } from "./lib/copy";
+import { assertDemoSeedAllowed } from "./lib/seedGuard";
+import { WARSAW_OSM_PLACES } from "./lib/warsawSeedPlaces";
 
 const SEED_TOKEN = "seed|happy-parent";
 
@@ -216,7 +218,7 @@ type SeedPlace = {
   copy: Parameters<typeof withPlaceCopy>[0];
 };
 
-const SEED_PLACES: SeedPlace[] = [
+const HAND_PLACES: SeedPlace[] = [
   {
     key: "pole-mokotowskie",
     categories: ["park", "playground"],
@@ -366,112 +368,238 @@ const SEED_PLACES: SeedPlace[] = [
   },
 ];
 
+const SEED_PLACES: SeedPlace[] = [...HAND_PLACES, ...WARSAW_OSM_PLACES];
+
+/** Favourites for the seed user only. Recents are browser localStorage. */
+const SEED_FAVORITE_KEYS = [
+  "pole-mokotowskie",
+  "saxon-playground",
+  "cafe-lula",
+  "library-koszykowa",
+];
+
 /** Idempotent seed of catalog + public Warsaw demo places. CLI only. */
+async function insertDemoSeed(ctx: MutationCtx) {
+  assertDemoSeedAllowed(process.env.CONVEX_CLOUD_URL);
+
+  const seedUser = await ctx.db
+    .query("users")
+    .withIndex("by_token", (q) => q.eq("tokenIdentifier", SEED_TOKEN))
+    .unique();
+
+  const seedUserId: Id<"users"> = seedUser
+    ? seedUser._id
+    : await ctx.db.insert("users", {
+        tokenIdentifier: SEED_TOKEN,
+        name: "Seed",
+        email: "seed@happyparent.local",
+        role: "admin",
+      });
+
+  const now = Date.now();
+  const slugToId = new Map<string, Id<"catalogItems">>();
+  let catalogInserted = 0;
+
+  for (const row of SEED_CATALOG) {
+    const existing = await ctx.db
+      .query("catalogItems")
+      .withIndex("by_slug", (q) => q.eq("slug", row.slug))
+      .unique();
+    if (existing) {
+      slugToId.set(row.slug, existing._id);
+      continue;
+    }
+    const names = emptyLangNames();
+    Object.assign(names, row.names);
+    const id = await ctx.db.insert("catalogItems", {
+      kind: row.kind,
+      slug: row.slug,
+      names,
+      createdAt: now,
+      updatedAt: now,
+    });
+    slugToId.set(row.slug, id);
+    catalogInserted += 1;
+  }
+
+  const existingPlaces = await ctx.db.query("places").collect();
+  const knownNames = new Set<string>();
+  const idByName = new Map<string, Id<"places">>();
+  for (const existing of existingPlaces) {
+    const names: string[] = [];
+    if (existing.name) names.push(existing.name);
+    if (existing.copy) {
+      for (const lang of Object.keys(existing.copy) as Array<
+        keyof typeof existing.copy
+      >) {
+        const n = existing.copy[lang].name.trim();
+        if (n) names.push(n);
+      }
+    }
+    for (const n of names) {
+      knownNames.add(n);
+      idByName.set(n, existing._id);
+    }
+  }
+
+  let placesInserted = 0;
+  for (const place of SEED_PLACES) {
+    const copy = withPlaceCopy(place.copy);
+    const seedNames = [
+      copy.pl.name,
+      copy.en.name,
+      copy.uk.name,
+      copy.ru.name,
+      copy.be.name,
+    ]
+      .map((n) => n.trim())
+      .filter(Boolean);
+    // Match any locale (incl. legacy English titles) so re-seed after migrate
+    // does not duplicate places that still have English-only names.
+    if (seedNames.some((n) => knownNames.has(n))) continue;
+
+    const categoryIds = place.categories
+      .map((slug) => slugToId.get(slug))
+      .filter((id): id is Id<"catalogItems"> => Boolean(id));
+    const attributeIds = place.attributes
+      .map((slug) => slugToId.get(slug))
+      .filter((id): id is Id<"catalogItems"> => Boolean(id));
+
+    const placeId = await ctx.db.insert("places", {
+      copy,
+      categoryIds,
+      attributeIds,
+      publishStatus: "public",
+      lat: place.lat,
+      lng: place.lng,
+      geometryType: place.geometryType,
+      boundary: place.boundary,
+      createdBy: seedUserId,
+      createdAt: now,
+      updatedAt: now,
+    });
+    for (const n of seedNames) {
+      knownNames.add(n);
+      idByName.set(n, placeId);
+    }
+    placesInserted += 1;
+  }
+
+  let favoritesInserted = 0;
+  for (const key of SEED_FAVORITE_KEYS) {
+    const favorite = SEED_PLACES.find((place) => place.key === key);
+    if (!favorite) continue;
+    const copy = withPlaceCopy(favorite.copy);
+    const placeId = idByName.get(copy.pl.name.trim());
+    if (!placeId) continue;
+    const existingFavorite = await ctx.db
+      .query("favorites")
+      .withIndex("by_user_place", (q) =>
+        q.eq("userId", seedUserId).eq("placeId", placeId),
+      )
+      .unique();
+    if (existingFavorite) continue;
+    await ctx.db.insert("favorites", {
+      userId: seedUserId,
+      placeId,
+      createdAt: now,
+    });
+    favoritesInserted += 1;
+  }
+
+  return {
+    catalogInserted,
+    placesInserted,
+    favoritesInserted,
+    catalogTotal: SEED_CATALOG.length,
+    placesTotal: SEED_PLACES.length,
+  };
+}
+
 export const run = internalMutation({
   args: {},
+  handler: async (ctx) => insertDemoSeed(ctx),
+});
+
+/**
+ * Delete places created by the seed user, plus favourites, comments, photos,
+ * and moderation rows on those places. Does not delete the catalog, the seed
+ * user, or anyone else's places. Insert-only `seed:run` never calls this.
+ * Refuses production. CLI or dashboard only.
+ */
+export const clearDemo = internalMutation({
+  args: {},
   handler: async (ctx) => {
+    assertDemoSeedAllowed(process.env.CONVEX_CLOUD_URL);
+
     const seedUser = await ctx.db
       .query("users")
       .withIndex("by_token", (q) => q.eq("tokenIdentifier", SEED_TOKEN))
       .unique();
-
-    const seedUserId: Id<"users"> = seedUser
-      ? seedUser._id
-      : await ctx.db.insert("users", {
-          tokenIdentifier: SEED_TOKEN,
-          name: "Seed",
-          email: "seed@happyparent.local",
-          role: "admin",
-        });
-
-    const now = Date.now();
-    const slugToId = new Map<string, Id<"catalogItems">>();
-    let catalogInserted = 0;
-
-    for (const row of SEED_CATALOG) {
-      const existing = await ctx.db
-        .query("catalogItems")
-        .withIndex("by_slug", (q) => q.eq("slug", row.slug))
-        .unique();
-      if (existing) {
-        slugToId.set(row.slug, existing._id);
-        continue;
-      }
-      const names = emptyLangNames();
-      Object.assign(names, row.names);
-      const id = await ctx.db.insert("catalogItems", {
-        kind: row.kind,
-        slug: row.slug,
-        names,
-        createdAt: now,
-        updatedAt: now,
-      });
-      slugToId.set(row.slug, id);
-      catalogInserted += 1;
+    if (!seedUser) {
+      return {
+        placesDeleted: 0,
+        favoritesDeleted: 0,
+        commentsDeleted: 0,
+        photosDeleted: 0,
+        moderationDeleted: 0,
+      };
     }
 
-    const existingPlaces = await ctx.db.query("places").collect();
-    const knownNames = new Set(
-      existingPlaces.flatMap((p) => {
-        const names: string[] = [];
-        if (p.name) names.push(p.name);
-        if (p.copy) {
-          for (const lang of Object.keys(p.copy) as Array<
-            keyof typeof p.copy
-          >) {
-            const n = p.copy[lang].name.trim();
-            if (n) names.push(n);
-          }
-        }
-        return names;
-      }),
+    const seedPlaces = (await ctx.db.query("places").collect()).filter(
+      (place) => place.createdBy === seedUser._id,
     );
+    const placeIds = new Set(seedPlaces.map((place) => place._id));
 
-    let placesInserted = 0;
-    for (const place of SEED_PLACES) {
-      const copy = withPlaceCopy(place.copy);
-      const seedNames = [
-        copy.pl.name,
-        copy.en.name,
-        copy.uk.name,
-        copy.ru.name,
-        copy.be.name,
-      ]
-        .map((n) => n.trim())
-        .filter(Boolean);
-      // Match any locale (incl. legacy English titles) so re-seed after migrate
-      // does not duplicate places that still have English-only names.
-      if (seedNames.some((n) => knownNames.has(n))) continue;
+    let favoritesDeleted = 0;
+    for (const favorite of await ctx.db.query("favorites").collect()) {
+      if (favorite.userId === seedUser._id || placeIds.has(favorite.placeId)) {
+        await ctx.db.delete(favorite._id);
+        favoritesDeleted += 1;
+      }
+    }
 
-      const categoryIds = place.categories
-        .map((slug) => slugToId.get(slug))
-        .filter((id): id is Id<"catalogItems"> => Boolean(id));
-      const attributeIds = place.attributes
-        .map((slug) => slugToId.get(slug))
-        .filter((id): id is Id<"catalogItems"> => Boolean(id));
+    let commentsDeleted = 0;
+    let photosDeleted = 0;
+    let moderationDeleted = 0;
+    for (const placeId of placeIds) {
+      const comments = await ctx.db
+        .query("comments")
+        .withIndex("by_place_status", (q) => q.eq("placeId", placeId))
+        .collect();
+      for (const comment of comments) {
+        await ctx.db.delete(comment._id);
+        commentsDeleted += 1;
+      }
 
-      await ctx.db.insert("places", {
-        copy,
-        categoryIds,
-        attributeIds,
-        publishStatus: "public",
-        lat: place.lat,
-        lng: place.lng,
-        geometryType: place.geometryType,
-        boundary: place.boundary,
-        createdBy: seedUserId,
-        createdAt: now,
-        updatedAt: now,
-      });
-      for (const n of seedNames) knownNames.add(n);
-      placesInserted += 1;
+      const photos = await ctx.db
+        .query("photos")
+        .withIndex("by_place_status", (q) => q.eq("placeId", placeId))
+        .collect();
+      for (const photo of photos) {
+        await ctx.storage.delete(photo.storageId);
+        await ctx.db.delete(photo._id);
+        photosDeleted += 1;
+      }
+
+      const queue = await ctx.db
+        .query("moderationQueue")
+        .withIndex("by_place", (q) => q.eq("placeId", placeId))
+        .collect();
+      for (const item of queue) {
+        await ctx.db.delete(item._id);
+        moderationDeleted += 1;
+      }
+
+      await ctx.db.delete(placeId);
     }
 
     return {
-      catalogInserted,
-      placesInserted,
-      catalogTotal: SEED_CATALOG.length,
-      placesTotal: SEED_PLACES.length,
+      placesDeleted: seedPlaces.length,
+      favoritesDeleted,
+      commentsDeleted,
+      photosDeleted,
+      moderationDeleted,
     };
   },
 });

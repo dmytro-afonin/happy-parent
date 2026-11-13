@@ -30,11 +30,51 @@ pnpm exec convex env set CLERK_FRONTEND_API_URL "$CLERK_FRONTEND_API_URL"
 pnpm dev
 ```
 
-Open http://localhost:3000. Seed demo places:
+Open http://localhost:3000. Seed demo places (dev and preview only):
 
 ```bash
 pnpm exec convex run seed:run
 ```
+
+`seed:run` is insert-only and idempotent: a second run does not add duplicate
+places and does not delete anything. It inserts the catalog when those slugs
+are missing, then about 110 public Warsaw places (points and polygons) across
+every category and label, with coordinates, addresses, and descriptions.
+OpenStreetMap names, coordinates, and addresses are © OpenStreetMap
+contributors under the ODbL (https://www.openstreetmap.org/copyright).
+Descriptions and labels are synthetic. Google Maps and Google Places are not
+a source.
+
+A few favourites are stored for the seed user (`seed@happyparent.local`) only.
+Recent searches live in the browser (`localStorage`) and are not seeded.
+
+The function refuses to run when `CONVEX_CLOUD_URL` is the production
+deployment `https://calculating-lark-523.convex.cloud`. Do not point it at
+production. If that production deployment is ever replaced, update
+`PRODUCTION_CONVEX_HOST` in `convex/lib/seedGuard.ts`.
+
+**Preview.** A newly created Convex preview runs `previewSeed:previewBootstrap`
+from [`scripts/vercel-build.sh`](scripts/vercel-build.sh) (`--preview-run`).
+That runs migrations, then `seed:run`. Convex skips `--preview-run` when the
+preview deployment already exists. Preview deploy keys cannot `convex run`
+(`ServiceTokenNotAllowed`). To fill a reused preview, open that deployment in
+the Convex dashboard and run the internal function `seed:run`. No extra
+Vercel, Clerk, or Convex env var is required for the public map to show the
+seed. Sign-in still needs the existing Clerk preview setup
+(`CLERK_FRONTEND_API_URL` on the Convex preview).
+
+**Clear.** Clearing is a separate command. It deletes places created by the
+seed user, favourites on those places (and the seed user's favourites), and
+comments, photos, and moderation rows for those places. It does not delete
+the catalog or places created by anyone else. It uses the same production
+refusal. `seed:run` never calls it.
+
+```bash
+pnpm exec convex run seed:clearDemo
+```
+
+On a preview deployment, run `seed:clearDemo` from the Convex dashboard.
+Do not run either function on production.
 
 To become admin locally (anonymous Convex has no shared dashboard user list),
 set your Clerk **user id** (Dashboard → Users → `user_…`):
@@ -74,9 +114,10 @@ pnpm dlx convex run --component migrations lib:getStatus --prod
 
 Migrations run from [`scripts/vercel-build.sh`](scripts/vercel-build.sh):
 
-- **Preview** — `--preview-run migrations:runAll` on newly created previews
-  only (reused branch previews skip it; do not `--preview-create` every
-  build — that wipes Clerk env on the Convex deployment)
+- **Preview** — `--preview-run previewSeed:previewBootstrap` on newly created
+  previews only (migrations, then the demo seed; reused branch previews skip
+  it; do not `--preview-create` every build — that wipes Clerk env on the
+  Convex deployment). The seed refuses production.
 - **Production** — after deploy, `convex run migrations:runAll` (always)
 
 Production `CONVEX_DEPLOY_KEY` must include run/write permissions

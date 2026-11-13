@@ -62,10 +62,16 @@ those. Keep Clerk secrets + `CONVEX_AGENT_MODE=anonymous`.
 - Missing `NEXT_PUBLIC_SENTRY_DSN` or PostHog keys skips those clients; the map
   still runs.
 - OpenFreeMap tiles require outbound internet.
-- Seed demo places from the CLI: `pnpm exec convex run seed:run`. `seed:run` and
-  `seed:promoteMeAdmin` are internal mutations, so the public client cannot call them.
-  `seed:run` creates a fake `Seed` user (for `createdBy` on places) — it does
-  **not** make your Clerk account admin.
+- Seed demo places from the CLI: `pnpm exec convex run seed:run`. `seed:run`,
+  `seed:clearDemo`, and `seed:promoteMeAdmin` are internal mutations, so the
+  public client cannot call them. `seed:run` is insert-only and idempotent
+  (re-run does not duplicate or delete). It refuses the production deployment
+  `calculating-lark-523.convex.cloud`. It creates a fake `Seed` user (for
+  `createdBy` on places) and a few favourites for that user only — it does
+  **not** make your Clerk account admin. Recents stay in browser
+  `localStorage`. Clear with `pnpm exec convex run seed:clearDemo` (same
+  production refusal; does not delete the catalog or non-seed places). See
+  README.
 - Local/Cloud Agent admin: set Convex/Cursor secret `ADMIN_CLERK_USER_IDS` to
   your Clerk user id (`user_…` from the Clerk dashboard). Do not rely on email
   allowlists — Clerk’s default Convex JWT omits `email` / `email_verified`.
@@ -87,12 +93,13 @@ Schema validation stays on. Breaking field renames / required fields must use
 
 Build uses [`scripts/vercel-build.sh`](scripts/vercel-build.sh):
 
-- **Preview** — `convex deploy --preview-run migrations:runAll`. Convex only
-  runs `--preview-run` when the preview is newly created (reuse skips it).
-  Do **not** `--preview-create` on every build: that drops deployment env
-  (`CLERK_FRONTEND_API_URL`) and wipes preview data. Set project-level
-  **preview** env defaults in the Convex dashboard for Clerk. Do not
-  bare-`convex run` on preview (`ServiceTokenNotAllowed`).
+- **Preview** — `convex deploy --preview-run previewSeed:previewBootstrap`. That
+  runs `migrations:runAll`, then the insert-only demo seed, and refuses
+  production. Convex only runs `--preview-run` when the preview is newly
+  created (reuse skips it). Do **not** `--preview-create` on every build:
+  that drops deployment env (`CLERK_FRONTEND_API_URL`) and wipes preview
+  data. Set project-level **preview** env defaults in the Convex dashboard
+  for Clerk. Do not bare-`convex run` on preview (`ServiceTokenNotAllowed`).
 - **Production** — `convex deploy` then `convex run migrations:runAll`.
   Production deploy keys (`prod:…`) act as admin keys and can run functions.
   This is the path that must always migrate existing data.
@@ -108,7 +115,8 @@ Manual fallback: `pnpm migrate:prod` (passes `--prod`; needs member login
 or a prod deploy key).
 
 Dashboard **Clear table** / bulk deletes are emergency-only, not a migration path.
-`seed:run` is idempotent insert-only — it must never delete places.
+`seed:run` is idempotent insert-only — it must never delete places. Clearing
+demo rows is only `seed:clearDemo`, which also refuses production.
 
 ### Lint / typecheck
 
