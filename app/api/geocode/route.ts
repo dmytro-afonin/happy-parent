@@ -1,8 +1,12 @@
+import { auth } from "@clerk/nextjs/server";
+import { fetchMutation } from "convex/nextjs";
 import { NextResponse } from "next/server";
+import { api } from "@/convex/_generated/api";
 import { shortenAddress } from "@/lib/format-address";
 import {
   GEOCODE_COOKIE,
-  verifyGeocodeCookieValue,
+  isMissingGeocodeProxySecret,
+  readGeocodeSession,
 } from "@/lib/geocode-gate";
 
 type LocationIqHit = {
@@ -21,32 +25,11 @@ type GeocodeHit = {
 };
 
 const MAX_Q_LEN = 80;
-const RATE_WINDOW_MS = 60_000;
-const RATE_MAX = 20;
 const RESULT_CACHE_TTL_MS = 60 * 60 * 1000;
 const RESULT_CACHE_MAX = 200;
 
-/** Simple in-memory IP throttle for the shared LocationIQ key. */
-const hitsByIp = new Map<string, { count: number; resetAt: number }>();
 /** Cache non-empty successful lookups to cut quota burn on repeat typing. */
 const resultCache = new Map<string, { at: number; hits: GeocodeHit[] }>();
-
-function clientIp(request: Request): string {
-  const forwarded = request.headers.get("x-forwarded-for");
-  if (forwarded) return forwarded.split(",")[0]?.trim() || "unknown";
-  return request.headers.get("x-real-ip") || "unknown";
-}
-
-function rateLimited(ip: string): boolean {
-  const now = Date.now();
-  const row = hitsByIp.get(ip);
-  if (!row || now >= row.resetAt) {
-    hitsByIp.set(ip, { count: 1, resetAt: now + RATE_WINDOW_MS });
-    return false;
-  }
-  row.count += 1;
-  return row.count > RATE_MAX;
-}
 
 /**
  * Only allow browser calls from this app. Blocks raw curl/bots that would
@@ -118,7 +101,19 @@ export async function GET(request: Request) {
     .map((part) => part.trim())
     .find((part) => part.startsWith(`${GEOCODE_COOKIE}=`))
     ?.slice(GEOCODE_COOKIE.length + 1);
-  if (!verifyGeocodeCookieValue(geoCookie)) {
+  let session: Awaited<ReturnType<typeof readGeocodeSession>>;
+  try {
+    session = await readGeocodeSession(geoCookie);
+  } catch (error) {
+    if (isMissingGeocodeProxySecret(error)) {
+      return NextResponse.json(
+        { error: "GEOCODE_PROXY_SECRET is not set" },
+        { status: 503, headers: noStore },
+      );
+    }
+    throw error;
+  }
+  if (!session) {
     return NextResponse.json(
       { error: "Forbidden" },
       { status: 403, headers: noStore },
@@ -137,17 +132,43 @@ export async function GET(request: Request) {
     );
   }
 
+  const { userId } = await auth();
+  let quota: {
+    allowed: boolean;
+    retryAfterMs: number;
+  };
+  try {
+    quota = await fetchMutation(api.geocodeSessions.consume, {
+      sessionId: session.sessionId,
+      expiresAt: session.expiresAt,
+      signature: session.signature,
+      tier: userId ? "user" : "guest",
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "";
+    if (message.includes("GEOCODE_PROXY_SECRET is not set")) {
+      return NextResponse.json(
+        { error: "GEOCODE_PROXY_SECRET is not set" },
+        { status: 503, headers: noStore },
+      );
+    }
+    return NextResponse.json(
+      { error: "Geocode quota is unavailable" },
+      { status: 503, headers: noStore },
+    );
+  }
+  if (!quota.allowed) {
+    const retryAfterSec = Math.max(1, Math.ceil(quota.retryAfterMs / 1000));
+    return NextResponse.json(
+      { error: "Too many requests" },
+      { status: 429, headers: { ...noStore, "Retry-After": String(retryAfterSec) } },
+    );
+  }
+
   const cacheKey = q.toLowerCase();
   const cached = cachedHits(cacheKey);
   if (cached) {
     return NextResponse.json(cached, { headers: noStore });
-  }
-
-  if (rateLimited(clientIp(request))) {
-    return NextResponse.json(
-      { error: "Too many requests" },
-      { status: 429, headers: noStore },
-    );
   }
 
   const key = process.env.LOCATIONIQ_API_KEY;
