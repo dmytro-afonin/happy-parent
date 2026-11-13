@@ -10,8 +10,12 @@ export function SiteHeader() {
   const pathname = usePathname();
   const me = useQuery(api.users.me);
 
-  // Full-bleed map owns its own chrome (Google/Apple style).
-  if (pathname === "/map" || pathname?.startsWith("/map/")) {
+  // Full-bleed map owns its own chrome (Google/Apple style). Home is the map.
+  if (
+    pathname === "/" ||
+    pathname === "/map" ||
+    pathname?.startsWith("/map/")
+  ) {
     return null;
   }
 
@@ -27,7 +31,7 @@ export function SiteHeader() {
           Happy Parent
         </Link>
         <Link
-          href="/map"
+          href="/"
           className="rounded-md px-1.5 py-1 text-sm text-[var(--ink-muted)] transition hover:bg-[var(--accent-soft)] hover:text-[var(--ink)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
         >
           Map
