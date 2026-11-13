@@ -19,11 +19,13 @@ Terra Draw is admin-only. Standard commands live in `README.md` and
 
 ### pstack skills
 
-Poteto's pstack development skills are in `.agents/skills/` (from
-[cursor/plugins](https://github.com/cursor/plugins/tree/main/pstack), next to
-the Clerk skills). For rigorous work, read `poteto-mode`. It routes to the
-`principle-*` skills (including `principle-prove-it-works`), `reflect`, and
-the other workflow skills in that directory.
+Seven pstack skills from
+[cursor/plugins](https://github.com/cursor/plugins/tree/main/pstack) live in
+`.agents/skills/` next to the Clerk skills. On every change, read
+`principle-prove-it-works`, `principle-fix-root-causes`, and
+`principle-subtract-before-you-add`. Use `architect` and `blast-radius` for
+design and impact, and `how` plus `typescript-best-practices` for
+implementation.
 
 ### Node and pnpm
 
