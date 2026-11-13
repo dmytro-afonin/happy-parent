@@ -17,6 +17,16 @@ Convex (data) and Clerk (auth). MapLibre + OpenFreeMap power the public map;
 Terra Draw is admin-only. Standard commands live in `README.md` and
 `package.json` scripts.
 
+### pstack skills
+
+Seven pstack skills from
+[cursor/plugins](https://github.com/cursor/plugins/tree/main/pstack) live in
+`.agents/skills/` next to the Clerk skills. On every change, read
+`principle-prove-it-works`, `principle-fix-root-causes`, and
+`principle-subtract-before-you-add`. Use `architect` and `blast-radius` for
+design and impact, and `how` plus `typescript-best-practices` for
+implementation.
+
 ### Node and pnpm
 
 - Runtime pin is `devEngines.runtime` in `package.json` (Node `^26.13.0`, downloaded when the shell Node does not match). `engines.node` is `26.x` so Vercel stays on the Node 26 major and does not float forward when the next major is released. There is no `.nvmrc`.
