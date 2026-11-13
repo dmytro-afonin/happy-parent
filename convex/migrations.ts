@@ -8,10 +8,11 @@
  *     `pnpm dlx convex run migrations:<name> '{"dryRun":true}' --prod`
  * - Append finished migrations to `POST_DEPLOY_MIGRATIONS` so deploys replay
  *   safely (already-done migrations are skipped).
- * - Preview CI (`scripts/vercel-build.sh`): `--preview-run` only when Convex
- *   creates a new preview (reuse skips it). Do not `--preview-create` every
- *   build — that drops deployment env (Clerk) and wipes data. Preview keys
- *   cannot bare-`convex run`.
+ * - Preview CI (`scripts/vercel-build.sh`): `--preview-run previewSeed:previewBootstrap`
+ *   only when Convex creates a new preview (reuse skips it). That function
+ *   runs these migrations, then the insert-only demo seed, and refuses
+ *   production. Do not `--preview-create` every build — that drops deployment
+ *   env (Clerk) and wipes data. Preview keys cannot bare-`convex run`.
  * - Production CI: after deploy, `convex run migrations:runAll` (prod deploy
  *   key must allow runInternalMutations). Manual: `pnpm migrate:prod`.
  *
