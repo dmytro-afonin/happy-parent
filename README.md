@@ -93,5 +93,23 @@ See `.env.example`. Required for a working map + auth:
 - `NEXT_PUBLIC_CONVEX_URL` (from `convex dev`)
 - `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
 - `CLERK_SECRET_KEY`
-- `CLERK_FRONTEND_API_URL` on the **Convex deployment**
+- `CLERK_FRONTEND_API_URL` on the **Convex deployment**, no trailing slash. The MCP role lookup builds `tokenIdentifier` as `<issuer>|<clerk user id>`.
 - `GEOCODE_PROXY_SECRET` on Vercel (Preview and Production) and on Convex (same value). Generate with `openssl rand -base64 32`. `/api/geocode` fails closed without it.
+- `MCP_RESOURCE_URL` — exact public URL of `/mcp`, no query and no trailing slash. Production: `https://parent.labdm.dev/mcp`. Local: `http://localhost:3000/mcp`. Register that same URL in the Clerk Dashboard (Agents → MCP servers) on the matching instance.
+- `MCP_ROLE_SECRET` on Vercel and on Convex (same value). Generate with `openssl rand -base64 32`. Not a Convex deploy key. `/mcp` returns 503 and names the variable when it is missing.
+
+## MCP
+
+`/mcp` is a remote MCP server for Happy Parent admins. Sign in once with Clerk OAuth. The access token is checked on this route (`aud` must be `MCP_RESOURCE_URL`) and is not sent to Convex. The client refreshes it. Clerk’s authorization server already advertises `refresh_token` and `offline_access`; this server’s protected-resource metadata lists only `profile`, so the client has to request `offline_access` itself.
+
+Admin access is `users.role === "admin"`. The route signs the Clerk user id from the verified token with `MCP_ROLE_SECRET` and calls `mcpAuth.roleForClerkUser`. There is no Convex session JWT and no per-user API key. A person with no `users` row gets 403 until they have signed in to the site once. Promotion stays on `ADMIN_CLERK_USER_IDS` inside `users.ensure`. MCP does not promote anyone.
+
+No token → 401. Signed-in non-admin → 403. Missing config → 503, and the body names what is missing. The only tool in this slice is `whoami`.
+
+Connect with the MCP URL:
+
+- Cursor: Settings → MCP → remote server URL
+- Claude: custom connector URL
+- Grok Agent SDK: `defineConnection({ url, oauth: true })` where `url` is `MCP_RESOURCE_URL`
+
+Clerk, by hand, on the production `parent` instance: Agents → MCP servers → add `https://parent.labdm.dev/mcp` and allow public clients. That turns on the `aud` claim and client-id metadata documents. Localhost is a separate resource on the development instance. Do not point a preview deployment at the production URL.
