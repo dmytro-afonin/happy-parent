@@ -11,6 +11,8 @@ import {
   Tag,
   X,
 } from "lucide-react";
+import { useState } from "react";
+import type { MapVariant } from "@/lib/map-variant";
 import {
   formatMetricDistance,
   shortenAddress,
@@ -23,6 +25,8 @@ import type { WarsawAddress } from "@/lib/warsaw-addresses";
 type Panel = "closed" | "search" | "favourites";
 
 type Props = {
+  variant: MapVariant;
+  popularCategories: CatalogItem[];
   query: string;
   onQuery: (value: string) => void;
   panel: Panel;
@@ -57,6 +61,8 @@ type Props = {
 };
 
 export function SearchPanel({
+  variant,
+  popularCategories,
   query,
   onQuery,
   panel,
@@ -91,16 +97,25 @@ export function SearchPanel({
 }: Props) {
   const { isSignedIn, user } = useUser();
   const { openUserProfile } = useClerk();
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [seenVariant, setSeenVariant] = useState(variant);
+  if (seenVariant !== variant) {
+    setSeenVariant(variant);
+    setFiltersOpen(false);
+  }
   const needle = query.trim();
   // Keep the drawer open for any search focus — including zero-hit needles —
   // so "No matches" can render instead of the panel vanishing.
   const showResults = panel === "favourites" || panel === "search";
   const sheetOpen =
     panel === "closed" && Boolean(selectedPlace || addressPreview);
+  const filterCount = categoryIds.length + attributeIds.length;
+  const phoneFiltersHidden = showResults || sheetOpen;
 
   return (
-    <div className="pointer-events-none absolute inset-x-0 top-0 z-20 p-3 sm:p-4">
-      <div className="pointer-events-auto mx-auto flex w-full max-w-3xl items-center gap-2.5">
+    <div className="map-discovery" data-variant={variant}>
+      <div className="map-discovery-frame">
+      <div className="flex items-center gap-2.5">
         <button
           type="button"
           title="Menu"
@@ -171,35 +186,161 @@ export function SearchPanel({
         </div>
       </div>
 
-      {!sheetOpen ? (
-        <div className="pointer-events-auto mx-auto mt-2.5 flex w-full max-w-3xl gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {categories.map((item) => (
-            <button
-              key={item._id}
-              type="button"
-              className="map-chip shrink-0"
-              data-active={categoryIds.includes(item._id)}
-              onClick={() => onToggleCategory(item._id)}
-            >
-              {item.label}
-            </button>
-          ))}
-          {attributes.map((item) => (
-            <button
-              key={item._id}
-              type="button"
-              className="map-chip shrink-0"
-              data-active={attributeIds.includes(item._id)}
-              onClick={() => onToggleAttribute(item._id)}
-            >
-              {item.label}
-            </button>
-          ))}
+      <div className="map-discovery-body">
+      {selectedPlace && panel === "closed" ? (
+        <div className="map-sheet mt-2 p-3 md:mt-3">
+          {placeSheet}
         </div>
       ) : null}
 
+      {!selectedPlace && addressPreview && panel === "closed" ? (
+        <div className="map-sheet mt-2 p-3 md:mt-3">
+          <div className="flex items-start gap-2">
+            <div className="min-w-0 flex-1">
+              <h2 className="font-semibold text-[var(--ink)]">
+                {addressPreview.label}
+              </h2>
+              <p className="text-xs text-[var(--ink-muted)]">
+                {shortenAddress(addressPreview.subtitle, addressPreview.label)}
+                {formatMetricDistance(origin, addressPreview)
+                  ? ` · ${formatMetricDistance(origin, addressPreview)}`
+                  : ""}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={onCloseAddressPreview}
+              className="map-fab h-8 w-8 rounded-full"
+              aria-label="Close address"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              className="flex items-center gap-2 rounded-full bg-primary px-3 py-2 text-sm font-medium text-primary-foreground transition hover:brightness-110"
+              onClick={() => {
+                const url = `https://www.google.com/maps/dir/?api=1&destination=${addressPreview.lat},${addressPreview.lng}`;
+                window.open(url, "_blank", "noopener,noreferrer");
+              }}
+            >
+              <Navigation className="h-4 w-4" />
+              Directions
+            </button>
+            {addressNearbyPlace ? (
+              <button
+                type="button"
+                className="rounded-full px-3 py-2 text-sm text-[var(--ink-muted)] ring-1 ring-[var(--line)] transition hover:bg-[#f3f7f3] hover:text-[var(--ink)]"
+                onClick={() => onOpenPlace(addressNearbyPlace._id)}
+              >
+                View {addressNearbyPlace.name}
+              </button>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
+
+      <div className={phoneFiltersHidden ? "max-md:hidden" : ""}>
+        {variant === "a" ? (
+          <div className="mt-3 flex max-h-[38vh] flex-col gap-3 overflow-y-auto md:max-h-none">
+            {filterCount === 0 ? (
+              <p className="text-sm text-[var(--ink-muted)]">
+                Choose a category or label. Places show on the map after you
+                tap one.
+              </p>
+            ) : null}
+            <FilterGroup
+              title="Categories"
+              items={categories}
+              selected={categoryIds}
+              onToggle={onToggleCategory}
+            />
+            <FilterGroup
+              title="Attributes"
+              items={attributes}
+              selected={attributeIds}
+              onToggle={onToggleAttribute}
+            />
+          </div>
+        ) : null}
+        {variant === "b" ? (
+          <div className="mt-3 flex flex-col gap-3">
+            <button
+              type="button"
+              className="map-chip w-fit md:hidden"
+              aria-expanded={filtersOpen}
+              onClick={() => setFiltersOpen((open) => !open)}
+            >
+              {filtersOpen ? "Hide filters" : "Filters"}
+              {filterCount > 0 ? ` · ${filterCount}` : ""}
+            </button>
+            <div
+              className={
+                filtersOpen
+                  ? "flex flex-col gap-3"
+                  : "hidden flex-col gap-3 md:flex"
+              }
+            >
+              <FilterGroup
+                title="Categories"
+                items={categories}
+                selected={categoryIds}
+                onToggle={onToggleCategory}
+              />
+              <FilterGroup
+                title="Attributes"
+                items={attributes}
+                selected={attributeIds}
+                onToggle={onToggleAttribute}
+              />
+            </div>
+          </div>
+        ) : null}
+        {variant === "c" ? (
+          <div className="mt-2.5 flex flex-col gap-3">
+            <FilterGroup
+              title="Popular"
+              items={popularCategories}
+              selected={categoryIds}
+              onToggle={onToggleCategory}
+              scroll
+            />
+            <button
+              type="button"
+              className="map-chip w-fit md:hidden"
+              aria-expanded={filtersOpen}
+              onClick={() => setFiltersOpen((open) => !open)}
+            >
+              {filtersOpen ? "Hide filters" : "All filters"}
+              {filterCount > 0 ? ` · ${filterCount}` : ""}
+            </button>
+            <div
+              className={
+                filtersOpen
+                  ? "flex flex-col gap-3"
+                  : "hidden flex-col gap-3 md:flex"
+              }
+            >
+              <FilterGroup
+                title="Categories"
+                items={categories}
+                selected={categoryIds}
+                onToggle={onToggleCategory}
+              />
+              <FilterGroup
+                title="Attributes"
+                items={attributes}
+                selected={attributeIds}
+                onToggle={onToggleAttribute}
+              />
+            </div>
+          </div>
+        ) : null}
+      </div>
+
       {showResults ? (
-        <div className="pointer-events-auto map-sheet mx-auto mt-2 max-h-[min(42vh,22rem)] w-full max-w-3xl overflow-y-auto p-1.5">
+        <div className="map-discovery-results map-sheet mt-2 max-h-[min(42vh,22rem)] overflow-y-auto p-1.5 md:max-h-56">
           {panel === "favourites" ? (
             <Section title="Favourites">
               {favouritePlaces.length === 0 ? (
@@ -355,60 +496,50 @@ export function SearchPanel({
           ) : null}
         </div>
       ) : null}
+      </div>
+      </div>
+    </div>
+  );
+}
 
-      {selectedPlace && panel === "closed" ? (
-        <div className="pointer-events-auto map-sheet mx-auto mt-2 w-full max-w-3xl p-3">
-          {placeSheet}
-        </div>
-      ) : null}
-
-      {!selectedPlace && addressPreview && panel === "closed" ? (
-        <div className="pointer-events-auto map-sheet mx-auto mt-2 w-full max-w-3xl p-3">
-          <div className="flex items-start gap-2">
-            <div className="min-w-0 flex-1">
-              <h2 className="font-semibold text-[var(--ink)]">
-                {addressPreview.label}
-              </h2>
-              <p className="text-xs text-[var(--ink-muted)]">
-                {shortenAddress(addressPreview.subtitle, addressPreview.label)}
-                {formatMetricDistance(origin, addressPreview)
-                  ? ` · ${formatMetricDistance(origin, addressPreview)}`
-                  : ""}
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={onCloseAddressPreview}
-              className="map-fab h-8 w-8 rounded-full"
-              aria-label="Close address"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-          <div className="mt-3 flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              className="flex items-center gap-2 rounded-full bg-primary px-3 py-2 text-sm font-medium text-primary-foreground transition hover:brightness-110"
-              onClick={() => {
-                const url = `https://www.google.com/maps/dir/?api=1&destination=${addressPreview.lat},${addressPreview.lng}`;
-                window.open(url, "_blank", "noopener,noreferrer");
-              }}
-            >
-              <Navigation className="h-4 w-4" />
-              Directions
-            </button>
-            {addressNearbyPlace ? (
-              <button
-                type="button"
-                className="rounded-full px-3 py-2 text-sm text-[var(--ink-muted)] ring-1 ring-[var(--line)] transition hover:bg-[#f3f7f3] hover:text-[var(--ink)]"
-                onClick={() => onOpenPlace(addressNearbyPlace._id)}
-              >
-                View {addressNearbyPlace.name}
-              </button>
-            ) : null}
-          </div>
-        </div>
-      ) : null}
+function FilterGroup({
+  title,
+  items,
+  selected,
+  onToggle,
+  scroll,
+}: {
+  title: string;
+  items: CatalogItem[];
+  selected: string[];
+  onToggle: (id: string) => void;
+  scroll?: boolean;
+}) {
+  if (items.length === 0) return null;
+  return (
+    <div>
+      <p className="mb-1.5 text-xs font-medium text-[var(--ink-muted)]">
+        {title}
+      </p>
+      <div
+        className={
+          scroll
+            ? "flex gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:flex-wrap md:overflow-visible"
+            : "flex flex-wrap gap-1.5"
+        }
+      >
+        {items.map((item) => (
+          <button
+            key={item._id}
+            type="button"
+            className="map-chip shrink-0"
+            data-active={selected.includes(item._id) || undefined}
+            onClick={() => onToggle(item._id)}
+          >
+            {item.label}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
