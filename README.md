@@ -17,7 +17,7 @@ an admin moderation queue before they become public.
 ## Local development
 
 ```bash
-# Node 26 with Corepack. packageManager pins pnpm@12.16.1.
+# Node 26 with Corepack. packageManager pins pnpm@12.21.0.
 corepack enable
 pnpm install --frozen-lockfile
 
