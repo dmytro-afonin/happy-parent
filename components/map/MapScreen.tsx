@@ -130,17 +130,24 @@ export function MapScreen({ variant }: { variant: MapVariant }) {
 
   const visiblePins = useMemo(() => {
     if (!places) return [];
-    if (variant === "a" && !catalogFiltered) {
-      if (!selectedId) return [];
+    const pins =
+      variant === "a" && !catalogFiltered
+        ? selectedId
+          ? places.filter((place) => place._id === selectedId)
+          : []
+        : filterPlaces(places, {
+            categoryIds,
+            attributeIds,
+            text: "",
+            location,
+          });
+    // Keep the opened place on the map even when filters exclude it: its card
+    // should have a matching pin, and MapView flies to selectedId via places.
+    if (selectedId && !pins.some((place) => place._id === selectedId)) {
       const opened = places.find((place) => place._id === selectedId);
-      return opened ? [opened] : [];
+      if (opened) return [opened, ...pins];
     }
-    return filterPlaces(places, {
-      categoryIds,
-      attributeIds,
-      text: "",
-      location,
-    });
+    return pins;
   }, [
     places,
     categoryIds,
