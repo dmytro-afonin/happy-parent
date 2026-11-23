@@ -12,7 +12,8 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "migrate:prod": "convex run migrations:runAll --prod"
+    "migrate:prod": "convex run migrations:runAll --prod",
+    "deps:scan": "pnpm audit --audit-level=high"
   },
   "dependencies": {
     "@clerk/mcp-tools": "^0.9.0",
