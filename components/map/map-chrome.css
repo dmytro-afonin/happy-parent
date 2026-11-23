@@ -204,11 +204,140 @@
   outline-offset: 1px;
 }
 
+/* Discovery: compact overlay on a phone, large side panel from tablet up. */
+.map-discovery {
+  pointer-events: none;
+  position: absolute;
+  z-index: 20;
+  top: 0;
+  right: 0;
+  left: 0;
+  padding: 0.75rem;
+  padding-top: max(0.75rem, env(safe-area-inset-top));
+}
+
+.map-discovery-frame {
+  pointer-events: auto;
+  width: 100%;
+  max-width: 48rem;
+  margin-inline: auto;
+}
+
+.map-variant-switch {
+  pointer-events: auto;
+  position: absolute;
+  z-index: 35;
+  left: 50%;
+  bottom: max(0.75rem, env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  display: flex;
+  gap: 0.15rem;
+  padding: 0.2rem;
+  border-radius: 999px;
+  background: #fff;
+  box-shadow:
+    0 1px 2px rgb(20 53 40 / 8%),
+    0 6px 18px rgb(20 53 40 / 12%);
+}
+
+.map-variant-option {
+  border-radius: 999px;
+  padding: 0.35rem 0.7rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--ink-muted);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.map-variant-option:hover {
+  color: var(--ink);
+  background: #f3f7f3;
+}
+
+.map-variant-option:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.map-variant-option[data-active="true"] {
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+
+.map-variant-option[data-active="true"]:hover {
+  color: var(--primary-foreground);
+  background: color-mix(in oklab, var(--primary) 92%, black);
+}
+
+@media (min-width: 768px) {
+  .map-discovery {
+    right: auto;
+    bottom: 0;
+    width: min(30rem, 42vw);
+    padding: 0.75rem;
+  }
+
+  .map-discovery-frame {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    max-width: none;
+    margin: 0;
+    overflow: hidden;
+    border-radius: 1.15rem;
+    background: #fff;
+    padding: 0.85rem 0.85rem 0.65rem;
+    box-shadow:
+      0 2px 6px rgb(20 53 40 / 8%),
+      0 16px 40px rgb(20 53 40 / 14%);
+  }
+
+  .map-discovery-frame .map-search {
+    border-radius: 0.85rem;
+    background: #f3f7f3;
+    box-shadow: none;
+  }
+
+  .map-discovery-body {
+    min-height: 0;
+    flex: 1;
+    overflow-y: auto;
+  }
+
+  .map-variant-switch {
+    left: calc(min(30rem, 42vw) + 0.75rem);
+    top: 0.75rem;
+    bottom: auto;
+    transform: none;
+  }
+}
+
 /* Keep MapLibre attribution clear of our control stack */
 .map-root .maplibregl-ctrl-bottom-right {
   right: 12px;
   bottom: 12px;
   max-width: calc(100% - 5.5rem);
+}
+
+@media (max-width: 767px) {
+  .map-root .maplibregl-ctrl-bottom-left {
+    display: none;
+  }
+
+  .map-root .maplibregl-ctrl-bottom-right {
+    left: 0.75rem;
+    right: auto;
+    bottom: 3.5rem;
+    max-width: min(16rem, calc(100% - 5rem));
+  }
+}
+
+@media (min-width: 768px) {
+  .map-root .maplibregl-ctrl-bottom-left {
+    left: calc(min(30rem, 42vw) + 0.5rem);
+  }
 }
 
 .map-root .maplibregl-ctrl-attrib {
